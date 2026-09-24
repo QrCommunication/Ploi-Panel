@@ -2,4 +2,7 @@
     <!-- Pinned to API 36 / AGP 8.13.2: latest AndroidX requires API 37 + AGP 9.1.
          Re-enable this advisory detector when the project upgrades its SDK/toolchain. -->
     <issue id="GradleDependency" severity="ignore" />
+    <!-- Play requires target 36 now; API 37 behavior is not validated on devices yet.
+         Re-enable OldTargetApi when compile/target SDK and foldable tests advance together. -->
+    <issue id="OldTargetApi" severity="ignore" />
 </lint>
