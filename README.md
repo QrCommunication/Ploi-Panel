@@ -2,7 +2,11 @@
 
 Application Android native et open source pour administrer plusieurs comptes Ploi et leurs serveurs/sites depuis un téléphone ou un appareil pliable.
 
-> **Statut : conception et fondations.** Le dépôt ne contient pas encore d'application utilisable. Voir [le cahier produit](docs/product.md) et [le plan de réalisation](docs/implementation.md). Ne pas saisir de jeton Ploi dans les issues, les commits ou les discussions.
+> **Statut : premier jalon exécutable, non publiable.** L'APK de développement permet de saisir un jeton Ploi **uniquement en mémoire**, lister les serveurs avec pagination et consulter leurs dernières métriques Ploi. Il ne propose pas encore multi-profils persistants, code/biométrie, OCR, SSH, widgets ni les opérations de gestion. Ne pas distribuer l'APK comme version finale. Voir [le cahier produit](docs/product.md) et [le plan de réalisation](docs/implementation.md). Ne pas saisir de jeton Ploi dans les issues, les commits ou les discussions.
+
+## Développement
+
+Prérequis : JDK 17, Android SDK API 36 et licence SDK acceptée. Puis `./gradlew :app:testDebugUnitTest :app:lintDebug :app:assembleDebug`. APK généré : `app/build/outputs/apk/debug/app-debug.apk`. Aucune donnée Ploi réelle n'est utilisée par les tests ; l'intégration avec un compte réel reste à valider. La version cible est Android 16 (API 36), la version minimale Android 10 (API 29).
 
 ## Principes
 

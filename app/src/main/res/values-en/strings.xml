@@ -1,0 +1,28 @@
+<resources>
+    <string name="app_name">Ploi Panel</string>
+    <string name="intro">Connect using a Ploi API token. This milestone keeps it in memory only; closing the app discards it.</string>
+    <string name="token">Ploi API token</string>
+    <string name="connect">View servers</string>
+    <string name="servers">Servers</string>
+    <string name="reload">Refresh</string>
+    <string name="disconnect">Sign out</string>
+    <string name="next">Next</string>
+    <string name="previous">Previous</string>
+    <string name="page">Page %1$s of %2$s</string>
+    <string name="monitoring">Monitoring</string>
+    <string name="monitoring_unavailable">Monitoring is unavailable for this server or subscription.</string>
+    <string name="server_status">Status: %1$s</string>
+    <string name="updated">Sample: %1$s</string>
+    <string name="back">Back to servers</string>
+    <string name="error_auth">Invalid or expired token (401).</string>
+    <string name="error_permission">Insufficient scope or unavailable feature (403).</string>
+    <string name="error_rate">Ploi rate limit reached. Retry in %1$s seconds.</string>
+    <string name="error_network">Could not connect. Check your network and retry.</string>
+    <string name="error_other">API error (%1$d).</string>
+    <string name="select_server">Select a server to see its monitoring.</string>
+    <string name="stale_warning">Ploi samples may be delayed; the latest sample time is shown below.</string>
+    <string name="metric_cpu">CPU</string>
+    <string name="metric_ram">RAM</string>
+    <string name="metric_disk">Disk</string>
+    <string name="metric_load">Load</string>
+</resources>
