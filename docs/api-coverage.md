@@ -2,7 +2,7 @@
 
 Extraction : 2026-09-24T18:31:36+00:00 ; source : [sitemap officiel](https://developers.ploi.io/sitemap.xml), puis en-têtes méthode/chemin des pages officielles. Base des requêtes : `https://ploi.io/api` (les chemins ci-dessous comprennent déjà `/api`).
 
-**231 opérations documentées**, 230 pages avec routes, 231 pages de référence API ; **119 non implémentées** (`not_implemented`), **112 implémentées et testées localement mais non vérifiées sur compte réel** (`implemented_locally_unverified_live`). Ce tableau inventorie la documentation, et ne constitue ni une preuve de disponibilité dans un compte donné, ni un contrat testé contre l’API. Le [JSON](api-coverage.json) conserve chaque entrée et la classification de toutes les URL du sitemap.
+**231 opérations documentées**, 230 pages avec routes, 231 pages de référence API ; **112 non implémentées** (`not_implemented`), **119 implémentées et testées localement mais non vérifiées sur compte réel** (`implemented_locally_unverified_live`). Ce tableau inventorie la documentation, et ne constitue ni une preuve de disponibilité dans un compte donné, ni un contrat testé contre l’API. Le [JSON](api-coverage.json) conserve chaque entrée et la classification de toutes les URL du sitemap.
 
 ## Périmètre et méthode
 
@@ -45,13 +45,13 @@ Extraction : 2026-09-24T18:31:36+00:00 ; source : [sitemap officiel](https://dev
 | `script-schedules` | `PATCH` | `/api/scripts/{script}/schedules/{schedule}` | [Update a schedule](https://developers.ploi.io/script-schedules/update-schedule) | `implemented_locally_unverified_live` |
 | `script-schedules` | `POST` | `/api/scripts/{script}/schedules/{schedule}/toggle` | [Toggle a schedule](https://developers.ploi.io/script-schedules/toggle-schedule) | `implemented_locally_unverified_live` |
 | `script-schedules` | `DELETE` | `/api/scripts/{script}/schedules/{schedule}` | [Delete a schedule](https://developers.ploi.io/script-schedules/delete-schedule) | `implemented_locally_unverified_live` |
-| `script-actions` | `GET` | `/api/scripts/{script}/actions` | [List all actions](https://developers.ploi.io/script-actions/list-actions) | `not_implemented` |
-| `script-actions` | `POST` | `/api/scripts/{script}/actions` | [Create an action](https://developers.ploi.io/script-actions/create-action) | `not_implemented` |
-| `script-actions` | `GET` | `/api/scripts/{script}/actions/{action}` | [Get an action](https://developers.ploi.io/script-actions/get-action) | `not_implemented` |
-| `script-actions` | `PATCH` | `/api/scripts/{script}/actions/{action}` | [Update an action](https://developers.ploi.io/script-actions/update-action) | `not_implemented` |
-| `script-actions` | `POST` | `/api/scripts/{script}/actions/{action}/toggle` | [Toggle an action](https://developers.ploi.io/script-actions/toggle-action) | `not_implemented` |
-| `script-actions` | `POST` | `/api/scripts/{script}/actions/{action}/rotate-secret` | [Rotate the secret](https://developers.ploi.io/script-actions/rotate-action-secret) | `not_implemented` |
-| `script-actions` | `DELETE` | `/api/scripts/{script}/actions/{action}` | [Delete an action](https://developers.ploi.io/script-actions/delete-action) | `not_implemented` |
+| `script-actions` | `GET` | `/api/scripts/{script}/actions` | [List all actions](https://developers.ploi.io/script-actions/list-actions) | `implemented_locally_unverified_live` |
+| `script-actions` | `POST` | `/api/scripts/{script}/actions` | [Create an action](https://developers.ploi.io/script-actions/create-action) | `implemented_locally_unverified_live` |
+| `script-actions` | `GET` | `/api/scripts/{script}/actions/{action}` | [Get an action](https://developers.ploi.io/script-actions/get-action) | `implemented_locally_unverified_live` |
+| `script-actions` | `PATCH` | `/api/scripts/{script}/actions/{action}` | [Update an action](https://developers.ploi.io/script-actions/update-action) | `implemented_locally_unverified_live` |
+| `script-actions` | `POST` | `/api/scripts/{script}/actions/{action}/toggle` | [Toggle an action](https://developers.ploi.io/script-actions/toggle-action) | `implemented_locally_unverified_live` |
+| `script-actions` | `POST` | `/api/scripts/{script}/actions/{action}/rotate-secret` | [Rotate the secret](https://developers.ploi.io/script-actions/rotate-action-secret) | `implemented_locally_unverified_live` |
+| `script-actions` | `DELETE` | `/api/scripts/{script}/actions/{action}` | [Delete an action](https://developers.ploi.io/script-actions/delete-action) | `implemented_locally_unverified_live` |
 | `status-pages` | `GET` | `/api/status-pages` | [List status pages](https://developers.ploi.io/status-pages/list-status-pages) | `not_implemented` |
 | `status-pages` | `GET` | `/api/status-pages/{statusPage}` | [Get status page](https://developers.ploi.io/status-pages/get-status-page) | `not_implemented` |
 | `status-pages` | `GET` | `/api/status-pages/{statusPage}/incidents` | [Get status page incidents](https://developers.ploi.io/status-pages/get-status-page-incidents) | `not_implemented` |

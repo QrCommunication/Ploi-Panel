@@ -16,6 +16,7 @@ import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.OutlinedTextField
+import androidx.compose.material3.RadioButton
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
@@ -54,6 +55,7 @@ internal fun ScriptsScreen(token: String, lock: AppLock, activity: FragmentActiv
     var editing by remember { mutableStateOf<PloiScript?>(null) }
     var running by remember { mutableStateOf<PloiScript?>(null) }
     var scheduling by remember { mutableStateOf<PloiScript?>(null) }
+    var actioning by remember { mutableStateOf<PloiScript?>(null) }
     var confirmDelete by remember { mutableStateOf<PloiScript?>(null) }
     // Names of the servers a run was started on, shown until the next action.
     var startedOn by remember { mutableStateOf<List<String>?>(null) }
@@ -141,6 +143,9 @@ internal fun ScriptsScreen(token: String, lock: AppLock, activity: FragmentActiv
                                 OutlinedButton(onClick = { scheduling = script }, enabled = !busy) {
                                     Text(stringResource(R.string.script_schedules))
                                 }
+                                OutlinedButton(onClick = { actioning = script }, enabled = !busy) {
+                                    Text(stringResource(R.string.script_actions))
+                                }
                                 OutlinedButton(onClick = { editing = script }, enabled = !busy) {
                                     Text(stringResource(R.string.edit_site))
                                 }
@@ -222,6 +227,15 @@ internal fun ScriptsScreen(token: String, lock: AppLock, activity: FragmentActiv
             lock = lock,
             activity = activity,
             onDismiss = { scheduling = null }
+        )
+    }
+    actioning?.let { script ->
+        ScriptActionsDialog(
+            token = token,
+            script = script,
+            lock = lock,
+            activity = activity,
+            onDismiss = { actioning = null }
         )
     }
     confirmDelete?.let { script ->
@@ -646,6 +660,329 @@ private fun <T> ScheduleFormDialog(
                     }
                 },
                 enabled = !busy && cron.isNotBlank() && selected.isNotEmpty()
+            ) { Text(submitLabel) }
+        },
+        dismissButton = {
+            OutlinedButton(onClick = onDismiss) { Text(stringResource(R.string.cancel)) }
+        }
+    )
+}
+
+/** Localized label for the four documented per-server install statuses. */
+private fun actionServerStatusLabel(status: String): Int = when (status) {
+    "installed" -> R.string.action_status_installed
+    "failed" -> R.string.action_status_failed
+    "uninstalling" -> R.string.action_status_uninstalling
+    else -> R.string.action_status_pending
+}
+
+/**
+ * Script-actions domain (Unlimited plan): list/create/edit/pause/rotate-secret/delete
+ * the event-driven actions of one script — the seven documented
+ * /api/scripts/{script}/actions routes. Delete and secret rotation are protected
+ * by PIN/biometric because they tear down units or invalidate signed webhook URLs.
+ */
+@Composable
+private fun ScriptActionsDialog(
+    token: String,
+    script: PloiScript,
+    lock: AppLock,
+    activity: FragmentActivity,
+    onDismiss: () -> Unit
+) {
+    val scope = rememberCoroutineScope()
+    var refresh by remember { mutableIntStateOf(0) }
+    var result by remember { mutableStateOf<List<ScriptAction>?>(null) }
+    var loading by remember { mutableStateOf(true) }
+    var error by remember { mutableStateOf<Throwable?>(null) }
+    var feedback by remember { mutableStateOf("") }
+    var busy by remember { mutableStateOf(false) }
+    var creating by remember { mutableStateOf(false) }
+    var editing by remember { mutableStateOf<ScriptAction?>(null) }
+    var confirmRotate by remember { mutableStateOf<ScriptAction?>(null) }
+    var confirmDelete by remember { mutableStateOf<ScriptAction?>(null) }
+
+    val createdMessage = stringResource(R.string.action_created)
+    val updatedMessage = stringResource(R.string.action_updated)
+    val deletedMessage = stringResource(R.string.action_deleted)
+    val rotatedMessage = stringResource(R.string.action_secret_rotated)
+    val pausedMessage = stringResource(R.string.action_paused_feedback)
+    val resumedMessage = stringResource(R.string.action_resumed_feedback)
+
+    LaunchedEffect(token, script.id, refresh) {
+        loading = true
+        error = null
+        try {
+            result = withContext(Dispatchers.IO) { PloiApi.scriptActions(token, script.id) }
+        } catch (cancelled: CancellationException) {
+            throw cancelled
+        } catch (failure: Exception) {
+            result = null
+            error = failure
+        } finally {
+            loading = false
+        }
+    }
+
+    fun runAction(message: String, block: suspend () -> Unit) {
+        busy = true
+        error = null
+        feedback = ""
+        scope.launch {
+            try {
+                withContext(Dispatchers.IO) { block() }
+                feedback = message
+                refresh++
+            } catch (cancelled: CancellationException) {
+                throw cancelled
+            } catch (failure: Exception) {
+                error = failure
+            } finally {
+                busy = false
+            }
+        }
+    }
+
+    AlertDialog(
+        onDismissRequest = onDismiss,
+        title = { Text(stringResource(R.string.actions_title, script.label)) },
+        text = {
+            Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                Text(
+                    stringResource(R.string.action_unlimited_note),
+                    style = MaterialTheme.typography.bodySmall
+                )
+                Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                    OutlinedButton(onClick = { refresh++ }, enabled = !loading && !busy) {
+                        Text(stringResource(R.string.reload))
+                    }
+                    OutlinedButton(onClick = { creating = true }, enabled = !busy) {
+                        Text(stringResource(R.string.new_action))
+                    }
+                }
+                if (loading) CircularProgressIndicator()
+                if (error != null) ApiErrorText(error!!)
+                if (feedback.isNotEmpty()) Text(feedback)
+                result?.let { actions ->
+                    if (actions.isEmpty()) Text(stringResource(R.string.empty_actions))
+                    LazyColumn(
+                        Modifier.heightIn(max = 320.dp),
+                        verticalArrangement = Arrangement.spacedBy(8.dp)
+                    ) {
+                        items(actions, key = { it.id }) { action ->
+                            Card(modifier = Modifier.fillMaxWidth()) {
+                                Column(Modifier.padding(12.dp), verticalArrangement = Arrangement.spacedBy(6.dp)) {
+                                    Text(
+                                        action.triggerLabel.ifBlank { action.trigger },
+                                        style = MaterialTheme.typography.titleSmall
+                                    )
+                                    Text(stringResource(R.string.action_delay_value, action.delaySeconds))
+                                    Text(
+                                        stringResource(
+                                            if (action.isPaused) R.string.schedule_paused else R.string.schedule_active
+                                        )
+                                    )
+                                    if (action.lastTriggeredAt.isNotBlank()) {
+                                        Text(stringResource(R.string.action_last_triggered, action.lastTriggeredAt))
+                                    }
+                                    action.servers.forEach { server ->
+                                        Text(
+                                            stringResource(
+                                                R.string.action_server_status,
+                                                server.serverId,
+                                                stringResource(actionServerStatusLabel(server.status))
+                                            )
+                                        )
+                                        if (server.lastError.isNotBlank()) {
+                                            Text(
+                                                stringResource(R.string.action_last_error, server.lastError),
+                                                color = MaterialTheme.colorScheme.error
+                                            )
+                                        }
+                                    }
+                                    Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                                        OutlinedButton(
+                                            onClick = {
+                                                busy = true
+                                                error = null
+                                                feedback = ""
+                                                scope.launch {
+                                                    try {
+                                                        val toggled = withContext(Dispatchers.IO) {
+                                                            PloiApi.toggleScriptAction(token, script.id, action.id)
+                                                        }
+                                                        feedback = if (toggled.isPaused) pausedMessage else resumedMessage
+                                                        refresh++
+                                                    } catch (cancelled: CancellationException) {
+                                                        throw cancelled
+                                                    } catch (failure: Exception) {
+                                                        error = failure
+                                                    } finally {
+                                                        busy = false
+                                                    }
+                                                }
+                                            },
+                                            enabled = !busy
+                                        ) {
+                                            Text(
+                                                stringResource(
+                                                    if (action.isPaused) R.string.resume_schedule
+                                                    else R.string.pause_schedule
+                                                )
+                                            )
+                                        }
+                                        OutlinedButton(onClick = { editing = action }, enabled = !busy) {
+                                            Text(stringResource(R.string.edit_site))
+                                        }
+                                    }
+                                    Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                                        OutlinedButton(onClick = { confirmRotate = action }, enabled = !busy) {
+                                            Text(stringResource(R.string.rotate_action_secret))
+                                        }
+                                        OutlinedButton(onClick = { confirmDelete = action }, enabled = !busy) {
+                                            Text(
+                                                stringResource(R.string.delete_action),
+                                                color = MaterialTheme.colorScheme.error
+                                            )
+                                        }
+                                    }
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+        },
+        confirmButton = {
+            OutlinedButton(onClick = onDismiss) { Text(stringResource(R.string.close)) }
+        }
+    )
+
+    if (creating) {
+        ActionFormDialog(
+            token = token,
+            busy = busy,
+            title = stringResource(R.string.new_action),
+            submitLabel = stringResource(R.string.create_action_submit),
+            initial = null,
+            build = { trigger, delay, servers ->
+                CreateScriptActionRequest(trigger = trigger, servers = servers, delaySeconds = delay)
+            },
+            onSubmit = { request ->
+                creating = false
+                runAction(createdMessage) { PloiApi.createScriptAction(token, script.id, request) }
+            },
+            onDismiss = { creating = false }
+        )
+    }
+    editing?.let { action ->
+        ActionFormDialog(
+            token = token,
+            busy = busy,
+            title = stringResource(R.string.edit_action_title),
+            submitLabel = stringResource(R.string.edit_site),
+            initial = action,
+            build = { trigger, delay, servers ->
+                UpdateScriptActionRequest(trigger = trigger, servers = servers, delaySeconds = delay)
+            },
+            onSubmit = { request ->
+                editing = null
+                runAction(updatedMessage) {
+                    PloiApi.updateScriptAction(token, script.id, action.id, request)
+                }
+            },
+            onDismiss = { editing = null }
+        )
+    }
+    confirmRotate?.let { action ->
+        SensitiveConfirmDialog(
+            lock = lock,
+            activity = activity,
+            message = stringResource(R.string.confirm_rotate_action_secret),
+            confirmLabel = R.string.rotate_action_secret,
+            onConfirmed = {
+                confirmRotate = null
+                runAction(rotatedMessage) { PloiApi.rotateScriptActionSecret(token, script.id, action.id) }
+            },
+            onDismiss = { confirmRotate = null }
+        )
+    }
+    confirmDelete?.let { action ->
+        SensitiveConfirmDialog(
+            lock = lock,
+            activity = activity,
+            message = stringResource(R.string.confirm_delete_action),
+            confirmLabel = R.string.delete_action,
+            onConfirmed = {
+                confirmDelete = null
+                runAction(deletedMessage) { PloiApi.deleteScriptAction(token, script.id, action.id) }
+            },
+            onDismiss = { confirmDelete = null }
+        )
+    }
+}
+
+/**
+ * Shared create/edit action form: the two documented triggers (radio), the
+ * optional delay in seconds (0–7200, blank keeps the documented default) and
+ * the documented server ID selection.
+ */
+@Composable
+private fun <T> ActionFormDialog(
+    token: String,
+    busy: Boolean,
+    title: String,
+    submitLabel: String,
+    initial: ScriptAction?,
+    build: (trigger: String, delaySeconds: Int?, servers: List<Long>) -> T,
+    onSubmit: (T) -> Unit,
+    onDismiss: () -> Unit
+) {
+    var trigger by remember { mutableStateOf(initial?.trigger ?: "server.booted") }
+    var delay by remember { mutableStateOf(initial?.delaySeconds?.toString().orEmpty()) }
+    var selected by remember { mutableStateOf(initial?.servers?.map { it.serverId }?.toSet() ?: emptySet()) }
+    var invalid by remember { mutableStateOf(false) }
+    AlertDialog(
+        onDismissRequest = onDismiss,
+        title = { Text(title) },
+        text = {
+            Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
+                Text(stringResource(R.string.action_trigger_label))
+                Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
+                    RadioButton(selected = trigger == "server.booted", onClick = { trigger = "server.booted" })
+                    Text(stringResource(R.string.action_trigger_booted))
+                }
+                Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
+                    RadioButton(selected = trigger == "server.shutdown", onClick = { trigger = "server.shutdown" })
+                    Text(stringResource(R.string.action_trigger_shutdown))
+                }
+                OutlinedTextField(
+                    value = delay, onValueChange = { delay = it.filter(Char::isDigit) },
+                    label = { Text(stringResource(R.string.action_delay_label)) },
+                    singleLine = true, modifier = Modifier.fillMaxWidth()
+                )
+                Text(stringResource(R.string.schedule_servers_label))
+                ServerMultiSelect(token, selected) { selected = it }
+                if (invalid) {
+                    Text(stringResource(R.string.invalid_form), color = MaterialTheme.colorScheme.error)
+                }
+            }
+        },
+        confirmButton = {
+            Button(
+                onClick = {
+                    val request = try {
+                        build(trigger, delay.toIntOrNull(), selected.toList())
+                    } catch (invalidRequest: IllegalArgumentException) {
+                        null
+                    }
+                    if (request == null) {
+                        invalid = true
+                    } else {
+                        onSubmit(request)
+                    }
+                },
+                enabled = !busy && selected.isNotEmpty()
             ) { Text(submitLabel) }
         },
         dismissButton = {

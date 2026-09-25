@@ -260,6 +260,29 @@ internal data class ScriptSchedulePage(
     val hasNext: Boolean get() = currentPage < lastPage
 }
 
+/**
+ * Per-server install pivot of the script-actions domain: the documented shape of
+ * each `servers[]` entry is server_id, status (`pending`, `installed`, `failed`,
+ * `uninstalling`), installed_at (nullable while pending) and last_error
+ * (nullable, set when the install failed).
+ */
+internal data class ScriptActionServer(
+    val serverId: Long, val status: String, val installedAt: String, val lastError: String
+)
+
+/**
+ * Event-driven action of the script-actions domain: the documented shape of
+ * GET/POST/PATCH/toggle/rotate-secret /api/scripts/{script}/actions responses is
+ * id, script_id, trigger, trigger_label, delay_seconds, is_paused,
+ * last_triggered_at (nullable before the first trigger), the servers pivot
+ * array, created_at and updated_at. Every route requires the Unlimited plan.
+ */
+internal data class ScriptAction(
+    val id: Long, val scriptId: Long, val trigger: String, val triggerLabel: String,
+    val delaySeconds: Int, val isPaused: Boolean, val lastTriggeredAt: String,
+    val servers: List<ScriptActionServer>, val createdAt: String, val updatedAt: String
+)
+
 /** Documented value sets for server creation (developers.ploi.io/servers/create-server). */
 internal val SERVER_TYPES = setOf("server", "load-balancer", "database-server", "redis-server")
 internal val CUSTOM_SERVER_TYPES = SERVER_TYPES + "storage-server"
@@ -978,6 +1001,72 @@ internal data class UpdateScriptScheduleRequest(
     fun toJson(): String = JSONObject().apply {
         put("cron_expression", cronExpression)
         put("servers", JSONArray(servers))
+    }.toString()
+}
+
+/**
+ * Documented value sets for the script-actions domain
+ * (developers.ploi.io/script-actions pages): the two supported triggers and the
+ * delay bounds 0 (no delay) to 7200 seconds (2 hours). Every route requires the
+ * Unlimited plan.
+ */
+internal val SCRIPT_ACTION_TRIGGERS = setOf("server.booted", "server.shutdown")
+internal val SCRIPT_ACTION_DELAY_RANGE = 0..7_200
+
+internal fun validateActionTrigger(trigger: String): String {
+    require(trigger in SCRIPT_ACTION_TRIGGERS) { "Unsupported action trigger" }
+    return trigger
+}
+
+internal fun validateActionDelay(delaySeconds: Int): Int {
+    require(delaySeconds in SCRIPT_ACTION_DELAY_RANGE) { "Delay must be between 0 and 7200 seconds" }
+    return delaySeconds
+}
+
+/**
+ * Validated payload for POST /api/scripts/{script}/actions: trigger and servers
+ * are the documented required attributes; delay_seconds is optional and omitted
+ * when null so the documented default (0) applies.
+ */
+internal data class CreateScriptActionRequest(
+    val trigger: String,
+    val servers: List<Long>,
+    val delaySeconds: Int? = null
+) {
+    init {
+        validateActionTrigger(trigger)
+        validateScheduleServers(servers)
+        delaySeconds?.let { validateActionDelay(it) }
+    }
+
+    fun toJson(): String = JSONObject().apply {
+        put("trigger", trigger)
+        put("servers", JSONArray(servers))
+        delaySeconds?.let { put("delay_seconds", it) }
+    }.toString()
+}
+
+/**
+ * Validated payload for PATCH /api/scripts/{script}/actions/{action}: trigger
+ * and servers are documented required — the server list replaces the previous
+ * one (servers left out are uninstalled server-side); delay_seconds stays
+ * optional and is omitted when null.
+ */
+internal data class UpdateScriptActionRequest(
+    val trigger: String,
+    val servers: List<Long>,
+    val delaySeconds: Int? = null
+) {
+    init {
+        validateActionTrigger(trigger)
+        validateScheduleServers(servers)
+        delaySeconds?.let { validateActionDelay(it) }
+    }
+
+    fun toJson(): String = JSONObject().apply {
+        put("trigger", trigger)
+        put("servers", JSONArray(servers))
+        delaySeconds?.let { put("delay_seconds", it) }
     }.toString()
 }
 
@@ -2231,6 +2320,85 @@ internal object PloiApi {
     /** DELETE /api/scripts/{script}/schedules/{schedule}: documented message may be null. */
     fun deleteScriptSchedule(token: String, scriptId: Long, scheduleId: Long): String = parseOrThrow {
         parseOptionalMessage(write("DELETE", schedulePath(scriptId, scheduleId), token, null))
+    }
+
+    // ---- Script actions domain (Unlimited plan) ----
+
+    private fun actionsPath(scriptId: Long): String = "/scripts/${validateResourceId(scriptId)}/actions"
+
+    private fun actionPath(scriptId: Long, actionId: Long): String =
+        "${actionsPath(scriptId)}/${validateResourceId(actionId)}"
+
+    private fun parseActionServer(item: JSONObject): ScriptActionServer = ScriptActionServer(
+        serverId = item.getLong("server_id"),
+        status = item.getString("status"),
+        installedAt = nullableString(item, "installed_at"),
+        lastError = nullableString(item, "last_error")
+    )
+
+    private fun parseActionEntry(item: JSONObject): ScriptAction {
+        val servers = item.getJSONArray("servers")
+        return ScriptAction(
+            id = item.getLong("id"),
+            scriptId = item.getLong("script_id"),
+            trigger = item.getString("trigger"),
+            triggerLabel = item.optString("trigger_label"),
+            delaySeconds = item.getInt("delay_seconds"),
+            isPaused = item.getBoolean("is_paused"),
+            lastTriggeredAt = nullableString(item, "last_triggered_at"),
+            servers = (0 until servers.length()).map { parseActionServer(servers.getJSONObject(it)) },
+            createdAt = item.optString("created_at"),
+            updatedAt = item.optString("updated_at")
+        )
+    }
+
+    /** Documented list shape: a bare `data` array without pagination metadata. */
+    fun parseScriptActions(json: String): List<ScriptAction> {
+        val data = JSONObject(json).getJSONArray("data")
+        return (0 until data.length()).map { parseActionEntry(data.getJSONObject(it)) }
+    }
+
+    fun parseScriptAction(json: String): ScriptAction =
+        parseActionEntry(JSONObject(json).getJSONObject("data"))
+
+    /** GET /api/scripts/{script}/actions: every action attached to the script. */
+    fun scriptActions(token: String, scriptId: Long): List<ScriptAction> = parseOrThrow {
+        parseScriptActions(get(actionsPath(scriptId), token))
+    }
+
+    /** GET /api/scripts/{script}/actions/{action}. */
+    fun scriptAction(token: String, scriptId: Long, actionId: Long): ScriptAction = parseOrThrow {
+        parseScriptAction(get(actionPath(scriptId, actionId), token))
+    }
+
+    /** POST /api/scripts/{script}/actions: wires the script to a server event. */
+    fun createScriptAction(token: String, scriptId: Long, request: CreateScriptActionRequest): ScriptAction =
+        parseOrThrow {
+            parseScriptAction(write("POST", actionsPath(scriptId), token, request.toJson()))
+        }
+
+    /** PATCH /api/scripts/{script}/actions/{action}: documented replace semantics for servers. */
+    fun updateScriptAction(
+        token: String, scriptId: Long, actionId: Long, request: UpdateScriptActionRequest
+    ): ScriptAction = parseOrThrow {
+        parseScriptAction(write("PATCH", actionPath(scriptId, actionId), token, request.toJson()))
+    }
+
+    /** POST /api/scripts/{script}/actions/{action}/toggle: flips the documented pause state. */
+    fun toggleScriptAction(token: String, scriptId: Long, actionId: Long): ScriptAction = parseOrThrow {
+        parseScriptAction(write("POST", "${actionPath(scriptId, actionId)}/toggle", token, JSONObject().toString()))
+    }
+
+    /** POST /api/scripts/{script}/actions/{action}/rotate-secret: re-issues every webhook URL. */
+    fun rotateScriptActionSecret(token: String, scriptId: Long, actionId: Long): ScriptAction = parseOrThrow {
+        parseScriptAction(
+            write("POST", "${actionPath(scriptId, actionId)}/rotate-secret", token, JSONObject().toString())
+        )
+    }
+
+    /** DELETE /api/scripts/{script}/actions/{action}: documented message may be null. */
+    fun deleteScriptAction(token: String, scriptId: Long, actionId: Long): String = parseOrThrow {
+        parseOptionalMessage(write("DELETE", actionPath(scriptId, actionId), token, null))
     }
 
     fun parseProviders(json: String): ProviderPage {
