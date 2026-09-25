@@ -1551,7 +1551,7 @@
       "domain": "script-schedules",
       "title": "List schedules",
       "operation": "List all schedules",
-      "status": "not_implemented"
+      "status": "implemented_locally_unverified_live"
     },
     {
       "method": "POST",
@@ -1560,7 +1560,7 @@
       "domain": "script-schedules",
       "title": "Create schedule",
       "operation": "Create a schedule",
-      "status": "not_implemented"
+      "status": "implemented_locally_unverified_live"
     },
     {
       "method": "GET",
@@ -1569,7 +1569,7 @@
       "domain": "script-schedules",
       "title": "Get schedule",
       "operation": "Get a schedule",
-      "status": "not_implemented"
+      "status": "implemented_locally_unverified_live"
     },
     {
       "method": "PATCH",
@@ -1578,7 +1578,7 @@
       "domain": "script-schedules",
       "title": "Update schedule",
       "operation": "Update a schedule",
-      "status": "not_implemented"
+      "status": "implemented_locally_unverified_live"
     },
     {
       "method": "POST",
@@ -1587,7 +1587,7 @@
       "domain": "script-schedules",
       "title": "Toggle schedule",
       "operation": "Toggle a schedule",
-      "status": "not_implemented"
+      "status": "implemented_locally_unverified_live"
     },
     {
       "method": "DELETE",
@@ -1596,7 +1596,7 @@
       "domain": "script-schedules",
       "title": "Delete schedule",
       "operation": "Delete a schedule",
-      "status": "not_implemented"
+      "status": "implemented_locally_unverified_live"
     },
     {
       "method": "GET",

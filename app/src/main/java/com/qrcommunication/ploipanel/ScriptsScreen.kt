@@ -4,6 +4,7 @@ import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
@@ -35,8 +36,9 @@ import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 
 /**
- * Scripts domain: account-level reusable scripts with create, edit, run-on-servers
- * and PIN/biometric-protected delete — the six documented /api/scripts routes.
+ * Scripts domain: account-level reusable scripts with create, edit, run-on-servers,
+ * PIN/biometric-protected delete and cron schedules (Pro plan) — the documented
+ * /api/scripts and /api/scripts/{script}/schedules routes.
  */
 @Composable
 internal fun ScriptsScreen(token: String, lock: AppLock, activity: FragmentActivity) {
@@ -51,6 +53,7 @@ internal fun ScriptsScreen(token: String, lock: AppLock, activity: FragmentActiv
     var creating by remember { mutableStateOf(false) }
     var editing by remember { mutableStateOf<PloiScript?>(null) }
     var running by remember { mutableStateOf<PloiScript?>(null) }
+    var scheduling by remember { mutableStateOf<PloiScript?>(null) }
     var confirmDelete by remember { mutableStateOf<PloiScript?>(null) }
     // Names of the servers a run was started on, shown until the next action.
     var startedOn by remember { mutableStateOf<List<String>?>(null) }
@@ -135,6 +138,9 @@ internal fun ScriptsScreen(token: String, lock: AppLock, activity: FragmentActiv
                                 OutlinedButton(onClick = { running = script }, enabled = !busy) {
                                     Text(stringResource(R.string.run_script))
                                 }
+                                OutlinedButton(onClick = { scheduling = script }, enabled = !busy) {
+                                    Text(stringResource(R.string.script_schedules))
+                                }
                                 OutlinedButton(onClick = { editing = script }, enabled = !busy) {
                                     Text(stringResource(R.string.edit_site))
                                 }
@@ -207,6 +213,15 @@ internal fun ScriptsScreen(token: String, lock: AppLock, activity: FragmentActiv
                 }
             },
             onDismiss = { running = null }
+        )
+    }
+    scheduling?.let { script ->
+        ScriptSchedulesDialog(
+            token = token,
+            script = script,
+            lock = lock,
+            activity = activity,
+            onDismiss = { scheduling = null }
         )
     }
     confirmDelete?.let { script ->
@@ -287,18 +302,15 @@ private fun <T> ScriptFormDialog(
     )
 }
 
-/** Run dialog for POST /api/scripts/{script}/run: checkbox selection of the account's servers. */
+/** Shared server multi-picker: loads every account server (page size 50) and renders checkboxes. */
 @Composable
-private fun RunScriptDialog(
+private fun ServerMultiSelect(
     token: String,
-    script: PloiScript,
-    busy: Boolean,
-    onRun: (List<Long>) -> Unit,
-    onDismiss: () -> Unit
+    selected: Set<Long>,
+    onSelectionChange: (Set<Long>) -> Unit
 ) {
     var servers by remember { mutableStateOf<List<Server>?>(null) }
     var loadError by remember { mutableStateOf<Throwable?>(null) }
-    var selected by remember { mutableStateOf(setOf<Long>()) }
     LaunchedEffect(token) {
         try {
             val first = withContext(Dispatchers.IO) { PloiApi.servers(token, perPage = 50) }
@@ -316,30 +328,43 @@ private fun RunScriptDialog(
             loadError = failure
         }
     }
+    when {
+        loadError != null -> ApiErrorText(loadError!!)
+        servers == null -> CircularProgressIndicator()
+        servers!!.isEmpty() -> Text(stringResource(R.string.empty_run_servers))
+        else -> servers!!.forEach { server ->
+            Row(
+                Modifier.fillMaxWidth(),
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                Checkbox(
+                    checked = server.id in selected,
+                    onCheckedChange = { checked ->
+                        onSelectionChange(if (checked) selected + server.id else selected - server.id)
+                    }
+                )
+                Text(server.name)
+            }
+        }
+    }
+}
+
+/** Run dialog for POST /api/scripts/{script}/run: checkbox selection of the account's servers. */
+@Composable
+private fun RunScriptDialog(
+    token: String,
+    script: PloiScript,
+    busy: Boolean,
+    onRun: (List<Long>) -> Unit,
+    onDismiss: () -> Unit
+) {
+    var selected by remember { mutableStateOf(setOf<Long>()) }
     AlertDialog(
         onDismissRequest = onDismiss,
         title = { Text(stringResource(R.string.run_script_title, script.label)) },
         text = {
             Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
-                when {
-                    loadError != null -> ApiErrorText(loadError!!)
-                    servers == null -> CircularProgressIndicator()
-                    servers!!.isEmpty() -> Text(stringResource(R.string.empty_run_servers))
-                    else -> servers!!.forEach { server ->
-                        Row(
-                            Modifier.fillMaxWidth(),
-                            verticalAlignment = Alignment.CenterVertically
-                        ) {
-                            Checkbox(
-                                checked = server.id in selected,
-                                onCheckedChange = { checked ->
-                                    selected = if (checked) selected + server.id else selected - server.id
-                                }
-                            )
-                            Text(server.name)
-                        }
-                    }
-                }
+                ServerMultiSelect(token, selected) { selected = it }
             }
         },
         confirmButton = {
@@ -347,6 +372,281 @@ private fun RunScriptDialog(
                 onClick = { onRun(selected.toList()) },
                 enabled = !busy && selected.isNotEmpty()
             ) { Text(stringResource(R.string.run_script_submit)) }
+        },
+        dismissButton = {
+            OutlinedButton(onClick = onDismiss) { Text(stringResource(R.string.cancel)) }
+        }
+    )
+}
+
+/**
+ * Script-schedules domain (Pro plan or higher): list/create/edit/pause/delete the
+ * cron schedules of one script — the six documented /api/scripts/{script}/schedules routes.
+ */
+@Composable
+private fun ScriptSchedulesDialog(
+    token: String,
+    script: PloiScript,
+    lock: AppLock,
+    activity: FragmentActivity,
+    onDismiss: () -> Unit
+) {
+    val scope = rememberCoroutineScope()
+    var page by remember { mutableIntStateOf(1) }
+    var refresh by remember { mutableIntStateOf(0) }
+    var result by remember { mutableStateOf<ScriptSchedulePage?>(null) }
+    var loading by remember { mutableStateOf(true) }
+    var error by remember { mutableStateOf<Throwable?>(null) }
+    var feedback by remember { mutableStateOf("") }
+    var busy by remember { mutableStateOf(false) }
+    var creating by remember { mutableStateOf(false) }
+    var editing by remember { mutableStateOf<ScriptSchedule?>(null) }
+    var confirmDelete by remember { mutableStateOf<ScriptSchedule?>(null) }
+
+    val createdMessage = stringResource(R.string.schedule_created)
+    val updatedMessage = stringResource(R.string.schedule_updated)
+    val deletedMessage = stringResource(R.string.schedule_deleted)
+    val pausedMessage = stringResource(R.string.schedule_paused_feedback)
+    val resumedMessage = stringResource(R.string.schedule_resumed_feedback)
+
+    LaunchedEffect(token, script.id, page, refresh) {
+        loading = true
+        error = null
+        try {
+            result = withContext(Dispatchers.IO) { PloiApi.scriptSchedules(token, script.id, page) }
+        } catch (cancelled: CancellationException) {
+            throw cancelled
+        } catch (failure: Exception) {
+            result = null
+            error = failure
+        } finally {
+            loading = false
+        }
+    }
+
+    fun runAction(message: String, block: suspend () -> Unit) {
+        busy = true
+        error = null
+        feedback = ""
+        scope.launch {
+            try {
+                withContext(Dispatchers.IO) { block() }
+                feedback = message
+                refresh++
+            } catch (cancelled: CancellationException) {
+                throw cancelled
+            } catch (failure: Exception) {
+                error = failure
+            } finally {
+                busy = false
+            }
+        }
+    }
+
+    AlertDialog(
+        onDismissRequest = onDismiss,
+        title = { Text(stringResource(R.string.schedules_title, script.label)) },
+        text = {
+            Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                Text(
+                    stringResource(R.string.schedule_pro_note),
+                    style = MaterialTheme.typography.bodySmall
+                )
+                Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                    OutlinedButton(onClick = { refresh++ }, enabled = !loading && !busy) {
+                        Text(stringResource(R.string.reload))
+                    }
+                    OutlinedButton(onClick = { creating = true }, enabled = !busy) {
+                        Text(stringResource(R.string.new_schedule))
+                    }
+                }
+                if (loading) CircularProgressIndicator()
+                if (error != null) ApiErrorText(error!!)
+                if (feedback.isNotEmpty()) Text(feedback)
+                result?.let { data ->
+                    if (data.schedules.isEmpty()) Text(stringResource(R.string.empty_schedules))
+                    if (data.lastPage > 1) {
+                        Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                            OutlinedButton(onClick = { page-- }, enabled = page > 1) {
+                                Text(stringResource(R.string.previous))
+                            }
+                            Text(
+                                stringResource(R.string.page, data.currentPage.toString(), data.lastPage.toString()),
+                                Modifier.padding(top = 12.dp)
+                            )
+                            OutlinedButton(onClick = { page++ }, enabled = data.hasNext) {
+                                Text(stringResource(R.string.next))
+                            }
+                        }
+                    }
+                    LazyColumn(
+                        Modifier.heightIn(max = 320.dp),
+                        verticalArrangement = Arrangement.spacedBy(8.dp)
+                    ) {
+                        items(data.schedules, key = { it.id }) { schedule ->
+                            Card(modifier = Modifier.fillMaxWidth()) {
+                                Column(Modifier.padding(12.dp), verticalArrangement = Arrangement.spacedBy(6.dp)) {
+                                    Text(schedule.cronExpression, style = MaterialTheme.typography.titleSmall)
+                                    Text(stringResource(R.string.schedule_servers_count, schedule.servers.size))
+                                    Text(
+                                        stringResource(
+                                            if (schedule.isPaused) R.string.schedule_paused else R.string.schedule_active
+                                        )
+                                    )
+                                    if (schedule.nextRunAt.isNotBlank()) {
+                                        Text(stringResource(R.string.schedule_next_run, schedule.nextRunAt))
+                                    }
+                                    if (schedule.lastRunAt.isNotBlank()) {
+                                        Text(stringResource(R.string.schedule_last_run, schedule.lastRunAt))
+                                    }
+                                    Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                                        OutlinedButton(
+                                            onClick = {
+                                                busy = true
+                                                error = null
+                                                feedback = ""
+                                                scope.launch {
+                                                    try {
+                                                        val toggled = withContext(Dispatchers.IO) {
+                                                            PloiApi.toggleScriptSchedule(token, script.id, schedule.id)
+                                                        }
+                                                        feedback = if (toggled.isPaused) pausedMessage else resumedMessage
+                                                        refresh++
+                                                    } catch (cancelled: CancellationException) {
+                                                        throw cancelled
+                                                    } catch (failure: Exception) {
+                                                        error = failure
+                                                    } finally {
+                                                        busy = false
+                                                    }
+                                                }
+                                            },
+                                            enabled = !busy
+                                        ) {
+                                            Text(
+                                                stringResource(
+                                                    if (schedule.isPaused) R.string.resume_schedule
+                                                    else R.string.pause_schedule
+                                                )
+                                            )
+                                        }
+                                        OutlinedButton(onClick = { editing = schedule }, enabled = !busy) {
+                                            Text(stringResource(R.string.edit_site))
+                                        }
+                                        OutlinedButton(onClick = { confirmDelete = schedule }, enabled = !busy) {
+                                            Text(
+                                                stringResource(R.string.delete_schedule),
+                                                color = MaterialTheme.colorScheme.error
+                                            )
+                                        }
+                                    }
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+        },
+        confirmButton = {
+            OutlinedButton(onClick = onDismiss) { Text(stringResource(R.string.close)) }
+        }
+    )
+
+    if (creating) {
+        ScheduleFormDialog(
+            token = token,
+            busy = busy,
+            title = stringResource(R.string.new_schedule),
+            submitLabel = stringResource(R.string.create_schedule_submit),
+            initial = null,
+            build = { cron, servers -> CreateScriptScheduleRequest(cronExpression = cron, servers = servers) },
+            onSubmit = { request ->
+                creating = false
+                runAction(createdMessage) { PloiApi.createScriptSchedule(token, script.id, request) }
+            },
+            onDismiss = { creating = false }
+        )
+    }
+    editing?.let { schedule ->
+        ScheduleFormDialog(
+            token = token,
+            busy = busy,
+            title = stringResource(R.string.edit_schedule_title),
+            submitLabel = stringResource(R.string.edit_site),
+            initial = schedule,
+            build = { cron, servers -> UpdateScriptScheduleRequest(cronExpression = cron, servers = servers) },
+            onSubmit = { request ->
+                editing = null
+                runAction(updatedMessage) {
+                    PloiApi.updateScriptSchedule(token, script.id, schedule.id, request)
+                }
+            },
+            onDismiss = { editing = null }
+        )
+    }
+    confirmDelete?.let { schedule ->
+        SensitiveConfirmDialog(
+            lock = lock,
+            activity = activity,
+            message = stringResource(R.string.confirm_delete_schedule, schedule.cronExpression),
+            confirmLabel = R.string.delete_schedule,
+            onConfirmed = {
+                confirmDelete = null
+                runAction(deletedMessage) { PloiApi.deleteScriptSchedule(token, script.id, schedule.id) }
+            },
+            onDismiss = { confirmDelete = null }
+        )
+    }
+}
+
+/** Shared create/edit schedule form: cron expression + documented server ID selection. */
+@Composable
+private fun <T> ScheduleFormDialog(
+    token: String,
+    busy: Boolean,
+    title: String,
+    submitLabel: String,
+    initial: ScriptSchedule?,
+    build: (cron: String, servers: List<Long>) -> T,
+    onSubmit: (T) -> Unit,
+    onDismiss: () -> Unit
+) {
+    var cron by remember { mutableStateOf(initial?.cronExpression.orEmpty()) }
+    var selected by remember { mutableStateOf(initial?.servers?.toSet() ?: emptySet()) }
+    var invalid by remember { mutableStateOf(false) }
+    AlertDialog(
+        onDismissRequest = onDismiss,
+        title = { Text(title) },
+        text = {
+            Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
+                OutlinedTextField(
+                    value = cron, onValueChange = { cron = it },
+                    label = { Text(stringResource(R.string.schedule_cron_label)) },
+                    singleLine = true, modifier = Modifier.fillMaxWidth()
+                )
+                Text(stringResource(R.string.schedule_servers_label))
+                ServerMultiSelect(token, selected) { selected = it }
+                if (invalid) {
+                    Text(stringResource(R.string.invalid_form), color = MaterialTheme.colorScheme.error)
+                }
+            }
+        },
+        confirmButton = {
+            Button(
+                onClick = {
+                    val request = try {
+                        build(cron.trim(), selected.toList())
+                    } catch (invalidRequest: IllegalArgumentException) {
+                        null
+                    }
+                    if (request == null) {
+                        invalid = true
+                    } else {
+                        onSubmit(request)
+                    }
+                },
+                enabled = !busy && cron.isNotBlank() && selected.isNotEmpty()
+            ) { Text(submitLabel) }
         },
         dismissButton = {
             OutlinedButton(onClick = onDismiss) { Text(stringResource(R.string.cancel)) }

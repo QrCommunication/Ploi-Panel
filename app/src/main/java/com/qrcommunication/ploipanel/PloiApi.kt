@@ -241,6 +241,25 @@ internal data class ScriptExecution(
     val createdAt: String, val startedAt: String, val finishedAt: String
 )
 
+/**
+ * Cron schedule of the script-schedules domain: the documented shape of
+ * GET/POST/PATCH /api/scripts/{script}/schedules responses is id, script_id,
+ * cron_expression, servers (array of server IDs), is_paused, next_run_at,
+ * last_run_at, created_at and updated_at. next_run_at and last_run_at are
+ * documented nullable (null while paused or before the first run).
+ * Every route of this domain requires the Pro plan or higher.
+ */
+internal data class ScriptSchedule(
+    val id: Long, val scriptId: Long, val cronExpression: String, val servers: List<Long>,
+    val isPaused: Boolean, val nextRunAt: String, val lastRunAt: String,
+    val createdAt: String, val updatedAt: String
+)
+internal data class ScriptSchedulePage(
+    val schedules: List<ScriptSchedule>, val currentPage: Int, val lastPage: Int
+) {
+    val hasNext: Boolean get() = currentPage < lastPage
+}
+
 /** Documented value sets for server creation (developers.ploi.io/servers/create-server). */
 internal val SERVER_TYPES = setOf("server", "load-balancer", "database-server", "redis-server")
 internal val CUSTOM_SERVER_TYPES = SERVER_TYPES + "storage-server"
@@ -898,6 +917,67 @@ internal data class UpdateScriptRequest(
         if (label.isNotBlank()) put("label", label)
         if (user.isNotBlank()) put("user", user)
         if (content.isNotBlank()) put("content", content)
+    }.toString()
+}
+
+/**
+ * Client-side guard for the documented "standard 5-field cron expression" of the
+ * script-schedules domain: exactly five whitespace-separated fields, each made of
+ * the characters a cron field may carry (digits, names, `*`, `,`, `-`, `/`).
+ * The Ploi server remains the authoritative validator.
+ */
+private val CRON_FIELD_PATTERN = Regex("[A-Za-z0-9*,/\\-]+")
+
+internal fun validateCronExpression(expression: String): String {
+    val fields = expression.trim().split(Regex("\\s+"))
+    require(fields.size == 5 && fields.all { it.isNotBlank() && it.matches(CRON_FIELD_PATTERN) }) {
+        "Cron expression must have exactly 5 standard fields"
+    }
+    return expression
+}
+
+internal fun validateScheduleServers(servers: List<Long>): List<Long> {
+    require(servers.isNotEmpty() && servers.all { it > 0 }) { "At least one valid server ID is required" }
+    return servers
+}
+
+/**
+ * Validated payload for POST /api/scripts/{script}/schedules: cron_expression and
+ * servers are the two documented required attributes; every server must belong to
+ * the current team (enforced server-side). Requires the Pro plan or higher.
+ */
+internal data class CreateScriptScheduleRequest(
+    val cronExpression: String,
+    val servers: List<Long>
+) {
+    init {
+        validateCronExpression(cronExpression)
+        validateScheduleServers(servers)
+    }
+
+    fun toJson(): String = JSONObject().apply {
+        put("cron_expression", cronExpression)
+        put("servers", JSONArray(servers))
+    }.toString()
+}
+
+/**
+ * Validated payload for PATCH /api/scripts/{script}/schedules/{schedule}: the
+ * documentation states cron_expression and servers are both required — this
+ * endpoint replaces the values rather than merging them.
+ */
+internal data class UpdateScriptScheduleRequest(
+    val cronExpression: String,
+    val servers: List<Long>
+) {
+    init {
+        validateCronExpression(cronExpression)
+        validateScheduleServers(servers)
+    }
+
+    fun toJson(): String = JSONObject().apply {
+        put("cron_expression", cronExpression)
+        put("servers", JSONArray(servers))
     }.toString()
 }
 
@@ -2081,6 +2161,76 @@ internal object PloiApi {
         return parseOrThrow {
             parseScriptExecution(get("/servers/${validateResourceId(serverId)}/scripts/run/$executionId", token))
         }
+    }
+
+    // ---- Script schedules domain (Pro plan or higher) ----
+
+    private fun schedulesPath(scriptId: Long): String = "/scripts/${validateResourceId(scriptId)}/schedules"
+
+    private fun schedulePath(scriptId: Long, scheduleId: Long): String =
+        "${schedulesPath(scriptId)}/${validateResourceId(scheduleId)}"
+
+    private fun parseScheduleEntry(item: JSONObject): ScriptSchedule {
+        val servers = item.getJSONArray("servers")
+        return ScriptSchedule(
+            id = item.getLong("id"),
+            scriptId = item.getLong("script_id"),
+            cronExpression = item.getString("cron_expression"),
+            servers = (0 until servers.length()).map { servers.getLong(it) },
+            isPaused = item.getBoolean("is_paused"),
+            nextRunAt = nullableString(item, "next_run_at"),
+            lastRunAt = nullableString(item, "last_run_at"),
+            createdAt = item.optString("created_at"),
+            updatedAt = item.optString("updated_at")
+        )
+    }
+
+    fun parseScriptSchedules(json: String): ScriptSchedulePage {
+        val root = JSONObject(json)
+        val data = root.getJSONArray("data")
+        val (page, lastPage) = pageMeta(root)
+        return ScriptSchedulePage(
+            (0 until data.length()).map { parseScheduleEntry(data.getJSONObject(it)) }, page, lastPage
+        )
+    }
+
+    fun parseScriptSchedule(json: String): ScriptSchedule =
+        parseScheduleEntry(JSONObject(json).getJSONObject("data"))
+
+    /** GET /api/scripts/{script}/schedules: paginated list of a script's cron schedules. */
+    fun scriptSchedules(token: String, scriptId: Long, page: Int = 1, perPage: Int = 15): ScriptSchedulePage {
+        require(page >= 1) { "Page must be positive" }
+        return parseOrThrow {
+            parseScriptSchedules(get("${schedulesPath(scriptId)}?page=$page&per_page=${validatePageSize(perPage)}", token))
+        }
+    }
+
+    /** GET /api/scripts/{script}/schedules/{schedule}. */
+    fun scriptSchedule(token: String, scriptId: Long, scheduleId: Long): ScriptSchedule = parseOrThrow {
+        parseScriptSchedule(get(schedulePath(scriptId, scheduleId), token))
+    }
+
+    /** POST /api/scripts/{script}/schedules: creates one cron schedule on the script. */
+    fun createScriptSchedule(token: String, scriptId: Long, request: CreateScriptScheduleRequest): ScriptSchedule =
+        parseOrThrow {
+            parseScriptSchedule(write("POST", schedulesPath(scriptId), token, request.toJson()))
+        }
+
+    /** PATCH /api/scripts/{script}/schedules/{schedule}: documented replace (not merge) semantics. */
+    fun updateScriptSchedule(
+        token: String, scriptId: Long, scheduleId: Long, request: UpdateScriptScheduleRequest
+    ): ScriptSchedule = parseOrThrow {
+        parseScriptSchedule(write("PATCH", schedulePath(scriptId, scheduleId), token, request.toJson()))
+    }
+
+    /** POST /api/scripts/{script}/schedules/{schedule}/toggle: flips the documented pause state. */
+    fun toggleScriptSchedule(token: String, scriptId: Long, scheduleId: Long): ScriptSchedule = parseOrThrow {
+        parseScriptSchedule(write("POST", "${schedulePath(scriptId, scheduleId)}/toggle", token, JSONObject().toString()))
+    }
+
+    /** DELETE /api/scripts/{script}/schedules/{schedule}: documented message may be null. */
+    fun deleteScriptSchedule(token: String, scriptId: Long, scheduleId: Long): String = parseOrThrow {
+        parseOptionalMessage(write("DELETE", schedulePath(scriptId, scheduleId), token, null))
     }
 
     fun parseProviders(json: String): ProviderPage {
