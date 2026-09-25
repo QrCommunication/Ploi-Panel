@@ -2109,7 +2109,7 @@
       "domain": "system-users",
       "title": "List system users",
       "operation": "List all system users",
-      "status": "not_implemented"
+      "status": "implemented_locally_unverified_live"
     },
     {
       "method": "POST",
@@ -2118,7 +2118,7 @@
       "domain": "system-users",
       "title": "Create system user",
       "operation": "Create a system user",
-      "status": "not_implemented"
+      "status": "implemented_locally_unverified_live"
     },
     {
       "method": "GET",
@@ -2127,7 +2127,7 @@
       "domain": "system-users",
       "title": "Get system user",
       "operation": "Get a system user",
-      "status": "not_implemented"
+      "status": "implemented_locally_unverified_live"
     },
     {
       "method": "DELETE",
@@ -2136,7 +2136,7 @@
       "domain": "system-users",
       "title": "Delete system user",
       "operation": "Delete a system user",
-      "status": "not_implemented"
+      "status": "implemented_locally_unverified_live"
     },
     {
       "method": "POST",

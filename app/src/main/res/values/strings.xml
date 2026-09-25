@@ -407,4 +407,19 @@
     <string name="delete_network_rule">Supprimer</string>
     <string name="confirm_delete_network_rule">Supprimer définitivement la règle de pare-feu « %1$s » ? Cette action est irréversible.</string>
     <string name="network_rule_deleted">Règle de pare-feu supprimée.</string>
+    <string name="system_users_tab">Utilisateurs</string>
+    <string name="empty_system_users">Aucun utilisateur système sur ce serveur.</string>
+    <string name="new_system_user">Nouvel utilisateur système</string>
+    <string name="system_user_name_label">Nom de l’utilisateur (un seul mot)</string>
+    <string name="system_user_sudo_label">Accès sudo</string>
+    <string name="system_user_receive_password_label">Recevoir le mot de passe sudo dans la réponse</string>
+    <string name="create_system_user_submit">Créer l’utilisateur</string>
+    <string name="system_user_created">Utilisateur système créé.</string>
+    <string name="system_user_root">Racine : %1$s</string>
+    <string name="system_user_created_at">Créé le : %1$s</string>
+    <string name="delete_system_user">Supprimer</string>
+    <string name="confirm_delete_system_user">Supprimer définitivement l’utilisateur système « %1$s » ? Cette action est irréversible.</string>
+    <string name="system_user_deleted">Utilisateur système supprimé.</string>
+    <string name="system_user_password_title">Mot de passe sudo de %1$s</string>
+    <string name="system_user_password_warning">Ce mot de passe n’est affiché qu’une seule fois et n’est pas conservé par l’application. Copiez-le maintenant.</string>
 </resources>

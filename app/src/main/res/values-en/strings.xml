@@ -407,4 +407,19 @@
     <string name="delete_network_rule">Delete</string>
     <string name="confirm_delete_network_rule">Permanently delete the firewall rule "%1$s"? This action cannot be undone.</string>
     <string name="network_rule_deleted">Firewall rule deleted.</string>
+    <string name="system_users_tab">Users</string>
+    <string name="empty_system_users">No system users on this server.</string>
+    <string name="new_system_user">New system user</string>
+    <string name="system_user_name_label">User name (single word)</string>
+    <string name="system_user_sudo_label">Sudo access</string>
+    <string name="system_user_receive_password_label">Receive the sudo password in the response</string>
+    <string name="create_system_user_submit">Create user</string>
+    <string name="system_user_created">System user created.</string>
+    <string name="system_user_root">Root: %1$s</string>
+    <string name="system_user_created_at">Created: %1$s</string>
+    <string name="delete_system_user">Delete</string>
+    <string name="confirm_delete_system_user">Permanently delete the system user "%1$s"? This action cannot be undone.</string>
+    <string name="system_user_deleted">System user deleted.</string>
+    <string name="system_user_password_title">Sudo password of %1$s</string>
+    <string name="system_user_password_warning">This password is shown only once and is not stored by the app. Copy it now.</string>
 </resources>

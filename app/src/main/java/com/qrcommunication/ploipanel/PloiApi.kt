@@ -202,6 +202,22 @@ internal data class NetworkRulePage(val rules: List<NetworkRule>, val currentPag
     val hasNext: Boolean get() = currentPage < lastPage
 }
 
+/**
+ * System user of GET/POST /api/servers/{server}/system-users responses; the documented
+ * shape is exactly id, name, root (home directory) and created_at.
+ */
+internal data class SystemUser(val id: Long, val name: String, val root: String, val createdAt: String)
+internal data class SystemUserPage(val users: List<SystemUser>, val currentPage: Int, val lastPage: Int) {
+    val hasNext: Boolean get() = currentPage < lastPage
+}
+
+/**
+ * Result of POST /servers/{server}/system-users: the created user plus the sudo
+ * password, present only when `receive_password` was requested (documented optional
+ * top-level `password` field, never persisted by the app).
+ */
+internal data class CreatedSystemUser(val user: SystemUser, val password: String)
+
 /** Documented value sets for server creation (developers.ploi.io/servers/create-server). */
 internal val SERVER_TYPES = setOf("server", "load-balancer", "database-server", "redis-server")
 internal val CUSTOM_SERVER_TYPES = SERVER_TYPES + "storage-server"
@@ -250,6 +266,12 @@ internal val NETWORK_RULE_PROTOCOLS = setOf("tcp", "udp")
 internal val NETWORK_RULE_TYPES = setOf("allow", "deny")
 internal const val NETWORK_RULE_IP_MAX_COUNT = 20
 private val NETWORK_RULE_PORT_PATTERN = Regex("""\d{1,5}(:\d{1,5})?""")
+/**
+ * System user creation: the documentation only requires a `name` string without a
+ * stated limit; whitespace is rejected client-side because a Linux account name
+ * cannot contain any. Optional flags: `sudo`, `receive_password` (default false).
+ */
+private val SYSTEM_USER_NAME_PATTERN = Regex("""\S+""")
 /** Documented shape of the optional next_backup_at schedule (`2025-01-16 03:00:00`). */
 private val NEXT_BACKUP_AT_PATTERN = Regex("""\d{4}-\d{2}-\d{2} \d{2}:\d{2}(:\d{2})?""")
 
@@ -784,6 +806,29 @@ private fun isValidNetworkRulePort(port: String): Boolean {
     val bounds = port.split(":").map { it.toInt() }
     if (bounds.any { it !in 1..65_535 }) return false
     return bounds.size == 1 || bounds[0] <= bounds[1]
+}
+
+/**
+ * Validated payload for POST /api/servers/{server}/system-users: `name` is the only
+ * documented required attribute; `sudo` grants sudo access and `receive_password`
+ * (documented default false) asks the API to return the sudo password in the response.
+ */
+internal data class CreateSystemUserRequest(
+    val name: String,
+    val sudo: Boolean = false,
+    val receivePassword: Boolean = false
+) {
+    init {
+        require(name.isNotBlank() && SYSTEM_USER_NAME_PATTERN.matches(name)) {
+            "System user name must be a single word without whitespace"
+        }
+    }
+
+    fun toJson(): String = JSONObject().apply {
+        put("name", name)
+        put("sudo", sudo)
+        if (receivePassword) put("receive_password", true)
+    }.toString()
 }
 
 internal class PloiHttpException(val status: Int, val retryAfterSeconds: String? = null) : Exception("Ploi HTTP $status")
@@ -1796,6 +1841,66 @@ internal object PloiApi {
     /** DELETE /servers/{server}/network-rules/{id}: documented response body is empty, nothing is parsed. */
     fun deleteNetworkRule(token: String, serverId: Long, ruleId: Long) {
         write("DELETE", networkRulePath(serverId, ruleId), token, null)
+    }
+
+    // ---- System users domain (Linux accounts of a server) ----
+
+    private fun systemUsersPath(serverId: Long): String = "/servers/${validateResourceId(serverId)}/system-users"
+
+    private fun systemUserPath(serverId: Long, userId: Long): String =
+        "${systemUsersPath(serverId)}/${validateResourceId(userId)}"
+
+    private fun parseSystemUserEntry(item: JSONObject) = SystemUser(
+        id = item.getLong("id"),
+        name = item.getString("name"),
+        root = item.optString("root"),
+        createdAt = item.optString("created_at")
+    )
+
+    fun parseSystemUsers(json: String): SystemUserPage {
+        val root = JSONObject(json)
+        val data = root.getJSONArray("data")
+        val (page, lastPage) = pageMeta(root)
+        return SystemUserPage(
+            (0 until data.length()).map { parseSystemUserEntry(data.getJSONObject(it)) }, page, lastPage
+        )
+    }
+
+    fun parseSystemUser(json: String): SystemUser = parseSystemUserEntry(JSONObject(json).getJSONObject("data"))
+
+    /**
+     * The documented create response carries the created user in `data`, plus a
+     * top-level `password` string when `receive_password` was set to true.
+     */
+    fun parseSystemUserCreateResponse(json: String): CreatedSystemUser {
+        val root = JSONObject(json)
+        return CreatedSystemUser(
+            user = parseSystemUserEntry(root.getJSONObject("data")),
+            password = root.optString("password")
+        )
+    }
+
+    /** GET /servers/{server}/system-users: paginated list of system users. */
+    fun systemUsers(token: String, serverId: Long, page: Int = 1, perPage: Int = 15): SystemUserPage {
+        require(page >= 1) { "Page must be positive" }
+        return parseOrThrow {
+            parseSystemUsers(get("${systemUsersPath(serverId)}?page=$page&per_page=${validatePageSize(perPage)}", token))
+        }
+    }
+
+    fun systemUser(token: String, serverId: Long, userId: Long): SystemUser = parseOrThrow {
+        parseSystemUser(get(systemUserPath(serverId, userId), token))
+    }
+
+    /** POST /servers/{server}/system-users: creates one Linux account on the server. */
+    fun createSystemUser(token: String, serverId: Long, request: CreateSystemUserRequest): CreatedSystemUser =
+        parseOrThrow {
+            parseSystemUserCreateResponse(write("POST", systemUsersPath(serverId), token, request.toJson()))
+        }
+
+    /** DELETE /servers/{server}/system-users/{id}: documented response body is empty, nothing is parsed. */
+    fun deleteSystemUser(token: String, serverId: Long, userId: Long) {
+        write("DELETE", systemUserPath(serverId, userId), token, null)
     }
 
     fun parseProviders(json: String): ProviderPage {

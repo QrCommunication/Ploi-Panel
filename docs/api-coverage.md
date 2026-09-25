@@ -2,7 +2,7 @@
 
 Extraction : 2026-09-24T18:31:36+00:00 ; source : [sitemap officiel](https://developers.ploi.io/sitemap.xml), puis en-têtes méthode/chemin des pages officielles. Base des requêtes : `https://ploi.io/api` (les chemins ci-dessous comprennent déjà `/api`).
 
-**231 opérations documentées**, 230 pages avec routes, 231 pages de référence API ; **137 non implémentées** (`not_implemented`), **94 implémentées et testées localement mais non vérifiées sur compte réel** (`implemented_locally_unverified_live`). Ce tableau inventorie la documentation, et ne constitue ni une preuve de disponibilité dans un compte donné, ni un contrat testé contre l’API. Le [JSON](api-coverage.json) conserve chaque entrée et la classification de toutes les URL du sitemap.
+**231 opérations documentées**, 230 pages avec routes, 231 pages de référence API ; **133 non implémentées** (`not_implemented`), **98 implémentées et testées localement mais non vérifiées sur compte réel** (`implemented_locally_unverified_live`). Ce tableau inventorie la documentation, et ne constitue ni une preuve de disponibilité dans un compte donné, ni un contrat testé contre l’API. Le [JSON](api-coverage.json) conserve chaque entrée et la classification de toutes les URL du sitemap.
 
 ## Périmètre et méthode
 
@@ -101,10 +101,10 @@ Extraction : 2026-09-24T18:31:36+00:00 ; source : [sitemap officiel](https://dev
 | `daemons` | `POST` | `/api/servers/{server}/daemons/{daemon}/restart` | [Restart a daemon](https://developers.ploi.io/daemons/restart-daemon) | `implemented_locally_unverified_live` |
 | `daemons` | `POST` | `/api/servers/{server}/daemons/{daemon}/toggle-pause` | [Toggle pause daemon](https://developers.ploi.io/daemons/pause-daemon) | `implemented_locally_unverified_live` |
 | `daemons` | `DELETE` | `/api/servers/{server}/daemons/{daemon}` | [Delete a daemon](https://developers.ploi.io/daemons/delete-daemon) | `implemented_locally_unverified_live` |
-| `system-users` | `GET` | `/api/servers/{server}/system-users` | [List all system users](https://developers.ploi.io/system-users/list-system-users) | `not_implemented` |
-| `system-users` | `POST` | `/api/servers/{server}/system-users` | [Create a system user](https://developers.ploi.io/system-users/create-system-user) | `not_implemented` |
-| `system-users` | `GET` | `/api/servers/{server}/system-users/{systemUser}` | [Get a system user](https://developers.ploi.io/system-users/get-system-user) | `not_implemented` |
-| `system-users` | `DELETE` | `/api/servers/{server}/system-users/{systemUser}` | [Delete a system user](https://developers.ploi.io/system-users/delete-system-user) | `not_implemented` |
+| `system-users` | `GET` | `/api/servers/{server}/system-users` | [List all system users](https://developers.ploi.io/system-users/list-system-users) | `implemented_locally_unverified_live` |
+| `system-users` | `POST` | `/api/servers/{server}/system-users` | [Create a system user](https://developers.ploi.io/system-users/create-system-user) | `implemented_locally_unverified_live` |
+| `system-users` | `GET` | `/api/servers/{server}/system-users/{systemUser}` | [Get a system user](https://developers.ploi.io/system-users/get-system-user) | `implemented_locally_unverified_live` |
+| `system-users` | `DELETE` | `/api/servers/{server}/system-users/{systemUser}` | [Delete a system user](https://developers.ploi.io/system-users/delete-system-user) | `implemented_locally_unverified_live` |
 | `services` | `POST` | `/api/servers/{server}/services/{service}/restart` | [Restart a service](https://developers.ploi.io/services/restart-service) | `not_implemented` |
 | `services` | `POST` | `/api/servers/{server}/services/{service}/reload` | [Reload a service](https://developers.ploi.io/services/reload-service) | `not_implemented` |
 | `services` | `POST` | `/api/servers/{server}/install/wp-cli` | [Install WordPress CLI](https://developers.ploi.io/services/install-wordpress-cli) | `not_implemented` |
