@@ -188,6 +188,20 @@ internal data class DaemonPage(val daemons: List<Daemon>, val currentPage: Int, 
     val hasNext: Boolean get() = currentPage < lastPage
 }
 
+/**
+ * Firewall rule of GET/POST /api/servers/{server}/network-rules responses. port is
+ * documented as a number but creation accepts ranges (`1000:2000`), so it is kept as
+ * text; from_ip_address is documented nullable and the protocol (`type`) is absent
+ * from the documented response, so it is parsed tolerantly.
+ */
+internal data class NetworkRule(
+    val id: Long, val name: String, val port: String, val protocol: String,
+    val ruleType: String, val fromIpAddress: String, val status: String, val createdAt: String
+)
+internal data class NetworkRulePage(val rules: List<NetworkRule>, val currentPage: Int, val lastPage: Int) {
+    val hasNext: Boolean get() = currentPage < lastPage
+}
+
 /** Documented value sets for server creation (developers.ploi.io/servers/create-server). */
 internal val SERVER_TYPES = setOf("server", "load-balancer", "database-server", "redis-server")
 internal val CUSTOM_SERVER_TYPES = SERVER_TYPES + "storage-server"
@@ -230,6 +244,12 @@ internal const val CRONTAB_COMMAND_MAX_LENGTH = 255
 internal const val CRONTAB_FREQUENCY_MAX_LENGTH = 50
 /** Documented maximum length for daemon creation (developers.ploi.io/daemons/create-daemon). */
 internal const val DAEMON_COMMAND_MAX_LENGTH = 150
+/** Documented constraints for network rule creation (developers.ploi.io/network-rules/create-network-rule). */
+internal const val NETWORK_RULE_NAME_MAX_LENGTH = 100
+internal val NETWORK_RULE_PROTOCOLS = setOf("tcp", "udp")
+internal val NETWORK_RULE_TYPES = setOf("allow", "deny")
+internal const val NETWORK_RULE_IP_MAX_COUNT = 20
+private val NETWORK_RULE_PORT_PATTERN = Regex("""\d{1,5}(:\d{1,5})?""")
 /** Documented shape of the optional next_backup_at schedule (`2025-01-16 03:00:00`). */
 private val NEXT_BACKUP_AT_PATTERN = Regex("""\d{4}-\d{2}-\d{2} \d{2}:\d{2}(:\d{2})?""")
 
@@ -712,6 +732,58 @@ internal data class CreateDaemonRequest(
         put("processes", processes)
         if (directory.isNotBlank()) put("directory", directory)
     }.toString()
+}
+
+/**
+ * Validated payload for POST /api/servers/{server}/network-rules: name (max 100),
+ * port (1-65535 or a range like `1000:2000`), type (`tcp`/`udp`) and rule_type
+ * (`allow`/`deny`) are documented as required; from_ip_address is optional,
+ * comma-separated (documented maximum 20 addresses — one rule is created per address
+ * and the response then carries an array).
+ */
+internal data class CreateNetworkRuleRequest(
+    val name: String,
+    val port: String,
+    val protocol: String,
+    val ruleType: String,
+    val fromIpAddress: String = ""
+) {
+    init {
+        require(name.isNotBlank() && name.length <= NETWORK_RULE_NAME_MAX_LENGTH) {
+            "Rule name must be 1 to $NETWORK_RULE_NAME_MAX_LENGTH characters"
+        }
+        require(isValidNetworkRulePort(port)) {
+            "Port must be 1-65535 or a range like 1000:2000"
+        }
+        require(protocol in NETWORK_RULE_PROTOCOLS) {
+            "Protocol must be one of ${NETWORK_RULE_PROTOCOLS.joinToString()}"
+        }
+        require(ruleType in NETWORK_RULE_TYPES) {
+            "Rule type must be one of ${NETWORK_RULE_TYPES.joinToString()}"
+        }
+        if (fromIpAddress.isNotEmpty()) {
+            val addresses = fromIpAddress.split(",")
+            require(addresses.size <= NETWORK_RULE_IP_MAX_COUNT && addresses.all { it.isNotBlank() }) {
+                "Up to $NETWORK_RULE_IP_MAX_COUNT comma-separated IP addresses are allowed"
+            }
+        }
+    }
+
+    fun toJson(): String = JSONObject().apply {
+        put("name", name)
+        put("port", port)
+        put("type", protocol)
+        put("rule_type", ruleType)
+        if (fromIpAddress.isNotBlank()) put("from_ip_address", fromIpAddress)
+    }.toString()
+}
+
+/** Documented port shape: a single 1-65535 port or an ascending `from:to` range. */
+private fun isValidNetworkRulePort(port: String): Boolean {
+    if (!NETWORK_RULE_PORT_PATTERN.matches(port)) return false
+    val bounds = port.split(":").map { it.toInt() }
+    if (bounds.any { it !in 1..65_535 }) return false
+    return bounds.size == 1 || bounds[0] <= bounds[1]
 }
 
 internal class PloiHttpException(val status: Int, val retryAfterSeconds: String? = null) : Exception("Ploi HTTP $status")
@@ -1662,6 +1734,68 @@ internal object PloiApi {
     /** DELETE /servers/{server}/daemons/{id}: documented response body is empty, nothing is parsed. */
     fun deleteDaemon(token: String, serverId: Long, daemonId: Long) {
         write("DELETE", daemonPath(serverId, daemonId), token, null)
+    }
+
+    // ---- Network rules domain (firewall rules of a server) ----
+
+    private fun networkRulesPath(serverId: Long): String = "/servers/${validateResourceId(serverId)}/network-rules"
+
+    private fun networkRulePath(serverId: Long, ruleId: Long): String =
+        "${networkRulesPath(serverId)}/${validateResourceId(ruleId)}"
+
+    private fun parseNetworkRuleEntry(item: JSONObject) = NetworkRule(
+        id = item.getLong("id"),
+        name = item.getString("name"),
+        port = item.opt("port")?.toString().orEmpty(),
+        protocol = item.optString("type"),
+        ruleType = item.optString("rule_type"),
+        fromIpAddress = nullableString(item, "from_ip_address"),
+        status = item.optString("status"),
+        createdAt = item.optString("created_at")
+    )
+
+    fun parseNetworkRules(json: String): NetworkRulePage {
+        val root = JSONObject(json)
+        val data = root.getJSONArray("data")
+        val (page, lastPage) = pageMeta(root)
+        return NetworkRulePage(
+            (0 until data.length()).map { parseNetworkRuleEntry(data.getJSONObject(it)) }, page, lastPage
+        )
+    }
+
+    fun parseNetworkRule(json: String): NetworkRule = parseNetworkRuleEntry(JSONObject(json).getJSONObject("data"))
+
+    /**
+     * The documented create response carries a single rule object, or an array of the
+     * created rules when several comma-separated IP addresses were passed.
+     */
+    fun parseNetworkRuleCreateResponse(json: String): List<NetworkRule> = when (val data = JSONObject(json).get("data")) {
+        is JSONArray -> (0 until data.length()).map { parseNetworkRuleEntry(data.getJSONObject(it)) }
+        is JSONObject -> listOf(parseNetworkRuleEntry(data))
+        else -> throw org.json.JSONException("Unexpected network rule create payload")
+    }
+
+    /** GET /servers/{server}/network-rules: paginated list of firewall rules. */
+    fun networkRules(token: String, serverId: Long, page: Int = 1, perPage: Int = 15): NetworkRulePage {
+        require(page >= 1) { "Page must be positive" }
+        return parseOrThrow {
+            parseNetworkRules(get("${networkRulesPath(serverId)}?page=$page&per_page=${validatePageSize(perPage)}", token))
+        }
+    }
+
+    fun networkRule(token: String, serverId: Long, ruleId: Long): NetworkRule = parseOrThrow {
+        parseNetworkRule(get(networkRulePath(serverId, ruleId), token))
+    }
+
+    /** POST /servers/{server}/network-rules: one rule per comma-separated IP address. */
+    fun createNetworkRule(token: String, serverId: Long, request: CreateNetworkRuleRequest): List<NetworkRule> =
+        parseOrThrow {
+            parseNetworkRuleCreateResponse(write("POST", networkRulesPath(serverId), token, request.toJson()))
+        }
+
+    /** DELETE /servers/{server}/network-rules/{id}: documented response body is empty, nothing is parsed. */
+    fun deleteNetworkRule(token: String, serverId: Long, ruleId: Long) {
+        write("DELETE", networkRulePath(serverId, ruleId), token, null)
     }
 
     fun parseProviders(json: String): ProviderPage {

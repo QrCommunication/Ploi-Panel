@@ -390,4 +390,21 @@
     <string name="delete_daemon">Delete</string>
     <string name="confirm_delete_daemon">Permanently delete the daemon "%1$s"? This action cannot be undone.</string>
     <string name="daemon_deleted">Daemon deleted.</string>
+    <string name="network_rules_tab">Firewall</string>
+    <string name="empty_network_rules">No firewall rules on this server.</string>
+    <string name="new_network_rule">New firewall rule</string>
+    <string name="network_rule_name_label">Rule name (max 100 characters)</string>
+    <string name="network_rule_port_label">Port (1–65535) or range (e.g. 1000:2000)</string>
+    <string name="network_rule_protocol_label">Protocol</string>
+    <string name="network_rule_type_label">Rule action</string>
+    <string name="network_rule_from_ip_label">Source IP addresses (optional, comma-separated, max 20)</string>
+    <string name="create_network_rule_submit">Create rule</string>
+    <string name="network_rule_created">Firewall rule created.</string>
+    <string name="network_rule_port">Port: %1$s (%2$s)</string>
+    <string name="network_rule_type">Action: %1$s</string>
+    <string name="network_rule_from_ip">From: %1$s</string>
+    <string name="network_rule_status">Status: %1$s</string>
+    <string name="delete_network_rule">Delete</string>
+    <string name="confirm_delete_network_rule">Permanently delete the firewall rule "%1$s"? This action cannot be undone.</string>
+    <string name="network_rule_deleted">Firewall rule deleted.</string>
 </resources>

@@ -2019,7 +2019,7 @@
       "domain": "network-rules",
       "title": "List network rules",
       "operation": "List all network rules",
-      "status": "not_implemented"
+      "status": "implemented_locally_unverified_live"
     },
     {
       "method": "POST",
@@ -2028,7 +2028,7 @@
       "domain": "network-rules",
       "title": "Create network rule",
       "operation": "Create a network rule",
-      "status": "not_implemented"
+      "status": "implemented_locally_unverified_live"
     },
     {
       "method": "GET",
@@ -2037,7 +2037,7 @@
       "domain": "network-rules",
       "title": "Get network rule",
       "operation": "Get a network rule",
-      "status": "not_implemented"
+      "status": "implemented_locally_unverified_live"
     },
     {
       "method": "DELETE",
@@ -2046,7 +2046,7 @@
       "domain": "network-rules",
       "title": "Delete network rule",
       "operation": "Delete a network rule",
-      "status": "not_implemented"
+      "status": "implemented_locally_unverified_live"
     },
     {
       "method": "GET",
