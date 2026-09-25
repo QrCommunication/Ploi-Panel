@@ -1479,7 +1479,7 @@
       "domain": "scripts",
       "title": "List scripts",
       "operation": "List all scripts",
-      "status": "not_implemented"
+      "status": "implemented_locally_unverified_live"
     },
     {
       "method": "POST",
@@ -1488,7 +1488,7 @@
       "domain": "scripts",
       "title": "Create script",
       "operation": "Create a script",
-      "status": "not_implemented"
+      "status": "implemented_locally_unverified_live"
     },
     {
       "method": "GET",
@@ -1497,7 +1497,7 @@
       "domain": "scripts",
       "title": "Get script",
       "operation": "Get a script",
-      "status": "not_implemented"
+      "status": "implemented_locally_unverified_live"
     },
     {
       "method": "PATCH",
@@ -1506,7 +1506,7 @@
       "domain": "scripts",
       "title": "Update script",
       "operation": "Update a script",
-      "status": "not_implemented"
+      "status": "implemented_locally_unverified_live"
     },
     {
       "method": "DELETE",
@@ -1515,7 +1515,7 @@
       "domain": "scripts",
       "title": "Delete script",
       "operation": "Delete a script",
-      "status": "not_implemented"
+      "status": "implemented_locally_unverified_live"
     },
     {
       "method": "POST",
@@ -1524,7 +1524,7 @@
       "domain": "scripts",
       "title": "Run script",
       "operation": "Run a script",
-      "status": "not_implemented"
+      "status": "implemented_locally_unverified_live"
     },
     {
       "method": "POST",
@@ -1533,7 +1533,7 @@
       "domain": "scripts",
       "title": "Run one-off script",
       "operation": "Run a one-off script",
-      "status": "not_implemented"
+      "status": "implemented_locally_unverified_live"
     },
     {
       "method": "GET",
@@ -1542,7 +1542,7 @@
       "domain": "scripts",
       "title": "Get script execution",
       "operation": "Get a script execution",
-      "status": "not_implemented"
+      "status": "implemented_locally_unverified_live"
     },
     {
       "method": "GET",

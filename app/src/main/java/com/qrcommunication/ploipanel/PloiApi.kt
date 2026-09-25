@@ -218,6 +218,29 @@ internal data class SystemUserPage(val users: List<SystemUser>, val currentPage:
  */
 internal data class CreatedSystemUser(val user: SystemUser, val password: String)
 
+/**
+ * Reusable script of the GET/POST /api/scripts responses; the documented shape is
+ * exactly id, user, label, content and created_at.
+ */
+internal data class PloiScript(
+    val id: Long, val user: String, val label: String, val content: String, val createdAt: String
+)
+internal data class ScriptPage(val scripts: List<PloiScript>, val currentPage: Int, val lastPage: Int) {
+    val hasNext: Boolean get() = currentPage < lastPage
+}
+/** Server entry of the documented POST /api/scripts/{script}/run response (data.running_on_servers). */
+internal data class ScriptRunServer(val id: Long, val name: String, val ip: String)
+/**
+ * One-off script execution of POST /servers/{server}/scripts/run and
+ * GET /servers/{server}/scripts/run/{execution}; the id is a UUID string and
+ * exit_code, output, started_at and finished_at are documented nullable.
+ */
+internal data class ScriptExecution(
+    val id: String, val serverId: Long, val user: String, val content: String,
+    val status: String, val exitCode: Int?, val output: String,
+    val createdAt: String, val startedAt: String, val finishedAt: String
+)
+
 /** Documented value sets for server creation (developers.ploi.io/servers/create-server). */
 internal val SERVER_TYPES = setOf("server", "load-balancer", "database-server", "redis-server")
 internal val CUSTOM_SERVER_TYPES = SERVER_TYPES + "storage-server"
@@ -272,6 +295,8 @@ private val NETWORK_RULE_PORT_PATTERN = Regex("""\d{1,5}(:\d{1,5})?""")
  * cannot contain any. Optional flags: `sudo`, `receive_password` (default false).
  */
 private val SYSTEM_USER_NAME_PATTERN = Regex("""\S+""")
+/** Documented maximum content length for POST /servers/{server}/scripts/run (one-off script). */
+internal const val ONE_OFF_SCRIPT_MAX_LENGTH = 7_500
 /** Documented shape of the optional next_backup_at schedule (`2025-01-16 03:00:00`). */
 private val NEXT_BACKUP_AT_PATTERN = Regex("""\d{4}-\d{2}-\d{2} \d{2}:\d{2}(:\d{2})?""")
 
@@ -828,6 +853,51 @@ internal data class CreateSystemUserRequest(
         put("name", name)
         put("sudo", sudo)
         if (receivePassword) put("receive_password", true)
+    }.toString()
+}
+
+/**
+ * Validated payload for POST /api/scripts: label, user and content are the three
+ * documented required attributes (user may be 'ploi', 'root' or any system user
+ * that exists on the target servers).
+ */
+internal data class CreateScriptRequest(
+    val label: String,
+    val user: String,
+    val content: String
+) {
+    init {
+        require(label.isNotBlank()) { "Script label is required" }
+        require(user.isNotBlank()) { "Script user is required" }
+        require(content.isNotBlank()) { "Script content is required" }
+    }
+
+    fun toJson(): String = JSONObject().apply {
+        put("label", label)
+        put("user", user)
+        put("content", content)
+    }.toString()
+}
+
+/**
+ * Validated payload for PATCH /api/scripts/{script}: label, user and content are all
+ * documented optional; at least one must be provided for the call to be meaningful.
+ */
+internal data class UpdateScriptRequest(
+    val label: String = "",
+    val user: String = "",
+    val content: String = ""
+) {
+    init {
+        require(label.isNotBlank() || user.isNotBlank() || content.isNotBlank()) {
+            "At least one script attribute to update"
+        }
+    }
+
+    fun toJson(): String = JSONObject().apply {
+        if (label.isNotBlank()) put("label", label)
+        if (user.isNotBlank()) put("user", user)
+        if (content.isNotBlank()) put("content", content)
     }.toString()
 }
 
@@ -1901,6 +1971,116 @@ internal object PloiApi {
     /** DELETE /servers/{server}/system-users/{id}: documented response body is empty, nothing is parsed. */
     fun deleteSystemUser(token: String, serverId: Long, userId: Long) {
         write("DELETE", systemUserPath(serverId, userId), token, null)
+    }
+
+    // ---- Scripts domain (reusable account-level scripts + one-off server runs) ----
+
+    private fun scriptPath(scriptId: Long): String = "/scripts/${validateResourceId(scriptId)}"
+
+    private fun parseScriptEntry(item: JSONObject) = PloiScript(
+        id = item.getLong("id"),
+        user = item.getString("user"),
+        label = item.getString("label"),
+        content = item.getString("content"),
+        createdAt = item.optString("created_at")
+    )
+
+    fun parseScripts(json: String): ScriptPage {
+        val root = JSONObject(json)
+        val data = root.getJSONArray("data")
+        val (page, lastPage) = pageMeta(root)
+        return ScriptPage(
+            (0 until data.length()).map { parseScriptEntry(data.getJSONObject(it)) }, page, lastPage
+        )
+    }
+
+    fun parseScript(json: String): PloiScript = parseScriptEntry(JSONObject(json).getJSONObject("data"))
+
+    /** GET /api/scripts: paginated list of the account's reusable scripts. */
+    fun scripts(token: String, page: Int = 1, perPage: Int = 15): ScriptPage {
+        require(page >= 1) { "Page must be positive" }
+        return parseOrThrow {
+            parseScripts(get("/scripts?page=$page&per_page=${validatePageSize(perPage)}", token))
+        }
+    }
+
+    fun script(token: String, scriptId: Long): PloiScript = parseOrThrow {
+        parseScript(get(scriptPath(scriptId), token))
+    }
+
+    /** POST /api/scripts: creates one reusable script in the account. */
+    fun createScript(token: String, request: CreateScriptRequest): PloiScript = parseOrThrow {
+        parseScript(write("POST", "/scripts", token, request.toJson()))
+    }
+
+    fun updateScript(token: String, scriptId: Long, request: UpdateScriptRequest): PloiScript = parseOrThrow {
+        parseScript(write("PATCH", scriptPath(scriptId), token, request.toJson()))
+    }
+
+    /** DELETE /api/scripts/{script}: the documented response carries a message. */
+    fun deleteScript(token: String, scriptId: Long): String = parseOrThrow {
+        parseMessage(write("DELETE", scriptPath(scriptId), token, null))
+    }
+
+    /** Documented POST /api/scripts/{script}/run response: data.running_on_servers array. */
+    fun parseScriptRunResponse(json: String): List<ScriptRunServer> {
+        val servers = JSONObject(json).getJSONObject("data").getJSONArray("running_on_servers")
+        return (0 until servers.length()).map { index ->
+            servers.getJSONObject(index).let { item ->
+                ScriptRunServer(item.getLong("id"), item.getString("name"), item.optString("ip"))
+            }
+        }
+    }
+
+    /** POST /api/scripts/{script}/run: `servers` is the documented required array of server IDs. */
+    fun runScript(token: String, scriptId: Long, servers: List<Long>): List<ScriptRunServer> {
+        require(servers.isNotEmpty() && servers.all { it > 0 }) { "At least one valid server ID is required" }
+        val body = JSONObject().put("servers", JSONArray(servers)).toString()
+        return parseOrThrow {
+            parseScriptRunResponse(write("POST", "${scriptPath(scriptId)}/run", token, body))
+        }
+    }
+
+    private fun parseScriptExecutionEntry(item: JSONObject) = ScriptExecution(
+        id = item.getString("id"),
+        serverId = item.getLong("server_id"),
+        user = item.getString("user"),
+        content = item.getString("content"),
+        status = item.getString("status"),
+        exitCode = if (item.isNull("exit_code")) null else item.getInt("exit_code"),
+        output = nullableString(item, "output"),
+        createdAt = item.optString("created_at"),
+        startedAt = nullableString(item, "started_at"),
+        finishedAt = nullableString(item, "finished_at")
+    )
+
+    fun parseScriptExecution(json: String): ScriptExecution =
+        parseScriptExecutionEntry(JSONObject(json).getJSONObject("data"))
+
+    /**
+     * POST /servers/{server}/scripts/run: one-off run; content (max 7500 chars) is
+     * documented required, `user` is documented optional and defaults to 'ploi'.
+     */
+    fun runOneOffScript(token: String, serverId: Long, content: String, user: String = "ploi"): ScriptExecution {
+        require(content.isNotBlank() && content.length <= ONE_OFF_SCRIPT_MAX_LENGTH) {
+            "Script content must be 1 to $ONE_OFF_SCRIPT_MAX_LENGTH characters"
+        }
+        require(user.isNotBlank()) { "Script user is required" }
+        val body = JSONObject().apply {
+            put("content", content)
+            put("user", user)
+        }.toString()
+        return parseOrThrow {
+            parseScriptExecution(write("POST", "/servers/${validateResourceId(serverId)}/scripts/run", token, body))
+        }
+    }
+
+    /** GET /servers/{server}/scripts/run/{execution}: execution id is the documented UUID string. */
+    fun scriptExecution(token: String, serverId: Long, executionId: String): ScriptExecution {
+        require(executionId.isNotBlank()) { "Execution ID is required" }
+        return parseOrThrow {
+            parseScriptExecution(get("/servers/${validateResourceId(serverId)}/scripts/run/$executionId", token))
+        }
     }
 
     fun parseProviders(json: String): ProviderPage {

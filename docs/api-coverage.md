@@ -2,7 +2,7 @@
 
 Extraction : 2026-09-24T18:31:36+00:00 ; source : [sitemap officiel](https://developers.ploi.io/sitemap.xml), puis en-têtes méthode/chemin des pages officielles. Base des requêtes : `https://ploi.io/api` (les chemins ci-dessous comprennent déjà `/api`).
 
-**231 opérations documentées**, 230 pages avec routes, 231 pages de référence API ; **133 non implémentées** (`not_implemented`), **98 implémentées et testées localement mais non vérifiées sur compte réel** (`implemented_locally_unverified_live`). Ce tableau inventorie la documentation, et ne constitue ni une preuve de disponibilité dans un compte donné, ni un contrat testé contre l’API. Le [JSON](api-coverage.json) conserve chaque entrée et la classification de toutes les URL du sitemap.
+**231 opérations documentées**, 230 pages avec routes, 231 pages de référence API ; **125 non implémentées** (`not_implemented`), **106 implémentées et testées localement mais non vérifiées sur compte réel** (`implemented_locally_unverified_live`). Ce tableau inventorie la documentation, et ne constitue ni une preuve de disponibilité dans un compte donné, ni un contrat testé contre l’API. Le [JSON](api-coverage.json) conserve chaque entrée et la classification de toutes les URL du sitemap.
 
 ## Périmètre et méthode
 
@@ -31,14 +31,14 @@ Extraction : 2026-09-24T18:31:36+00:00 ; source : [sitemap officiel](https://dev
 | `user` | `GET` | `/api/user/source-control` | [Get all source control providers](https://developers.ploi.io/user/list-source-control-providers) | `implemented_locally_unverified_live` |
 | `user` | `GET` | `/api/user/source-control/{provider}` | [Get source control provider](https://developers.ploi.io/user/show-source-control-providers) | `implemented_locally_unverified_live` |
 | `user` | `GET` | `/api/user/source-control/{provider}/repositories` | [Get repositories](https://developers.ploi.io/user/repositories-for-source-control-providers) | `implemented_locally_unverified_live` |
-| `scripts` | `GET` | `/api/scripts` | [List all scripts](https://developers.ploi.io/scripts/list-scripts) | `not_implemented` |
-| `scripts` | `POST` | `/api/scripts` | [Create a script](https://developers.ploi.io/scripts/create-script) | `not_implemented` |
-| `scripts` | `GET` | `/api/scripts/{script}` | [Get a script](https://developers.ploi.io/scripts/get-script) | `not_implemented` |
-| `scripts` | `PATCH` | `/api/scripts/{script}` | [Update a script](https://developers.ploi.io/scripts/update-script) | `not_implemented` |
-| `scripts` | `DELETE` | `/api/scripts/{script}` | [Delete a script](https://developers.ploi.io/scripts/delete-script) | `not_implemented` |
-| `scripts` | `POST` | `/api/scripts/{script}/run` | [Run a script](https://developers.ploi.io/scripts/run-script) | `not_implemented` |
-| `scripts` | `POST` | `/api/servers/{server}/scripts/run` | [Run a one-off script](https://developers.ploi.io/scripts/run-one-off-script) | `not_implemented` |
-| `scripts` | `GET` | `/api/servers/{server}/scripts/run/{execution}` | [Get a script execution](https://developers.ploi.io/scripts/get-script-execution) | `not_implemented` |
+| `scripts` | `GET` | `/api/scripts` | [List all scripts](https://developers.ploi.io/scripts/list-scripts) | `implemented_locally_unverified_live` |
+| `scripts` | `POST` | `/api/scripts` | [Create a script](https://developers.ploi.io/scripts/create-script) | `implemented_locally_unverified_live` |
+| `scripts` | `GET` | `/api/scripts/{script}` | [Get a script](https://developers.ploi.io/scripts/get-script) | `implemented_locally_unverified_live` |
+| `scripts` | `PATCH` | `/api/scripts/{script}` | [Update a script](https://developers.ploi.io/scripts/update-script) | `implemented_locally_unverified_live` |
+| `scripts` | `DELETE` | `/api/scripts/{script}` | [Delete a script](https://developers.ploi.io/scripts/delete-script) | `implemented_locally_unverified_live` |
+| `scripts` | `POST` | `/api/scripts/{script}/run` | [Run a script](https://developers.ploi.io/scripts/run-script) | `implemented_locally_unverified_live` |
+| `scripts` | `POST` | `/api/servers/{server}/scripts/run` | [Run a one-off script](https://developers.ploi.io/scripts/run-one-off-script) | `implemented_locally_unverified_live` |
+| `scripts` | `GET` | `/api/servers/{server}/scripts/run/{execution}` | [Get a script execution](https://developers.ploi.io/scripts/get-script-execution) | `implemented_locally_unverified_live` |
 | `script-schedules` | `GET` | `/api/scripts/{script}/schedules` | [List all schedules](https://developers.ploi.io/script-schedules/list-schedules) | `not_implemented` |
 | `script-schedules` | `POST` | `/api/scripts/{script}/schedules` | [Create a schedule](https://developers.ploi.io/script-schedules/create-schedule) | `not_implemented` |
 | `script-schedules` | `GET` | `/api/scripts/{script}/schedules/{schedule}` | [Get a schedule](https://developers.ploi.io/script-schedules/get-schedule) | `not_implemented` |

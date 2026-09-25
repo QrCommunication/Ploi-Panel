@@ -56,6 +56,7 @@ internal fun ServerDetailScreen(
             OutlinedButton(onClick = { tab = 7 }, enabled = tab != 7) { Text(stringResource(R.string.daemons_tab)) }
             OutlinedButton(onClick = { tab = 8 }, enabled = tab != 8) { Text(stringResource(R.string.network_rules_tab)) }
             OutlinedButton(onClick = { tab = 9 }, enabled = tab != 9) { Text(stringResource(R.string.system_users_tab)) }
+            OutlinedButton(onClick = { tab = 10 }, enabled = tab != 10) { Text(stringResource(R.string.one_off_script_tab)) }
             OutlinedButton(onClick = { tab = 3 }, enabled = tab != 3) { Text(stringResource(R.string.infos)) }
             OutlinedButton(onClick = { tab = 4 }, enabled = tab != 4) { Text(stringResource(R.string.logs)) }
         }
@@ -68,6 +69,7 @@ internal fun ServerDetailScreen(
             7 -> DaemonsScreen(token, server.id, lock, activity)
             8 -> NetworkRulesScreen(token, server.id, lock, activity)
             9 -> SystemUsersScreen(token, server.id, lock, activity)
+            10 -> OneOffScriptScreen(token, server.id)
             3 -> ServerInfoTab(token, server, lock, activity, onChanged, onDeleted)
             else -> ServerLogsTab(token, server.id)
         }
