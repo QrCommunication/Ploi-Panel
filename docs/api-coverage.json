@@ -1785,7 +1785,7 @@
       "domain": "servers",
       "title": "Get server",
       "operation": "Get a server",
-      "status": "not_implemented"
+      "status": "implemented_locally_unverified_live"
     },
     {
       "method": "POST",
@@ -1794,7 +1794,7 @@
       "domain": "servers",
       "title": "Create server",
       "operation": "Create a server",
-      "status": "not_implemented"
+      "status": "implemented_locally_unverified_live"
     },
     {
       "method": "POST",
@@ -1803,7 +1803,7 @@
       "domain": "servers",
       "title": "Create custom server",
       "operation": "Create a custom server",
-      "status": "not_implemented"
+      "status": "implemented_locally_unverified_live"
     },
     {
       "method": "POST",
@@ -1812,7 +1812,7 @@
       "domain": "servers",
       "title": "Create custom server",
       "operation": "Start installation",
-      "status": "not_implemented"
+      "status": "implemented_locally_unverified_live"
     },
     {
       "method": "PATCH",
@@ -1821,7 +1821,7 @@
       "domain": "servers",
       "title": "Update server",
       "operation": "Update a server",
-      "status": "not_implemented"
+      "status": "implemented_locally_unverified_live"
     },
     {
       "method": "DELETE",
@@ -1830,7 +1830,7 @@
       "domain": "servers",
       "title": "Delete server",
       "operation": "Delete a server",
-      "status": "not_implemented"
+      "status": "implemented_locally_unverified_live"
     },
     {
       "method": "GET",
@@ -1839,7 +1839,7 @@
       "domain": "servers",
       "title": "Server logs",
       "operation": "Get server logs",
-      "status": "not_implemented"
+      "status": "implemented_locally_unverified_live"
     },
     {
       "method": "GET",
@@ -1848,7 +1848,7 @@
       "domain": "servers",
       "title": "Monitored servers",
       "operation": "List monitored servers",
-      "status": "not_implemented"
+      "status": "implemented_locally_unverified_live"
     },
     {
       "method": "GET",
@@ -1866,7 +1866,7 @@
       "domain": "servers",
       "title": "Restart server",
       "operation": "Restart a server",
-      "status": "not_implemented"
+      "status": "implemented_locally_unverified_live"
     },
     {
       "method": "GET",

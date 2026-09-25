@@ -2,7 +2,7 @@
 
 Extraction : 2026-09-24T18:31:36+00:00 ; source : [sitemap officiel](https://developers.ploi.io/sitemap.xml), puis en-têtes méthode/chemin des pages officielles. Base des requêtes : `https://ploi.io/api` (les chemins ci-dessous comprennent déjà `/api`).
 
-**231 opérations documentées**, 230 pages avec routes, 231 pages de référence API ; **218 non implémentées** (`not_implemented`), **13 implémentées et testées localement mais non vérifiées sur compte réel** (`implemented_locally_unverified_live`). Ce tableau inventorie la documentation, et ne constitue ni une preuve de disponibilité dans un compte donné, ni un contrat testé contre l’API. Le [JSON](api-coverage.json) conserve chaque entrée et la classification de toutes les URL du sitemap.
+**231 opérations documentées**, 230 pages avec routes, 231 pages de référence API ; **209 non implémentées** (`not_implemented`), **22 implémentées et testées localement mais non vérifiées sur compte réel** (`implemented_locally_unverified_live`). Ce tableau inventorie la documentation, et ne constitue ni une preuve de disponibilité dans un compte donné, ni un contrat testé contre l’API. Le [JSON](api-coverage.json) conserve chaque entrée et la classification de toutes les URL du sitemap.
 
 ## Périmètre et méthode
 
@@ -65,16 +65,16 @@ Extraction : 2026-09-24T18:31:36+00:00 ; source : [sitemap officiel](https://dev
 | `projects` | `PATCH` | `/api/projects/{project}` | [Update a project](https://developers.ploi.io/projects/update-project) | `not_implemented` |
 | `projects` | `DELETE` | `/api/projects/{project}` | [Delete a project](https://developers.ploi.io/projects/delete-project) | `not_implemented` |
 | `servers` | `GET` | `/api/servers` | [List all servers](https://developers.ploi.io/servers/list-servers) | `implemented_locally_unverified_live` |
-| `servers` | `GET` | `/api/servers/{id}` | [Get a server](https://developers.ploi.io/servers/get-server) | `not_implemented` |
-| `servers` | `POST` | `/api/servers` | [Create a server](https://developers.ploi.io/servers/create-server) | `not_implemented` |
-| `servers` | `POST` | `/api/servers/custom` | [Create a custom server](https://developers.ploi.io/servers/create-custom-server) | `not_implemented` |
-| `servers` | `POST` | `/api/servers/custom/{id}/start` | [Start installation](https://developers.ploi.io/servers/create-custom-server) | `not_implemented` |
-| `servers` | `PATCH` | `/api/servers/{server}` | [Update a server](https://developers.ploi.io/servers/update-server) | `not_implemented` |
-| `servers` | `DELETE` | `/api/servers/{server}` | [Delete a server](https://developers.ploi.io/servers/delete-server) | `not_implemented` |
-| `servers` | `GET` | `/api/servers/{id}/logs` | [Get server logs](https://developers.ploi.io/servers/logs-server) | `not_implemented` |
-| `servers` | `GET` | `/api/servers/monitored` | [List monitored servers](https://developers.ploi.io/servers/monitored) | `not_implemented` |
+| `servers` | `GET` | `/api/servers/{id}` | [Get a server](https://developers.ploi.io/servers/get-server) | `implemented_locally_unverified_live` |
+| `servers` | `POST` | `/api/servers` | [Create a server](https://developers.ploi.io/servers/create-server) | `implemented_locally_unverified_live` |
+| `servers` | `POST` | `/api/servers/custom` | [Create a custom server](https://developers.ploi.io/servers/create-custom-server) | `implemented_locally_unverified_live` |
+| `servers` | `POST` | `/api/servers/custom/{id}/start` | [Start installation](https://developers.ploi.io/servers/create-custom-server) | `implemented_locally_unverified_live` |
+| `servers` | `PATCH` | `/api/servers/{server}` | [Update a server](https://developers.ploi.io/servers/update-server) | `implemented_locally_unverified_live` |
+| `servers` | `DELETE` | `/api/servers/{server}` | [Delete a server](https://developers.ploi.io/servers/delete-server) | `implemented_locally_unverified_live` |
+| `servers` | `GET` | `/api/servers/{id}/logs` | [Get server logs](https://developers.ploi.io/servers/logs-server) | `implemented_locally_unverified_live` |
+| `servers` | `GET` | `/api/servers/monitored` | [List monitored servers](https://developers.ploi.io/servers/monitored) | `implemented_locally_unverified_live` |
 | `servers` | `GET` | `/api/servers/{server}/monitor` | [Get monitoring data](https://developers.ploi.io/servers/monitoring) | `implemented_locally_unverified_live` |
-| `servers` | `POST` | `/api/servers/{id}/restart` | [Restart a server](https://developers.ploi.io/servers/restart-server) | `not_implemented` |
+| `servers` | `POST` | `/api/servers/{id}/restart` | [Restart a server](https://developers.ploi.io/servers/restart-server) | `implemented_locally_unverified_live` |
 | `databases` | `GET` | `/api/servers/{server}/databases` | [List all databases](https://developers.ploi.io/databases/list-databases) | `not_implemented` |
 | `databases` | `POST` | `/api/servers/{server}/databases` | [Create a database](https://developers.ploi.io/databases/create-database) | `not_implemented` |
 | `databases` | `GET` | `/api/servers/{server}/databases/{id}` | [Get a database](https://developers.ploi.io/databases/get-database) | `not_implemented` |

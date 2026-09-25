@@ -51,6 +51,155 @@ internal data class SourceControlPage(
     val hasNext: Boolean get() = currentPage < lastPage
 }
 internal data class SourceControlRepository(val label: String, val name: String, val createdAt: String)
+internal data class ServerDetail(
+    val id: Long, val status: String, val statusId: Int, val type: String, val databaseType: String,
+    val name: String, val ipAddress: String, val internalIp: String, val sshPort: Int,
+    val rebootRequired: Boolean, val phpVersion: String, val phpCliVersion: String,
+    val mysqlVersion: String, val sitesCount: Int, val monitoring: Boolean, val opcache: Boolean,
+    val installedPhpVersions: List<String>, val updatesPackages: Int, val updatesSecurity: Int,
+    val description: String, val providerName: String, val createdAt: String,
+    val createdHuman: String, val uptimeHuman: String
+)
+internal data class CustomServerCreation(
+    val id: Long, val name: String, val publicKey: String, val sshCommand: String,
+    val startInstallationUrl: String, val message: String
+)
+internal data class ServerLogEntry(
+    val description: String, val content: String, val siteId: Long?, val serverId: Long, val createdAt: String
+)
+internal data class ServerLogPage(val logs: List<ServerLogEntry>, val currentPage: Int, val lastPage: Int) {
+    val hasNext: Boolean get() = currentPage < lastPage
+}
+internal data class MonitoredServer(
+    val id: Long, val name: String, val ip: String, val url: String, val statistics: List<MonitorSample>
+)
+
+/** Documented value sets for server creation (developers.ploi.io/servers/create-server). */
+internal val SERVER_TYPES = setOf("server", "load-balancer", "database-server", "redis-server")
+internal val CUSTOM_SERVER_TYPES = SERVER_TYPES + "storage-server"
+internal val DATABASE_TYPES = setOf(
+    "none", "mysql", "mysql84", "mysql9", "mariadb", "mariadb114",
+    "postgresql", "postgresql14", "postgresql15", "postgresql16", "postgresql17", "postgresql18"
+)
+internal val WEBSERVER_TYPES = setOf("nginx", "nginx-docker")
+internal val PHP_VERSIONS = setOf(
+    "none", "5.6", "7.0", "7.1", "7.2", "7.3", "7.4", "8.0", "8.1", "8.2", "8.3", "8.4", "8.5"
+)
+internal val OS_TYPES = setOf("ubuntu-24-04-lts", "ubuntu-26-04-lts", "debian-12", "debian-13")
+internal val IP_TYPES = setOf("ipv4", "ipv6", "ipv4-ipv6", "ipv6-ipv4")
+internal val DEFAULT_OS_TYPE = "ubuntu-26-04-lts"
+private val SERVER_NAME_PATTERN = Regex("[A-Za-z0-9-]+")
+private val IPV4_PATTERN = Regex("""\d{1,3}(\.\d{1,3}){3}""")
+
+internal fun validateServerName(name: String): String {
+    require(name.isNotBlank() && name.length <= 50 && SERVER_NAME_PATTERN.matches(name)) {
+        "Server name must be alpha-numeric with dashes only"
+    }
+    return name
+}
+
+internal fun validateIpAddress(ip: String): String {
+    require((IPV4_PATTERN.matches(ip) && ip.split(".").all { it.toInt() in 0..255 }) || ip.contains(':')) {
+        "Invalid IP address"
+    }
+    return ip
+}
+
+internal fun validateSshPort(port: Int): Int {
+    require(port in 1..65_535) { "SSH port out of range" }
+    return port
+}
+
+internal fun validateWebhookUrl(url: String): String {
+    require(url.startsWith("https://") && url.length > "https://".length) { "Webhook URL must use HTTPS" }
+    return url
+}
+
+private fun optionalName(name: String): String {
+    if (name.isBlank()) return ""
+    return validateServerName(name)
+}
+
+/** Validated payload for POST /api/servers (provider-based creation). */
+internal data class CreateServerRequest(
+    val plan: String,
+    val region: String,
+    val credential: Long,
+    val type: String,
+    val databaseType: String,
+    val webserverType: String,
+    val phpVersion: String,
+    val name: String = "",
+    val osType: String = DEFAULT_OS_TYPE,
+    val description: String = "",
+    val installMonitoring: Boolean = false,
+    val ipType: String = "ipv4",
+    val webhookUrl: String = ""
+) {
+    init {
+        require(plan.isNotBlank()) { "Plan is required" }
+        require(region.isNotBlank()) { "Region is required" }
+        require(credential > 0) { "Credential must be a valid provider ID" }
+        require(type in SERVER_TYPES) { "Unsupported server type" }
+        require(databaseType in DATABASE_TYPES) { "Unsupported database type" }
+        require(webserverType in WEBSERVER_TYPES) { "Unsupported webserver type" }
+        require(phpVersion in PHP_VERSIONS) { "Unsupported PHP version" }
+        optionalName(name)
+        require(osType in OS_TYPES) { "Unsupported OS type" }
+        require(ipType in IP_TYPES) { "Unsupported IP type" }
+        if (webhookUrl.isNotBlank()) validateWebhookUrl(webhookUrl)
+    }
+
+    fun toJson(): String = JSONObject().apply {
+        put("plan", plan)
+        put("region", region)
+        put("credential", credential)
+        put("type", type)
+        put("database_type", databaseType)
+        put("webserver_type", webserverType)
+        put("php_version", phpVersion)
+        if (name.isNotBlank()) put("name", name)
+        put("os_type", osType)
+        if (description.isNotBlank()) put("description", description)
+        if (installMonitoring) put("install_monitoring", true)
+        put("ip_type", ipType)
+        if (webhookUrl.isNotBlank()) put("webhook_url", webhookUrl)
+    }.toString()
+}
+
+/** Validated payload for POST /api/servers/custom (bring-your-own server). */
+internal data class CreateCustomServerRequest(
+    val type: String,
+    val ip: String,
+    val sshPort: Int,
+    val databaseType: String,
+    val phpVersion: String,
+    val name: String = "",
+    val osType: String = DEFAULT_OS_TYPE,
+    val description: String = ""
+) {
+    init {
+        require(type in CUSTOM_SERVER_TYPES) { "Unsupported server type" }
+        validateIpAddress(ip)
+        validateSshPort(sshPort)
+        require(databaseType in DATABASE_TYPES) { "Unsupported database type" }
+        require(phpVersion in PHP_VERSIONS) { "Unsupported PHP version" }
+        optionalName(name)
+        require(osType in OS_TYPES) { "Unsupported OS type" }
+    }
+
+    fun toJson(): String = JSONObject().apply {
+        put("type", type)
+        put("ip", ip)
+        put("ssh_port", sshPort)
+        put("database_type", databaseType)
+        put("php_version", phpVersion)
+        if (name.isNotBlank()) put("name", name)
+        put("os_type", osType)
+        if (description.isNotBlank()) put("description", description)
+    }.toString()
+}
+
 internal class PloiHttpException(val status: Int, val retryAfterSeconds: String? = null) : Exception("Ploi HTTP $status")
 
 /** Typed API surface. Never persist or log a bearer token. */
@@ -90,12 +239,13 @@ internal object PloiApi {
     fun parseMonitoring(json: String): MonitorSample? {
         val data = JSONObject(json).getJSONArray("data")
         if (data.length() == 0) return null
-        val sample = (0 until data.length()).map(data::getJSONObject).maxBy { it.getString("date") }
-        return MonitorSample(
-            sample.optString("cpu"), sample.optString("ram"), sample.optString("disk"),
-            sample.optString("load_average"), sample.getString("date")
-        )
+        return parseMonitorSample((0 until data.length()).map(data::getJSONObject).maxBy { it.getString("date") })
     }
+
+    private fun parseMonitorSample(sample: JSONObject) = MonitorSample(
+        sample.optString("cpu"), sample.optString("ram"), sample.optString("disk"),
+        sample.optString("load_average"), sample.getString("date")
+    )
 
     fun validateResourceId(id: Long): Long {
         require(id > 0) { "Resource ID must be positive" }
@@ -175,6 +325,152 @@ internal object PloiApi {
     fun monitoring(token: String, serverId: Long): MonitorSample? {
         require(serverId > 0) { "Invalid server ID" }
         return parseOrThrow { parseMonitoring(get("/servers/$serverId/monitor", token)) }
+    }
+
+    // ---- Servers domain: read + write documented routes ----
+
+    /** Numeric-or-string JSON fields (php_version is 7.2 in some responses, "8.4" in others). */
+    private fun flexibleString(item: JSONObject, field: String): String =
+        item.opt(field)?.takeUnless { it == JSONObject.NULL }?.toString().orEmpty()
+
+    private fun parseServerDetailEntry(item: JSONObject): ServerDetail {
+        val updates = item.optJSONObject("updates")
+        val provider = item.optJSONObject("provider")
+        val phpVersions = item.optJSONArray("installed_php_versions")
+        return ServerDetail(
+            id = item.getLong("id"),
+            status = item.optString("status"),
+            statusId = item.optInt("status_id", -1),
+            type = item.optString("type"),
+            databaseType = item.optString("database_type"),
+            name = item.getString("name"),
+            ipAddress = item.optString("ip_address"),
+            internalIp = nullableString(item, "internal_ip"),
+            sshPort = item.optInt("ssh_port", 0),
+            rebootRequired = item.optBoolean("reboot_required", false),
+            phpVersion = flexibleString(item, "php_version"),
+            phpCliVersion = flexibleString(item, "php_cli_version"),
+            mysqlVersion = flexibleString(item, "mysql_version"),
+            sitesCount = item.optInt("sites_count", 0),
+            monitoring = item.optBoolean("monitoring", false),
+            opcache = item.optBoolean("opcache", false),
+            installedPhpVersions = phpVersions?.let { array -> (0 until array.length()).map(array::getString) }.orEmpty(),
+            updatesPackages = updates?.optInt("packages", 0) ?: 0,
+            updatesSecurity = updates?.optInt("security", 0) ?: 0,
+            description = nullableString(item, "description"),
+            providerName = provider?.optString("name").orEmpty(),
+            createdAt = item.optString("created_at"),
+            createdHuman = nullableString(item, "created_human"),
+            uptimeHuman = nullableString(item, "uptime_human")
+        )
+    }
+
+    fun parseServerDetail(json: String): ServerDetail =
+        parseServerDetailEntry(JSONObject(json).getJSONObject("data"))
+
+    fun server(token: String, serverId: Long): ServerDetail = parseOrThrow {
+        parseServerDetail(get("/servers/${validateResourceId(serverId)}", token))
+    }
+
+    fun createServer(token: String, request: CreateServerRequest): ServerDetail = parseOrThrow {
+        parseServerDetail(write("POST", "/servers", token, request.toJson()))
+    }
+
+    fun parseCustomServerCreation(json: String): CustomServerCreation {
+        val root = JSONObject(json)
+        return CustomServerCreation(
+            id = root.getLong("id"),
+            name = root.getString("name"),
+            publicKey = root.getString("public_key"),
+            sshCommand = root.getString("ssh_command"),
+            startInstallationUrl = root.getString("start_installation_url"),
+            message = root.optString("message")
+        )
+    }
+
+    fun createCustomServer(token: String, request: CreateCustomServerRequest): CustomServerCreation = parseOrThrow {
+        parseCustomServerCreation(write("POST", "/servers/custom", token, request.toJson()))
+    }
+
+    fun parseMessage(json: String): String = JSONObject(json).getString("message")
+
+    fun startCustomServerInstallation(
+        token: String, serverId: Long, installMonitoring: Boolean = false, webhookUrl: String = ""
+    ): String {
+        if (webhookUrl.isNotBlank()) validateWebhookUrl(webhookUrl)
+        val body = JSONObject().apply {
+            if (installMonitoring) put("install_monitoring", true)
+            if (webhookUrl.isNotBlank()) put("webhook_url", webhookUrl)
+        }.toString()
+        return parseOrThrow {
+            parseMessage(write("POST", "/servers/custom/${validateResourceId(serverId)}/start", token, body))
+        }
+    }
+
+    fun updateServer(token: String, serverId: Long, name: String, ip: String = "", sshPort: Int? = null): ServerDetail {
+        validateServerName(name)
+        require(ip.isBlank() || sshPort != null) { "SSH port required when IP is set" }
+        if (ip.isNotBlank()) validateIpAddress(ip)
+        sshPort?.let { validateSshPort(it) }
+        val body = JSONObject().apply {
+            put("name", name)
+            if (ip.isNotBlank()) {
+                put("ip", ip)
+                put("ssh_port", sshPort)
+            }
+        }.toString()
+        return parseOrThrow { parseServerDetail(write("PATCH", "/servers/${validateResourceId(serverId)}", token, body)) }
+    }
+
+    fun deleteServer(token: String, serverId: Long): ServerDetail = parseOrThrow {
+        parseServerDetail(write("DELETE", "/servers/${validateResourceId(serverId)}", token, null))
+    }
+
+    fun restartServer(token: String, serverId: Long): String = parseOrThrow {
+        parseMessage(write("POST", "/servers/${validateResourceId(serverId)}/restart", token, JSONObject().toString()))
+    }
+
+    private fun parseServerLogEntry(item: JSONObject) = ServerLogEntry(
+        description = item.getString("description"),
+        content = item.optString("content"),
+        siteId = if (item.isNull("site_id")) null else item.getLong("site_id"),
+        serverId = item.getLong("server_id"),
+        createdAt = item.optString("created_at")
+    )
+
+    fun parseServerLogs(json: String): ServerLogPage {
+        val root = JSONObject(json)
+        val data = root.getJSONArray("data")
+        val (page, lastPage) = pageMeta(root)
+        return ServerLogPage((0 until data.length()).map { parseServerLogEntry(data.getJSONObject(it)) }, page, lastPage)
+    }
+
+    fun serverLogs(token: String, serverId: Long, page: Int = 1, perPage: Int = 15): ServerLogPage {
+        require(page >= 1) { "Page must be positive" }
+        return parseOrThrow {
+            parseServerLogs(get("/servers/${validateResourceId(serverId)}/logs?page=$page&per_page=${validatePageSize(perPage)}", token))
+        }
+    }
+
+    fun parseMonitoredServers(json: String): List<MonitoredServer> {
+        val data = JSONObject(json).getJSONArray("data")
+        return (0 until data.length()).map { index ->
+            val item = data.getJSONObject(index)
+            val statistics = item.optJSONArray("statistics")
+            MonitoredServer(
+                id = item.getLong("id"),
+                name = item.getString("name"),
+                ip = item.optString("ip"),
+                url = item.optString("url"),
+                statistics = statistics?.let { array ->
+                    (0 until array.length()).map { parseMonitorSample(array.getJSONObject(it)) }
+                }.orEmpty()
+            )
+        }
+    }
+
+    fun monitoredServers(token: String): List<MonitoredServer> = parseOrThrow {
+        parseMonitoredServers(get("/servers/monitored", token))
     }
 
     // ---- Account (user) domain: read-only documented routes ----
@@ -312,4 +608,7 @@ internal object PloiApi {
     internal var httpClient: PloiHttpClient = PloiHttpClient()
 
     private fun get(path: String, token: String): String = httpClient.get(path, token)
+
+    private fun write(method: String, path: String, token: String, body: String?): String =
+        httpClient.request(method, path, token, body)
 }

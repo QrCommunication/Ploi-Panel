@@ -119,6 +119,8 @@ private fun PanelHome(lock: AppLock, activity: FragmentActivity, onLock: () -> U
     var selected by remember { mutableStateOf<Server?>(null) }
     var panelTab by remember { mutableIntStateOf(0) }
     var refresh by remember { mutableIntStateOf(0) }
+    var creating by remember { mutableStateOf(false) }
+    var showMonitored by remember { mutableStateOf(false) }
     var servers by remember { mutableStateOf<ServerPage?>(null) }
     var error by remember { mutableStateOf<Throwable?>(null) }
     var loading by remember { mutableStateOf(false) }
@@ -247,22 +249,41 @@ private fun PanelHome(lock: AppLock, activity: FragmentActivity, onLock: () -> U
                 2 -> AccountScreen(token)
                 else -> BoxWithConstraints(Modifier.fillMaxSize()) {
                 val expanded = maxWidth >= 720.dp
-                if (expanded) {
-                    Row(horizontalArrangement = Arrangement.spacedBy(16.dp)) {
+                when {
+                    creating -> CreateServerScreen(
+                        token,
+                        onDone = { creating = false; selected = null; refresh++ },
+                        onCancel = { creating = false }
+                    )
+                    showMonitored -> Column {
+                        OutlinedButton(onClick = { showMonitored = false }) { Text(stringResource(R.string.back)) }
+                        MonitoredServersScreen(token)
+                    }
+                    expanded -> Row(horizontalArrangement = Arrangement.spacedBy(16.dp)) {
                         Column(Modifier.weight(1f)) {
-                            ServerList(servers, loading, error, page, onPage = { page = it }, onRefresh = { refresh++ }, onSelect = { selected = it })
+                            ServerList(servers, loading, error, page, onPage = { page = it }, onRefresh = { refresh++ },
+                                onSelect = { selected = it }, onCreate = { creating = true }, onMonitored = { showMonitored = true })
                         }
                         Column(Modifier.weight(1f)) {
                             val server = selected
                             if (server == null) Text(stringResource(R.string.select_server))
-                            else ServerDetail(token, server, refresh)
+                            else ServerDetailScreen(
+                                token, server, lock, activity, refresh,
+                                onChanged = { refresh++ },
+                                onDeleted = { selected = null; refresh++ }
+                            )
                         }
                     }
-                } else if (selected != null) {
-                    OutlinedButton(onClick = { selected = null }) { Text(stringResource(R.string.back)) }
-                    ServerDetail(token, selected!!, refresh)
-                } else {
-                    ServerList(servers, loading, error, page, onPage = { page = it }, onRefresh = { refresh++ }, onSelect = { selected = it })
+                    selected != null -> Column {
+                        OutlinedButton(onClick = { selected = null }) { Text(stringResource(R.string.back)) }
+                        ServerDetailScreen(
+                            token, selected!!, lock, activity, refresh,
+                            onChanged = { refresh++ },
+                            onDeleted = { selected = null; refresh++ }
+                        )
+                    }
+                    else -> ServerList(servers, loading, error, page, onPage = { page = it }, onRefresh = { refresh++ },
+                        onSelect = { selected = it }, onCreate = { creating = true }, onMonitored = { showMonitored = true })
                 }
                 }
             }
@@ -318,10 +339,15 @@ internal fun ApiErrorText(failure: Throwable) {
 @Composable
 private fun ServerList(
     pageData: ServerPage?, loading: Boolean, error: Throwable?, page: Int,
-    onPage: (Int) -> Unit, onRefresh: () -> Unit, onSelect: (Server) -> Unit
+    onPage: (Int) -> Unit, onRefresh: () -> Unit, onSelect: (Server) -> Unit,
+    onCreate: () -> Unit, onMonitored: () -> Unit
 ) {
     Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
-        OutlinedButton(onClick = onRefresh, enabled = !loading) { Text(stringResource(R.string.reload)) }
+        Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+            OutlinedButton(onClick = onRefresh, enabled = !loading) { Text(stringResource(R.string.reload)) }
+            OutlinedButton(onClick = onCreate) { Text(stringResource(R.string.new_server)) }
+            OutlinedButton(onClick = onMonitored) { Text(stringResource(R.string.monitored_overview)) }
+        }
         if (loading) CircularProgressIndicator()
         if (error != null) ApiErrorText(error)
         if (pageData != null) {
@@ -342,63 +368,5 @@ private fun ServerList(
                 }
             }
         }
-    }
-}
-
-@Composable
-private fun ServerDetail(token: String, server: Server, refresh: Int) {
-    var tab by remember(server.id, token) { mutableIntStateOf(0) }
-    Column(Modifier.fillMaxSize()) {
-        Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-            OutlinedButton(onClick = { tab = 0 }, enabled = tab != 0) { Text(stringResource(R.string.monitoring)) }
-            OutlinedButton(onClick = { tab = 1 }, enabled = tab != 1) { Text(stringResource(R.string.sites)) }
-        }
-        if (tab == 0) MonitoringView(token, server, refresh) else SitesScreen(token, server.id)
-    }
-}
-
-@Composable
-private fun MonitoringView(token: String, server: Server, refresh: Int) {
-    var sample by remember(server.id, token) { mutableStateOf<MonitorSample?>(null) }
-    var loading by remember(server.id, token) { mutableStateOf(true) }
-    var error by remember(server.id, token) { mutableStateOf<Throwable?>(null) }
-    LaunchedEffect(server.id, token, refresh) {
-        loading = true
-        error = null
-        try {
-            sample = withContext(Dispatchers.IO) { PloiApi.monitoring(token, server.id) }
-        } catch (cancelled: CancellationException) {
-            throw cancelled
-        } catch (failure: Exception) {
-            sample = null
-            error = failure
-        } finally {
-            loading = false
-        }
-    }
-    Column(Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
-        Text(server.name, style = MaterialTheme.typography.headlineSmall, fontWeight = FontWeight.Bold)
-        Text(stringResource(R.string.monitoring), style = MaterialTheme.typography.titleLarge)
-        if (loading) CircularProgressIndicator()
-        if (error is PloiHttpException && (error as PloiHttpException).status == 422) {
-            Text(stringResource(R.string.monitoring_unavailable))
-        } else if (error != null) ApiErrorText(error!!)
-        else if (!loading && sample == null) Text(stringResource(R.string.monitoring_unavailable))
-        if (sample != null) {
-            Text(stringResource(R.string.stale_warning))
-            Text(stringResource(R.string.updated, sample!!.date))
-            Metric(stringResource(R.string.metric_cpu), "${sample!!.cpu} %")
-            Metric(stringResource(R.string.metric_ram), "${sample!!.ram} %")
-            Metric(stringResource(R.string.metric_disk), "${sample!!.disk} %")
-            Metric(stringResource(R.string.metric_load), sample!!.load)
-        }
-    }
-}
-
-@Composable
-private fun Metric(label: String, value: String) {
-    Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
-        Text(label, style = MaterialTheme.typography.bodyLarge)
-        Text(value, fontWeight = FontWeight.Bold)
     }
 }
