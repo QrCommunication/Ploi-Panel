@@ -25,4 +25,12 @@
     <string name="metric_ram">RAM</string>
     <string name="metric_disk">Disk</string>
     <string name="metric_load">Load</string>
+    <string name="providers">Providers</string>
+    <string name="provider_detail">Plans and regions</string>
+    <string name="plans">Available plans</string>
+    <string name="regions">Available regions</string>
+    <string name="empty_providers">No providers are linked to this Ploi profile.</string>
+    <string name="select_provider">Select a provider to view plans and regions.</string>
+    <string name="add_provider">Add a provider on Ploi</string>
+    <string name="back_providers">Back to providers</string>
 </resources>

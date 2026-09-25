@@ -1407,7 +1407,7 @@
       "domain": "user",
       "title": "List server providers",
       "operation": "Get all server providers",
-      "status": "not_implemented"
+      "status": "implemented_locally_unverified_live"
     },
     {
       "method": "GET",
@@ -1416,7 +1416,7 @@
       "domain": "user",
       "title": "Get server provider",
       "operation": "Get server provider",
-      "status": "not_implemented"
+      "status": "implemented_locally_unverified_live"
     },
     {
       "method": "GET",

@@ -9,6 +9,15 @@ internal data class ServerPage(val servers: List<Server>, val currentPage: Int, 
     val hasNext: Boolean get() = currentPage < lastPage
 }
 internal data class MonitorSample(val cpu: String, val ram: String, val disk: String, val load: String, val date: String)
+internal data class ProviderOption(val id: String, val name: String, val description: String = "")
+internal data class ProviderCredential(
+    val id: Long, val name: String, val label: String, val plans: List<ProviderOption>, val regions: List<ProviderOption>
+) {
+    val displayName: String get() = label.ifBlank { name }
+}
+internal data class ProviderPage(val providers: List<ProviderCredential>, val currentPage: Int, val lastPage: Int) {
+    val hasNext: Boolean get() = currentPage < lastPage
+}
 internal class PloiHttpException(val status: Int, val retryAfterSeconds: String? = null) : Exception("Ploi HTTP $status")
 
 /** Read-only API foundation. Never persist or log a bearer token. */
@@ -47,6 +56,45 @@ internal object PloiApi {
             sample.optString("cpu"), sample.optString("ram"), sample.optString("disk"),
             sample.optString("load_average"), sample.getString("date")
         )
+    }
+
+    fun parseProviders(json: String): ProviderPage {
+        val root = JSONObject(json)
+        val data = root.getJSONArray("data")
+        val meta = root.getJSONObject("meta")
+        val page = meta.getInt("current_page")
+        val lastPage = meta.getInt("last_page")
+        require(page >= 1 && lastPage >= 1 && page <= lastPage) { "Invalid pagination metadata" }
+        return ProviderPage((0 until data.length()).map { parseProviderEntry(data.getJSONObject(it)) }, page, lastPage)
+    }
+
+    fun parseProvider(json: String): ProviderCredential = parseProviderEntry(JSONObject(json).getJSONObject("data"))
+
+    private fun parseProviderEntry(item: JSONObject): ProviderCredential {
+        val available = item.getJSONObject("provider")
+        val plans = available.getJSONArray("plans")
+        val regions = available.getJSONArray("regions")
+        return ProviderCredential(
+            id = item.getLong("id"),
+            name = item.getString("name"),
+            label = if (item.isNull("label")) "" else item.getString("label"),
+            plans = (0 until plans.length()).map { i ->
+                plans.getJSONObject(i).let { ProviderOption(it.getString("id"), it.getString("name"), it.optString("description")) }
+            },
+            regions = (0 until regions.length()).map { i ->
+                regions.getJSONObject(i).let { ProviderOption(it.getString("id"), it.getString("name")) }
+            }
+        )
+    }
+
+    fun providers(token: String, page: Int = 1, perPage: Int = 15): ProviderPage {
+        require(page >= 1) { "Page must be positive" }
+        return parseProviders(get("/user/server-providers?page=$page&per_page=${validatePageSize(perPage)}", token))
+    }
+
+    fun provider(token: String, providerId: Long): ProviderCredential {
+        require(providerId > 0) { "Invalid provider ID" }
+        return parseProvider(get("/user/server-providers/$providerId", token))
     }
 
     fun servers(token: String, page: Int = 1, perPage: Int = 15): ServerPage {

@@ -25,4 +25,12 @@
     <string name="metric_ram">RAM</string>
     <string name="metric_disk">Disque</string>
     <string name="metric_load">Charge</string>
+    <string name="providers">Prestataires</string>
+    <string name="provider_detail">Offres et régions</string>
+    <string name="plans">Offres disponibles</string>
+    <string name="regions">Régions disponibles</string>
+    <string name="empty_providers">Aucun prestataire associé à ce profil Ploi.</string>
+    <string name="select_provider">Sélectionnez un prestataire pour voir ses offres et régions.</string>
+    <string name="add_provider">Ajouter un prestataire sur Ploi</string>
+    <string name="back_providers">Retour aux prestataires</string>
 </resources>

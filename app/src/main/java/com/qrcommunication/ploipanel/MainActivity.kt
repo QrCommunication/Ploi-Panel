@@ -65,13 +65,15 @@ private fun PloiPanel() {
             var token by remember { mutableStateOf<String?>(null) }
             var page by remember { mutableIntStateOf(1) }
             var selected by remember { mutableStateOf<Server?>(null) }
+            var showProviders by remember { mutableStateOf(false) }
             var refresh by remember { mutableIntStateOf(0) }
             var servers by remember { mutableStateOf<ServerPage?>(null) }
             var error by remember { mutableStateOf<Throwable?>(null) }
             var loading by remember { mutableStateOf(false) }
 
-            LaunchedEffect(token, page, refresh) {
+            LaunchedEffect(token, page, refresh, showProviders) {
                 val active = token ?: return@LaunchedEffect
+                if (showProviders) return@LaunchedEffect
                 loading = true
                 error = null
                 try {
@@ -105,18 +107,26 @@ private fun PloiPanel() {
             } else {
                 Column(Modifier.fillMaxSize().padding(16.dp)) {
                     Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
-                        Text(stringResource(R.string.servers), style = MaterialTheme.typography.headlineMedium, fontWeight = FontWeight.Bold)
+                        Text(if (showProviders) stringResource(R.string.providers) else stringResource(R.string.servers), style = MaterialTheme.typography.headlineMedium, fontWeight = FontWeight.Bold)
                         OutlinedButton(onClick = {
                             token = null
                             draftToken = ""
                             selected = null
+                            showProviders = false
                             servers = null
                             error = null
                             page = 1
                         }) { Text(stringResource(R.string.disconnect)) }
                     }
                     Spacer(Modifier.height(12.dp))
-                    BoxWithConstraints(Modifier.fillMaxSize()) {
+                    Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                        OutlinedButton(onClick = { showProviders = false }, enabled = showProviders) { Text(stringResource(R.string.servers)) }
+                        OutlinedButton(onClick = { showProviders = true }, enabled = !showProviders) { Text(stringResource(R.string.providers)) }
+                    }
+                    Spacer(Modifier.height(12.dp))
+                    if (showProviders) {
+                        ProvidersScreen(token!!)
+                    } else BoxWithConstraints(Modifier.fillMaxSize()) {
                         val expanded = maxWidth >= 720.dp
                         if (expanded) {
                             Row(horizontalArrangement = Arrangement.spacedBy(16.dp)) {
@@ -143,7 +153,7 @@ private fun PloiPanel() {
 }
 
 @Composable
-private fun ErrorText(failure: Throwable) {
+internal fun ApiErrorText(failure: Throwable) {
     val message = when (failure) {
         is PloiHttpException -> when (failure.status) {
             401 -> stringResource(R.string.error_auth)
@@ -164,7 +174,7 @@ private fun ServerList(
     Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
         OutlinedButton(onClick = onRefresh, enabled = !loading) { Text(stringResource(R.string.reload)) }
         if (loading) CircularProgressIndicator()
-        if (error != null) ErrorText(error)
+        if (error != null) ApiErrorText(error)
         if (pageData != null) {
             Row(horizontalArrangement = Arrangement.spacedBy(12.dp)) {
                 OutlinedButton(onClick = { onPage(page - 1) }, enabled = page > 1) { Text(stringResource(R.string.previous)) }
@@ -211,7 +221,7 @@ private fun MonitoringView(token: String, server: Server, refresh: Int) {
         if (loading) CircularProgressIndicator()
         if (error is PloiHttpException && (error as PloiHttpException).status == 422) {
             Text(stringResource(R.string.monitoring_unavailable))
-        } else if (error != null) ErrorText(error!!)
+        } else if (error != null) ApiErrorText(error!!)
         else if (!loading && sample == null) Text(stringResource(R.string.monitoring_unavailable))
         if (sample != null) {
             Text(stringResource(R.string.stale_warning))
