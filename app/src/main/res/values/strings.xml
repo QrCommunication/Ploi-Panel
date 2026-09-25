@@ -71,4 +71,15 @@
     <string name="biometric_prompt_subtitle">Confirmez votre identité pour accéder aux profils.</string>
     <string name="biometric_cancel">Utiliser le code PIN</string>
     <string name="lock_now">Verrouiller</string>
+    <string name="account">Compte</string>
+    <string name="account_plan">Abonnement : %1$s</string>
+    <string name="account_plan_expiry">Expiration : %1$s</string>
+    <string name="backup_configurations">Configurations de sauvegarde</string>
+    <string name="empty_backup_configurations">Aucune configuration de sauvegarde associée.</string>
+    <string name="notification_channels">Canaux de notification</string>
+    <string name="empty_notification_channels">Aucun canal de notification associé.</string>
+    <string name="source_control">Gestion de code source</string>
+    <string name="empty_source_control">Aucun prestataire de code source associé.</string>
+    <string name="repositories">Dépôts</string>
+    <string name="empty_repositories">Aucun dépôt retourné pour ce prestataire.</string>
 </resources>

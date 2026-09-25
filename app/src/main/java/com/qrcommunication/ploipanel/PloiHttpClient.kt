@@ -10,8 +10,13 @@ import java.util.TimeZone
 import java.util.concurrent.ConcurrentHashMap
 import java.util.concurrent.CountDownLatch
 
-/** Wire-level request. Headers may carry a bearer token: never log or persist them. */
-internal data class HttpRequest(val method: String, val url: String, val headers: Map<String, String>)
+/** Wire-level request. Headers and body may carry secrets: never log or persist them. */
+internal data class HttpRequest(
+    val method: String,
+    val url: String,
+    val headers: Map<String, String>,
+    val body: String? = null
+)
 
 /** Wire-level response with header names normalized to lowercase. */
 internal data class HttpResponse(val status: Int, val body: String, val headers: Map<String, String>)
@@ -34,6 +39,10 @@ internal class UrlConnectionTransport(
             connection.connectTimeout = connectTimeoutMillis
             connection.readTimeout = readTimeoutMillis
             request.headers.forEach { (name, value) -> connection.setRequestProperty(name, value) }
+            if (request.body != null) {
+                connection.doOutput = true
+                connection.outputStream.use { it.write(request.body.toByteArray(Charsets.UTF_8)) }
+            }
             val status = connection.responseCode
             val stream = if (status in 200..299) connection.inputStream else connection.errorStream
             val body = stream?.bufferedReader()?.use { it.readText() }.orEmpty()
@@ -101,6 +110,19 @@ internal class PloiHttpClient(
 
     private val inFlight = ConcurrentHashMap<String, SharedCall>()
 
+    /**
+     * Sends any documented verb. Only plain GETs are deduplicated; writes are always executed
+     * once per call so a retry by the caller never collapses into another caller's mutation.
+     */
+    fun request(method: String, path: String, token: String, body: String? = null): String {
+        require(method in VERBS) { "Unsupported HTTP verb: $method" }
+        require(path.startsWith("/")) { "API path must start with a slash" }
+        require(body == null || method != "GET") { "GET requests must not carry a body" }
+        if (method == "GET") return get(path, token)
+        PloiApi.validateToken(token)
+        return executeWithRateLimitRetry(method, path, token, body)
+    }
+
     fun get(path: String, token: String): String {
         require(path.startsWith("/")) { "API path must start with a slash" }
         // Deduplication key hashes the token so secret material is not copied into map keys.
@@ -109,7 +131,7 @@ internal class PloiHttpClient(
         val leader = inFlight.putIfAbsent(key, call) == null
         if (!leader) return inFlight.getValue(key).await()
         try {
-            val body = executeWithRateLimitRetry(path, token)
+            val body = executeWithRateLimitRetry("GET", path, token, null)
             call.complete(body, null)
             return body
         } catch (failure: Exception) {
@@ -120,18 +142,20 @@ internal class PloiHttpClient(
         }
     }
 
-    private fun executeWithRateLimitRetry(path: String, token: String): String {
+    private fun executeWithRateLimitRetry(method: String, path: String, token: String, body: String?): String {
         var attempt = 0
         while (true) {
             val response = try {
                 transport.execute(
                     HttpRequest(
-                        method = "GET",
+                        method = method,
                         url = baseUrl + path,
-                        headers = mapOf(
-                            "Authorization" to "Bearer $token",
-                            "Accept" to "application/json"
-                        )
+                        headers = buildMap {
+                            put("Authorization", "Bearer $token")
+                            put("Accept", "application/json")
+                            if (body != null) put("Content-Type", "application/json")
+                        },
+                        body = body
                     )
                 )
             } catch (offline: IOException) {
@@ -169,5 +193,6 @@ internal class PloiHttpClient(
 
     internal companion object {
         const val DEFAULT_BASE_URL = "https://ploi.io/api"
+        private val VERBS = setOf("GET", "POST", "PATCH", "PUT", "DELETE")
     }
 }

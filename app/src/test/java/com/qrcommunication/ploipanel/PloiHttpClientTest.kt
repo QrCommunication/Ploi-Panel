@@ -236,4 +236,79 @@ class PloiHttpClientTest {
             PloiApi.httpClient = previous
         }
     }
+
+    // ---- Write verbs (POST/PATCH/PUT/DELETE) ----
+
+    @Test fun postSendsJsonBodyAndContentType() {
+        val transport = ScriptedTransport(ok("{\"data\":{\"id\":1}}"))
+        client(transport).request("POST", "/servers", token, "{\"name\":\"web\"}")
+        val request = transport.requests.single()
+        assertEquals("POST", request.method)
+        assertEquals("{\"name\":\"web\"}", request.body)
+        assertEquals("application/json", request.headers["Content-Type"])
+        assertEquals("Bearer $token", request.headers["Authorization"])
+    }
+
+    @Test fun patchAndDeleteUseDocumentedVerbs() {
+        val transport = ScriptedTransport(ok(), ok())
+        val client = client(transport)
+        client.request("PATCH", "/servers/3", token, "{\"name\":\"renamed\"}")
+        client.request("DELETE", "/servers/3", token)
+        assertEquals("PATCH", transport.requests[0].method)
+        assertEquals("DELETE", transport.requests[1].method)
+        assertEquals(null, transport.requests[1].body)
+        assertEquals(null, transport.requests[1].headers["Content-Type"])
+    }
+
+    @Test fun writesAreNeverDeduplicated() {
+        val entered = CountDownLatch(1)
+        val release = CountDownLatch(1)
+        val calls = AtomicInteger(0)
+        val transport = HttpTransport {
+            calls.incrementAndGet()
+            entered.countDown()
+            release.await(5, TimeUnit.SECONDS)
+            ok("{\"data\":{}}")
+        }
+        val client = client(transport)
+        val threadA = Thread { client.request("POST", "/servers", token, "{\"name\":\"a\"}") }
+        val threadB = Thread { client.request("POST", "/servers", token, "{\"name\":\"a\"}") }
+        threadA.start()
+        assertTrue(entered.await(5, TimeUnit.SECONDS))
+        threadB.start()
+        Thread.sleep(200)
+        release.countDown()
+        threadA.join(5_000)
+        threadB.join(5_000)
+        assertEquals(2, calls.get())
+    }
+
+    @Test fun acceptsEmptyBodyOn204() {
+        val transport = ScriptedTransport(HttpResponse(204, "", emptyMap()))
+        assertEquals("", client(transport).request("DELETE", "/servers/3", token))
+    }
+
+    @Test fun writesRetryOn429WithRetryAfter() {
+        val sleeps = mutableListOf<Long>()
+        val transport = ScriptedTransport(error(429, retryAfter = "1"), ok("{\"data\":{}}"))
+        val body = client(transport, sleeps = sleeps).request("POST", "/servers/3/restart", token)
+        assertEquals("{\"data\":{}}", body)
+        assertEquals(listOf(1_000L), sleeps)
+        assertEquals(2, transport.requests.size)
+    }
+
+    @Test(expected = IllegalArgumentException::class)
+    fun rejectsGetWithBody() {
+        client(ScriptedTransport(ok())).request("GET", "/servers", token, "{}")
+    }
+
+    @Test(expected = IllegalArgumentException::class)
+    fun rejectsUnknownVerb() {
+        client(ScriptedTransport(ok())).request("TRACE", "/servers", token)
+    }
+
+    @Test(expected = IllegalArgumentException::class)
+    fun rejectsWriteWithBlankToken() {
+        client(ScriptedTransport(ok())).request("POST", "/servers", " ", "{}")
+    }
 }

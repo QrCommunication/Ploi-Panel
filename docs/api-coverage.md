@@ -2,7 +2,7 @@
 
 Extraction : 2026-09-24T18:31:36+00:00 ; source : [sitemap officiel](https://developers.ploi.io/sitemap.xml), puis en-têtes méthode/chemin des pages officielles. Base des requêtes : `https://ploi.io/api` (les chemins ci-dessous comprennent déjà `/api`).
 
-**231 opérations documentées**, 230 pages avec routes, 231 pages de référence API ; **225 non implémentées** (`not_implemented`), **6 implémentées et testées localement mais non vérifiées sur compte réel** (`implemented_locally_unverified_live`). Ce tableau inventorie la documentation, et ne constitue ni une preuve de disponibilité dans un compte donné, ni un contrat testé contre l’API. Le [JSON](api-coverage.json) conserve chaque entrée et la classification de toutes les URL du sitemap.
+**231 opérations documentées**, 230 pages avec routes, 231 pages de référence API ; **218 non implémentées** (`not_implemented`), **13 implémentées et testées localement mais non vérifiées sur compte réel** (`implemented_locally_unverified_live`). Ce tableau inventorie la documentation, et ne constitue ni une preuve de disponibilité dans un compte donné, ni un contrat testé contre l’API. Le [JSON](api-coverage.json) conserve chaque entrée et la classification de toutes les URL du sitemap.
 
 ## Périmètre et méthode
 
@@ -22,15 +22,15 @@ Extraction : 2026-09-24T18:31:36+00:00 ; source : [sitemap officiel](https://dev
 
 | Domaine | Méthode | Chemin documenté | Opération / source officielle | État |
 |---|---|---|---|---|
-| `user` | `GET` | `/api/user` | [Get user information](https://developers.ploi.io/user/information) | `not_implemented` |
+| `user` | `GET` | `/api/user` | [Get user information](https://developers.ploi.io/user/information) | `implemented_locally_unverified_live` |
 | `user` | `GET` | `/api/user/server-providers` | [Get all server providers](https://developers.ploi.io/user/list-server-providers) | `implemented_locally_unverified_live` |
 | `user` | `GET` | `/api/user/server-providers/{provider}` | [Get server provider](https://developers.ploi.io/user/get-server-provider) | `implemented_locally_unverified_live` |
-| `user` | `GET` | `/api/user/backup-configurations` | [Get all backup configurations](https://developers.ploi.io/user/list-backup-configurations) | `not_implemented` |
-| `user` | `GET` | `/api/user/backup-configurations/{backupConfiguration}` | [Get backup configuration](https://developers.ploi.io/user/get-backup-configuration) | `not_implemented` |
-| `user` | `GET` | `/api/user/notification-channels` | [Get all notification channels](https://developers.ploi.io/user/list-notification-channels) | `not_implemented` |
-| `user` | `GET` | `/api/user/source-control` | [Get all source control providers](https://developers.ploi.io/user/list-source-control-providers) | `not_implemented` |
-| `user` | `GET` | `/api/user/source-control/{provider}` | [Get source control provider](https://developers.ploi.io/user/show-source-control-providers) | `not_implemented` |
-| `user` | `GET` | `/api/user/source-control/{provider}/repositories` | [Get repositories](https://developers.ploi.io/user/repositories-for-source-control-providers) | `not_implemented` |
+| `user` | `GET` | `/api/user/backup-configurations` | [Get all backup configurations](https://developers.ploi.io/user/list-backup-configurations) | `implemented_locally_unverified_live` |
+| `user` | `GET` | `/api/user/backup-configurations/{backupConfiguration}` | [Get backup configuration](https://developers.ploi.io/user/get-backup-configuration) | `implemented_locally_unverified_live` |
+| `user` | `GET` | `/api/user/notification-channels` | [Get all notification channels](https://developers.ploi.io/user/list-notification-channels) | `implemented_locally_unverified_live` |
+| `user` | `GET` | `/api/user/source-control` | [Get all source control providers](https://developers.ploi.io/user/list-source-control-providers) | `implemented_locally_unverified_live` |
+| `user` | `GET` | `/api/user/source-control/{provider}` | [Get source control provider](https://developers.ploi.io/user/show-source-control-providers) | `implemented_locally_unverified_live` |
+| `user` | `GET` | `/api/user/source-control/{provider}/repositories` | [Get repositories](https://developers.ploi.io/user/repositories-for-source-control-providers) | `implemented_locally_unverified_live` |
 | `scripts` | `GET` | `/api/scripts` | [List all scripts](https://developers.ploi.io/scripts/list-scripts) | `not_implemented` |
 | `scripts` | `POST` | `/api/scripts` | [Create a script](https://developers.ploi.io/scripts/create-script) | `not_implemented` |
 | `scripts` | `GET` | `/api/scripts/{script}` | [Get a script](https://developers.ploi.io/scripts/get-script) | `not_implemented` |

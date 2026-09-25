@@ -117,15 +117,15 @@ private fun PanelHome(lock: AppLock, activity: FragmentActivity, onLock: () -> U
     var profileError by remember { mutableIntStateOf(0) }
     var page by remember { mutableIntStateOf(1) }
     var selected by remember { mutableStateOf<Server?>(null) }
-    var showProviders by remember { mutableStateOf(false) }
+    var panelTab by remember { mutableIntStateOf(0) }
     var refresh by remember { mutableIntStateOf(0) }
     var servers by remember { mutableStateOf<ServerPage?>(null) }
     var error by remember { mutableStateOf<Throwable?>(null) }
     var loading by remember { mutableStateOf(false) }
 
-    LaunchedEffect(token, page, refresh, showProviders) {
+    LaunchedEffect(token, page, refresh, panelTab) {
         val active = token ?: return@LaunchedEffect
-        if (showProviders) return@LaunchedEffect
+        if (panelTab != 0) return@LaunchedEffect
         loading = true
         error = null
         try {
@@ -208,7 +208,14 @@ private fun PanelHome(lock: AppLock, activity: FragmentActivity, onLock: () -> U
         Column(Modifier.fillMaxSize().padding(16.dp)) {
             Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
                 Column {
-                    Text(if (showProviders) stringResource(R.string.providers) else stringResource(R.string.servers), style = MaterialTheme.typography.headlineMedium, fontWeight = FontWeight.Bold)
+                    Text(
+                        when (panelTab) {
+                            1 -> stringResource(R.string.providers)
+                            2 -> stringResource(R.string.account)
+                            else -> stringResource(R.string.servers)
+                        },
+                        style = MaterialTheme.typography.headlineMedium, fontWeight = FontWeight.Bold
+                    )
                     Text(stringResource(R.string.current_profile, activeProfile?.first?.label.orEmpty()), style = MaterialTheme.typography.bodySmall)
                 }
                 Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
@@ -219,7 +226,7 @@ private fun PanelHome(lock: AppLock, activity: FragmentActivity, onLock: () -> U
                         draftLabel = ""
                         draftToken = ""
                         selected = null
-                        showProviders = false
+                        panelTab = 0
                         servers = null
                         error = null
                         page = 1
@@ -230,13 +237,15 @@ private fun PanelHome(lock: AppLock, activity: FragmentActivity, onLock: () -> U
             BiometricToggle(lock, activity)
             Spacer(Modifier.height(12.dp))
             Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                OutlinedButton(onClick = { showProviders = false }, enabled = showProviders) { Text(stringResource(R.string.servers)) }
-                OutlinedButton(onClick = { showProviders = true }, enabled = !showProviders) { Text(stringResource(R.string.providers)) }
+                OutlinedButton(onClick = { panelTab = 0 }, enabled = panelTab != 0) { Text(stringResource(R.string.servers)) }
+                OutlinedButton(onClick = { panelTab = 1 }, enabled = panelTab != 1) { Text(stringResource(R.string.providers)) }
+                OutlinedButton(onClick = { panelTab = 2 }, enabled = panelTab != 2) { Text(stringResource(R.string.account)) }
             }
             Spacer(Modifier.height(12.dp))
-            if (showProviders) {
-                ProvidersScreen(token)
-            } else BoxWithConstraints(Modifier.fillMaxSize()) {
+            when (panelTab) {
+                1 -> ProvidersScreen(token)
+                2 -> AccountScreen(token)
+                else -> BoxWithConstraints(Modifier.fillMaxSize()) {
                 val expanded = maxWidth >= 720.dp
                 if (expanded) {
                     Row(horizontalArrangement = Arrangement.spacedBy(16.dp)) {
@@ -254,6 +263,7 @@ private fun PanelHome(lock: AppLock, activity: FragmentActivity, onLock: () -> U
                     ServerDetail(token, selected!!, refresh)
                 } else {
                     ServerList(servers, loading, error, page, onPage = { page = it }, onRefresh = { refresh++ }, onSelect = { selected = it })
+                }
                 }
             }
         }

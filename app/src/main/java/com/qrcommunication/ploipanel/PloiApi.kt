@@ -23,9 +23,37 @@ internal data class ProviderCredential(
 internal data class ProviderPage(val providers: List<ProviderCredential>, val currentPage: Int, val lastPage: Int) {
     val hasNext: Boolean get() = currentPage < lastPage
 }
+internal data class UserInfo(
+    val name: String, val email: String, val plan: String, val planExpiresAt: String,
+    val timezone: String, val country: String, val avatarUrl: String, val createdAt: String,
+    val billingDetails: String
+)
+internal data class BackupConfiguration(val id: Long, val label: String, val type: String, val humanType: String, val createdAt: String)
+internal data class BackupConfigurationPage(
+    val configurations: List<BackupConfiguration>, val currentPage: Int, val lastPage: Int
+) {
+    val hasNext: Boolean get() = currentPage < lastPage
+}
+internal data class NotificationChannel(val id: Long, val type: String, val label: String, val createdAt: String)
+internal data class NotificationChannelPage(
+    val channels: List<NotificationChannel>, val currentPage: Int, val lastPage: Int
+) {
+    val hasNext: Boolean get() = currentPage < lastPage
+}
+internal data class SourceControlProvider(
+    val id: Long, val label: String, val name: String, val provider: String, val createdAt: String
+) {
+    val displayName: String get() = label.ifBlank { name.ifBlank { provider } }
+}
+internal data class SourceControlPage(
+    val providers: List<SourceControlProvider>, val currentPage: Int, val lastPage: Int
+) {
+    val hasNext: Boolean get() = currentPage < lastPage
+}
+internal data class SourceControlRepository(val label: String, val name: String, val createdAt: String)
 internal class PloiHttpException(val status: Int, val retryAfterSeconds: String? = null) : Exception("Ploi HTTP $status")
 
-/** Read-only API foundation. Never persist or log a bearer token. */
+/** Typed API surface. Never persist or log a bearer token. */
 internal object PloiApi {
     fun validateToken(token: String): String {
         require(token.isNotBlank() && token == token.trim() && !token.contains('\r') && !token.contains('\n')) {
@@ -39,13 +67,19 @@ internal object PloiApi {
         return size
     }
 
-    fun parseServers(json: String): ServerPage {
-        val root = JSONObject(json)
-        val data = root.getJSONArray("data")
+    /** Validated (currentPage, lastPage) pair shared by every paginated collection. */
+    private fun pageMeta(root: JSONObject): Pair<Int, Int> {
         val meta = root.getJSONObject("meta")
         val page = meta.getInt("current_page")
         val lastPage = meta.getInt("last_page")
         require(page >= 1 && lastPage >= 1 && page <= lastPage) { "Invalid pagination metadata" }
+        return page to lastPage
+    }
+
+    fun parseServers(json: String): ServerPage {
+        val root = JSONObject(json)
+        val data = root.getJSONArray("data")
+        val (page, lastPage) = pageMeta(root)
         val servers = (0 until data.length()).map { index ->
             val item = data.getJSONObject(index)
             Server(item.getLong("id"), item.getString("name"), item.optString("status"), item.optString("ip_address"))
@@ -70,10 +104,7 @@ internal object PloiApi {
 
     fun parseSites(json: String): SitePage {
         val root = JSONObject(json)
-        val meta = root.getJSONObject("meta")
-        val page = meta.getInt("current_page")
-        val lastPage = meta.getInt("last_page")
-        require(page >= 1 && lastPage >= 1 && page <= lastPage) { "Invalid pagination metadata" }
+        val (page, lastPage) = pageMeta(root)
         val data = root.getJSONArray("data")
         return SitePage((0 until data.length()).map { parseSiteEntry(data.getJSONObject(it)) }, page, lastPage)
     }
@@ -103,10 +134,7 @@ internal object PloiApi {
     fun parseProviders(json: String): ProviderPage {
         val root = JSONObject(json)
         val data = root.getJSONArray("data")
-        val meta = root.getJSONObject("meta")
-        val page = meta.getInt("current_page")
-        val lastPage = meta.getInt("last_page")
-        require(page >= 1 && lastPage >= 1 && page <= lastPage) { "Invalid pagination metadata" }
+        val (page, lastPage) = pageMeta(root)
         return ProviderPage((0 until data.length()).map { parseProviderEntry(data.getJSONObject(it)) }, page, lastPage)
     }
 
@@ -147,6 +175,130 @@ internal object PloiApi {
     fun monitoring(token: String, serverId: Long): MonitorSample? {
         require(serverId > 0) { "Invalid server ID" }
         return parseOrThrow { parseMonitoring(get("/servers/$serverId/monitor", token)) }
+    }
+
+    // ---- Account (user) domain: read-only documented routes ----
+
+    private fun nullableString(item: JSONObject, field: String): String =
+        if (item.isNull(field)) "" else item.optString(field)
+
+    fun parseUser(json: String): UserInfo {
+        val data = JSONObject(json).getJSONObject("data")
+        return UserInfo(
+            name = data.getString("name"),
+            email = data.getString("email"),
+            plan = data.optString("plan"),
+            planExpiresAt = nullableString(data, "plan_expires_at"),
+            timezone = data.optString("timezone"),
+            country = data.optString("country"),
+            avatarUrl = data.optString("avatar"),
+            createdAt = data.optString("created_at"),
+            billingDetails = nullableString(data, "billing_details")
+        )
+    }
+
+    fun user(token: String): UserInfo = parseOrThrow { parseUser(get("/user", token)) }
+
+    private fun parseBackupConfigurationEntry(item: JSONObject) = BackupConfiguration(
+        id = item.getLong("id"),
+        label = nullableString(item, "label"),
+        type = item.getString("type"),
+        humanType = item.optString("humanType"),
+        createdAt = item.optString("created_at")
+    )
+
+    fun parseBackupConfigurations(json: String): BackupConfigurationPage {
+        val root = JSONObject(json)
+        val data = root.getJSONArray("data")
+        val (page, lastPage) = pageMeta(root)
+        return BackupConfigurationPage(
+            (0 until data.length()).map { parseBackupConfigurationEntry(data.getJSONObject(it)) }, page, lastPage
+        )
+    }
+
+    fun parseBackupConfiguration(json: String): BackupConfiguration =
+        parseBackupConfigurationEntry(JSONObject(json).getJSONObject("data"))
+
+    fun backupConfigurations(token: String, page: Int = 1, perPage: Int = 15): BackupConfigurationPage {
+        require(page >= 1) { "Page must be positive" }
+        return parseOrThrow {
+            parseBackupConfigurations(get("/user/backup-configurations?page=$page&per_page=${validatePageSize(perPage)}", token))
+        }
+    }
+
+    fun backupConfiguration(token: String, configurationId: Long): BackupConfiguration = parseOrThrow {
+        parseBackupConfiguration(get("/user/backup-configurations/${validateResourceId(configurationId)}", token))
+    }
+
+    private fun parseNotificationChannelEntry(item: JSONObject) = NotificationChannel(
+        id = item.getLong("id"),
+        type = item.getString("type"),
+        label = nullableString(item, "label"),
+        createdAt = item.optString("created_at")
+    )
+
+    fun parseNotificationChannels(json: String): NotificationChannelPage {
+        val root = JSONObject(json)
+        val data = root.getJSONArray("data")
+        val (page, lastPage) = pageMeta(root)
+        return NotificationChannelPage(
+            (0 until data.length()).map { parseNotificationChannelEntry(data.getJSONObject(it)) }, page, lastPage
+        )
+    }
+
+    fun notificationChannels(token: String, page: Int = 1, perPage: Int = 15): NotificationChannelPage {
+        require(page >= 1) { "Page must be positive" }
+        return parseOrThrow {
+            parseNotificationChannels(get("/user/notification-channels?page=$page&per_page=${validatePageSize(perPage)}", token))
+        }
+    }
+
+    private fun parseSourceControlEntry(item: JSONObject) = SourceControlProvider(
+        id = item.getLong("id"),
+        label = nullableString(item, "label"),
+        name = item.optString("name"),
+        provider = item.getString("provider"),
+        createdAt = item.optString("created_at")
+    )
+
+    fun parseSourceControlProviders(json: String): SourceControlPage {
+        val root = JSONObject(json)
+        val data = root.getJSONArray("data")
+        val (page, lastPage) = pageMeta(root)
+        return SourceControlPage(
+            (0 until data.length()).map { parseSourceControlEntry(data.getJSONObject(it)) }, page, lastPage
+        )
+    }
+
+    fun parseSourceControlProvider(json: String): SourceControlProvider =
+        parseSourceControlEntry(JSONObject(json).getJSONObject("data"))
+
+    fun sourceControlProviders(token: String, page: Int = 1, perPage: Int = 15): SourceControlPage {
+        require(page >= 1) { "Page must be positive" }
+        return parseOrThrow {
+            parseSourceControlProviders(get("/user/source-control?page=$page&per_page=${validatePageSize(perPage)}", token))
+        }
+    }
+
+    fun sourceControlProvider(token: String, providerId: Long): SourceControlProvider = parseOrThrow {
+        parseSourceControlProvider(get("/user/source-control/${validateResourceId(providerId)}", token))
+    }
+
+    fun parseSourceControlRepositories(json: String): List<SourceControlRepository> {
+        val repositories = JSONObject(json).getJSONObject("data").getJSONArray("repositories")
+        return (0 until repositories.length()).map { index ->
+            repositories.getJSONObject(index).let { item ->
+                SourceControlRepository(
+                    label = nullableString(item, "label"),
+                    name = item.getString("name"),
+                    createdAt = item.optString("created_at")
+                )
+            }
+        }
+    }
+
+    fun sourceControlRepositories(token: String, providerId: Long): List<SourceControlRepository> = parseOrThrow {
+        parseSourceControlRepositories(get("/user/source-control/${validateResourceId(providerId)}/repositories", token))
     }
 
     /** Wraps JSON decoding failures so 2xx garbage surfaces as a typed error, not a raw crash. */
