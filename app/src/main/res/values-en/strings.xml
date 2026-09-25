@@ -26,6 +26,7 @@
     <string name="error_permission">Insufficient scope or unavailable feature (403).</string>
     <string name="error_rate">Ploi rate limit reached. Retry in %1$s seconds.</string>
     <string name="error_network">Could not connect. Check your network and retry.</string>
+    <string name="error_malformed">Unreadable Ploi response. Try again later.</string>
     <string name="error_other">API error (%1$d).</string>
     <string name="select_server">Select a server to see its monitoring.</string>
     <string name="stale_warning">Ploi samples may be delayed; the latest sample time is shown below.</string>

@@ -1,8 +1,6 @@
 package com.qrcommunication.ploipanel
 
 import org.json.JSONObject
-import java.net.HttpURLConnection
-import java.net.URL
 
 internal data class Server(val id: Long, val name: String, val status: String, val ipAddress: String)
 internal data class ServerPage(val servers: List<Server>, val currentPage: Int, val lastPage: Int) {
@@ -95,12 +93,12 @@ internal object PloiApi {
 
     fun sites(token: String, serverId: Long, page: Int = 1, perPage: Int = 15): SitePage {
         require(page >= 1) { "Page must be positive" }
-        return parseSites(get("/servers/${validateResourceId(serverId)}/sites?page=$page&per_page=${validatePageSize(perPage)}", token))
+        return parseOrThrow { parseSites(get("/servers/${validateResourceId(serverId)}/sites?page=$page&per_page=${validatePageSize(perPage)}", token)) }
     }
 
-    fun site(token: String, serverId: Long, siteId: Long): Site = parseSite(
-        get("/servers/${validateResourceId(serverId)}/sites/${validateResourceId(siteId)}", token)
-    )
+    fun site(token: String, serverId: Long, siteId: Long): Site = parseOrThrow {
+        parseSite(get("/servers/${validateResourceId(serverId)}/sites/${validateResourceId(siteId)}", token))
+    }
 
     fun parseProviders(json: String): ProviderPage {
         val root = JSONObject(json)
@@ -133,38 +131,33 @@ internal object PloiApi {
 
     fun providers(token: String, page: Int = 1, perPage: Int = 15): ProviderPage {
         require(page >= 1) { "Page must be positive" }
-        return parseProviders(get("/user/server-providers?page=$page&per_page=${validatePageSize(perPage)}", token))
+        return parseOrThrow { parseProviders(get("/user/server-providers?page=$page&per_page=${validatePageSize(perPage)}", token)) }
     }
 
     fun provider(token: String, providerId: Long): ProviderCredential {
         require(providerId > 0) { "Invalid provider ID" }
-        return parseProvider(get("/user/server-providers/$providerId", token))
+        return parseOrThrow { parseProvider(get("/user/server-providers/$providerId", token)) }
     }
 
     fun servers(token: String, page: Int = 1, perPage: Int = 15): ServerPage {
         require(page >= 1) { "Page must be positive" }
-        return parseServers(get("/servers?page=$page&per_page=${validatePageSize(perPage)}", token))
+        return parseOrThrow { parseServers(get("/servers?page=$page&per_page=${validatePageSize(perPage)}", token)) }
     }
 
     fun monitoring(token: String, serverId: Long): MonitorSample? {
         require(serverId > 0) { "Invalid server ID" }
-        return parseMonitoring(get("/servers/$serverId/monitor", token))
+        return parseOrThrow { parseMonitoring(get("/servers/$serverId/monitor", token)) }
     }
 
-    private fun get(path: String, token: String): String {
-        val connection = (URL("https://ploi.io/api$path").openConnection() as HttpURLConnection)
+    /** Wraps JSON decoding failures so 2xx garbage surfaces as a typed error, not a raw crash. */
+    private inline fun <T> parseOrThrow(parser: () -> T): T =
         try {
-            connection.requestMethod = "GET"
-            connection.instanceFollowRedirects = false
-            connection.connectTimeout = 10_000
-            connection.readTimeout = 15_000
-            connection.setRequestProperty("Authorization", "Bearer ${validateToken(token)}")
-            connection.setRequestProperty("Accept", "application/json")
-            val status = connection.responseCode
-            if (status !in 200..299) throw PloiHttpException(status, connection.getHeaderField("Retry-After"))
-            return connection.inputStream.bufferedReader().use { it.readText() }
-        } finally {
-            connection.disconnect()
+            parser()
+        } catch (malformed: org.json.JSONException) {
+            throw PloiMalformedPayloadException(malformed)
         }
-    }
+
+    internal var httpClient: PloiHttpClient = PloiHttpClient()
+
+    private fun get(path: String, token: String): String = httpClient.get(path, token)
 }

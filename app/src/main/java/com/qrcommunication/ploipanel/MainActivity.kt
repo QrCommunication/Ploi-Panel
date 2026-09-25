@@ -299,6 +299,7 @@ internal fun ApiErrorText(failure: Throwable) {
             429 -> stringResource(R.string.error_rate, failure.retryAfterSeconds ?: "?")
             else -> stringResource(R.string.error_other, failure.status)
         }
+        is PloiMalformedPayloadException -> stringResource(R.string.error_malformed)
         else -> stringResource(R.string.error_network)
     }
     Text(message, color = MaterialTheme.colorScheme.error)

@@ -26,6 +26,7 @@
     <string name="error_permission">Droit insuffisant ou fonction non disponible (403).</string>
     <string name="error_rate">Limite Ploi atteinte. Réessayez dans %1$s secondes.</string>
     <string name="error_network">Connexion impossible. Vérifiez le réseau puis réessayez.</string>
+    <string name="error_malformed">Réponse Ploi illisible. Réessayez plus tard.</string>
     <string name="error_other">Erreur API (%1$d).</string>
     <string name="select_server">Sélectionnez un serveur pour afficher son monitoring.</string>
     <string name="stale_warning">Les mesures Ploi peuvent être différées ; l’heure de la dernière mesure est indiquée ci-dessous.</string>
