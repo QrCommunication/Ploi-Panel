@@ -148,6 +148,24 @@ internal data class DatabaseBackupPage(val backups: List<DatabaseBackup>, val cu
 internal data class BackupNotificationChannel(
     val id: Long, val type: String, val label: String, val location: String, val createdAt: String
 )
+/**
+ * Site file backup entry (`site`: /backups/file). The documented list shape carries
+ * `interval` as text ("daily") and `active` as 0/1, while the update shape carries a
+ * numeric interval plus the site, its server and the backup configuration.
+ */
+internal data class FileBackup(
+    val id: Long, val status: String, val label: String, val type: String, val typeHuman: String,
+    val path: String, val remotePath: String, val locations: String, val intervalMinutes: Int?,
+    val intervalLabel: String, val excluded: List<String>, val keepBackupAmount: Int,
+    val active: Boolean, val compression: String, val deleteOnFail: Boolean, val customName: String,
+    val localPath: String, val siteId: Long, val siteDomain: String,
+    val serverId: Long, val serverName: String,
+    val backupConfigurationId: Long, val backupConfigurationLabel: String,
+    val lastBackupAt: String, val nextBackupAt: String, val createdAt: String
+)
+internal data class FileBackupPage(val backups: List<FileBackup>, val currentPage: Int, val lastPage: Int) {
+    val hasNext: Boolean get() = currentPage < lastPage
+}
 
 /** Documented value sets for server creation (developers.ploi.io/servers/create-server). */
 internal val SERVER_TYPES = setOf("server", "load-balancer", "database-server", "redis-server")
@@ -179,6 +197,10 @@ internal const val DUPLICATE_NAME_MAX_LENGTH = 255
 internal const val DUPLICATE_PASSWORD_MAX_LENGTH = 50
 /** Documented database backup intervals in minutes; 0 = nightly (create + update documents). */
 internal val BACKUP_INTERVALS = setOf(0, 10, 20, 30, 40, 50, 60, 120, 240, 480, 720, 1440, 10080, 43800)
+/** Documented intervals (minutes) for POST /backups/file; 0 = nightly. */
+internal val FILE_BACKUP_CREATE_INTERVALS = setOf(0, 10, 20, 30, 40, 50, 60, 120, 240, 480, 720, 1440)
+/** Documented intervals (minutes) for PATCH /backups/file/{id}; 0 = nightly. */
+internal val FILE_BACKUP_UPDATE_INTERVALS = setOf(0, 60, 120, 240, 480, 720, 1440, 10080, 43800)
 /** Documented notification locations for database backup channels. */
 internal val BACKUP_CHANNEL_LOCATIONS = setOf("before-backup", "after-backup", "failed-backup")
 /** Documented shape of the optional next_backup_at schedule (`2025-01-16 03:00:00`). */
@@ -516,6 +538,96 @@ internal data class UpdateDatabaseBackupRequest(
         deleteOnFail?.let { put("deleteOnFail", it) }
         if (customName.isNotBlank()) put("custom_name", customName)
         if (path.isNotBlank()) put("path", path)
+        if (compression.isNotBlank()) put("compression", compression)
+        if (excluded.isNotEmpty()) put("excluded", JSONArray(excluded))
+        if (locations.isNotBlank()) put("locations", locations)
+        if (nextBackupAt.isNotBlank()) put("next_backup_at", nextBackupAt)
+    }.toString()
+}
+
+private fun validateAbsoluteBackupPath(path: String, field: String): String {
+    require(path.startsWith("/")) { "$field must be an absolute path" }
+    return path
+}
+
+/**
+ * Validated payload for POST /api/backups/file: `path` is the documented object mapping
+ * each selected site ID to the absolute path to back up.
+ */
+internal data class CreateFileBackupRequest(
+    val backupConfiguration: Long,
+    val server: Long,
+    val sites: List<Long>,
+    val interval: Int,
+    val paths: Map<Long, String>,
+    val locations: String = "",
+    val keepBackupAmount: Int? = null,
+    val customName: String = "",
+    val localPath: String = "",
+    val password: String = "",
+    val nextBackupAt: String = "",
+    val deleteOnFail: Boolean = false
+) {
+    init {
+        require(backupConfiguration > 0) { "Backup configuration must be a valid ID" }
+        require(server > 0) { "Server must be a valid ID" }
+        require(sites.isNotEmpty() && sites.all { it > 0 }) { "At least one valid site ID is required" }
+        require(interval in FILE_BACKUP_CREATE_INTERVALS) { "Unsupported file backup interval" }
+        require(paths.keys.containsAll(sites)) { "Every selected site needs a backup path" }
+        paths.values.forEach { validateAbsoluteBackupPath(it, "Backup path") }
+        require(keepBackupAmount == null || keepBackupAmount >= 0) { "Keep backup amount must not be negative" }
+        if (localPath.isNotBlank()) validateAbsoluteBackupPath(localPath, "Local path")
+        validateNextBackupAt(nextBackupAt)
+    }
+
+    fun toJson(): String = JSONObject().apply {
+        put("backup_configuration", backupConfiguration)
+        put("server", server)
+        put("sites", JSONArray(sites))
+        put("interval", interval)
+        put("path", JSONObject(paths.mapKeys { (siteId, _) -> siteId.toString() }))
+        if (locations.isNotBlank()) put("locations", locations)
+        keepBackupAmount?.let { put("keep_backup_amount", it) }
+        if (customName.isNotBlank()) put("custom_name", customName)
+        if (localPath.isNotBlank()) put("local_path", localPath)
+        if (password.isNotEmpty()) put("password", password)
+        if (nextBackupAt.isNotBlank()) put("next_backup_at", nextBackupAt)
+        if (deleteOnFail) put("deleteOnFail", true)
+    }.toString()
+}
+
+/**
+ * Validated payload for PATCH /api/backups/file/{id}: interval, keep amount and path are
+ * documented as required; the path must start with /home/system_user/root_domain.
+ */
+internal data class UpdateFileBackupRequest(
+    val interval: Int,
+    val keepBackupAmount: Int,
+    val path: String,
+    val deleteOnFail: Boolean? = null,
+    val customName: String = "",
+    val localPath: String = "",
+    val compression: String = "",
+    val excluded: List<String> = emptyList(),
+    val locations: String = "",
+    val nextBackupAt: String = ""
+) {
+    init {
+        require(interval in FILE_BACKUP_UPDATE_INTERVALS) { "Unsupported file backup interval" }
+        require(keepBackupAmount >= 0) { "Keep backup amount must not be negative" }
+        require(path.startsWith("/home/")) { "Path must start with /home/system_user/root_domain" }
+        require(excluded.none { it.isBlank() }) { "Excluded entries must not be blank" }
+        if (localPath.isNotBlank()) validateAbsoluteBackupPath(localPath, "Local path")
+        validateNextBackupAt(nextBackupAt)
+    }
+
+    fun toJson(): String = JSONObject().apply {
+        put("interval", interval)
+        put("keep_backup_amount", keepBackupAmount)
+        put("path", path)
+        deleteOnFail?.let { put("deleteOnFail", it) }
+        if (customName.isNotBlank()) put("custom_name", customName)
+        if (localPath.isNotBlank()) put("local_path", localPath)
         if (compression.isNotBlank()) put("compression", compression)
         if (excluded.isNotEmpty()) put("excluded", JSONArray(excluded))
         if (locations.isNotBlank()) put("locations", locations)
@@ -1220,6 +1332,148 @@ internal object PloiApi {
                 write(
                     "DELETE",
                     "${databaseBackupPath(backupId)}/notification-channels/${validateResourceId(channelId)}$suffix",
+                    token, null
+                )
+            )
+        }
+    }
+
+    // ---- Site file backups domain (site: /backups/file) ----
+
+    private fun fileBackupPath(backupId: Long): String =
+        "/backups/file/${validateResourceId(backupId)}"
+
+    /** `active` is documented as boolean in the update shape but as 0/1 in the list shape. */
+    private fun flexibleBoolean(item: JSONObject, key: String): Boolean = when (val value = item.opt(key)) {
+        is Boolean -> value
+        is Number -> value.toInt() != 0
+        else -> false
+    }
+
+    private fun parseFileBackupEntry(item: JSONObject): FileBackup {
+        val site = item.optJSONObject("site")
+        val siteServer = site?.optJSONObject("server")
+        val configuration = item.optJSONObject("backup_configuration")
+        val excluded = item.optJSONArray("excluded")
+        val interval = item.opt("interval")
+        val serverIdValue = item.opt("server_id")
+        return FileBackup(
+            id = item.getLong("id"),
+            status = item.optString("status"),
+            label = nullableString(item, "label"),
+            type = item.optString("type"),
+            typeHuman = nullableString(item, "type_human"),
+            path = nullableString(item, "path"),
+            remotePath = nullableString(item, "remote_path"),
+            locations = nullableString(item, "locations"),
+            intervalMinutes = (interval as? Number)?.toInt(),
+            intervalLabel = (interval as? String).orEmpty(),
+            excluded = excluded?.let { (0 until it.length()).map(it::getString) } ?: emptyList(),
+            keepBackupAmount = item.optInt("keep_backup_amount", 0),
+            active = flexibleBoolean(item, "active"),
+            compression = nullableString(item, "compression"),
+            deleteOnFail = item.optBoolean("delete_on_fail", false),
+            customName = nullableString(item, "custom_name"),
+            localPath = nullableString(item, "local_path"),
+            siteId = site?.optLong("id") ?: 0L,
+            siteDomain = site?.optString("root_domain").orEmpty(),
+            serverId = siteServer?.optLong("id") ?: (serverIdValue as? Number)?.toLong() ?: 0L,
+            serverName = siteServer?.optString("name").orEmpty(),
+            backupConfigurationId = configuration?.optLong("id") ?: 0L,
+            backupConfigurationLabel = configuration?.optString("label").orEmpty(),
+            lastBackupAt = nullableString(item, "last_backup_at"),
+            nextBackupAt = nullableString(item, "next_backup_at"),
+            createdAt = item.optString("created_at")
+        )
+    }
+
+    fun parseFileBackups(json: String): FileBackupPage {
+        val root = JSONObject(json)
+        val data = root.getJSONArray("data")
+        val (page, lastPage) = pageMeta(root)
+        return FileBackupPage(
+            (0 until data.length()).map { parseFileBackupEntry(data.getJSONObject(it)) }, page, lastPage
+        )
+    }
+
+    fun parseFileBackup(json: String): FileBackup =
+        parseFileBackupEntry(JSONObject(json).getJSONObject("data"))
+
+    /** GET /backups/file: optional documented `server` and `site` filters. */
+    fun fileBackups(
+        token: String, serverId: Long? = null, siteId: Long? = null, page: Int = 1, perPage: Int = 15
+    ): FileBackupPage {
+        require(page >= 1) { "Page must be positive" }
+        require(serverId == null || serverId > 0) { "Invalid server ID" }
+        require(siteId == null || siteId > 0) { "Invalid site ID" }
+        val query = buildString {
+            append("?page=$page&per_page=${validatePageSize(perPage)}")
+            serverId?.let { append("&server=$it") }
+            siteId?.let { append("&site=$it") }
+        }
+        return parseOrThrow { parseFileBackups(get("/backups/file$query", token)) }
+    }
+
+    fun fileBackup(token: String, backupId: Long): FileBackup = parseOrThrow {
+        parseFileBackup(get(fileBackupPath(backupId), token))
+    }
+
+    /** POST /backups/file: the documented response carries only status + message. */
+    fun createFileBackup(token: String, request: CreateFileBackupRequest): String = parseOrThrow {
+        parseOptionalMessage(write("POST", "/backups/file", token, request.toJson()))
+    }
+
+    /** PATCH /backups/file/{id}: the documented response carries the updated backup. */
+    fun updateFileBackup(
+        token: String, backupId: Long, request: UpdateFileBackupRequest
+    ): FileBackup = parseOrThrow {
+        parseFileBackup(write("PATCH", fileBackupPath(backupId), token, request.toJson()))
+    }
+
+    /** POST /backups/file/{id}/run: manual trigger, response carries only status + message. */
+    fun runFileBackup(token: String, backupId: Long): String = parseOrThrow {
+        parseOptionalMessage(
+            write("POST", "${fileBackupPath(backupId)}/run", token, JSONObject().toString())
+        )
+    }
+
+    /** DELETE /backups/file/{id}: the documented message may be null. */
+    fun deleteFileBackup(token: String, backupId: Long): String = parseOrThrow {
+        parseOptionalMessage(write("DELETE", fileBackupPath(backupId), token, null))
+    }
+
+    fun fileBackupNotificationChannels(token: String, backupId: Long): List<BackupNotificationChannel> =
+        parseOrThrow {
+            parseBackupChannels(get("${fileBackupPath(backupId)}/notification-channels", token))
+        }
+
+    /** POST …/notification-channels: attaches one channel to one documented location. */
+    fun attachFileBackupNotificationChannel(
+        token: String, backupId: Long, channelId: Long, location: String
+    ): List<BackupNotificationChannel> {
+        validateResourceId(channelId)
+        validateBackupChannelLocation(location)
+        return parseOrThrow {
+            val body = JSONObject().put("channel", channelId).put("location", location).toString()
+            parseBackupChannels(
+                write("POST", "${fileBackupPath(backupId)}/notification-channels", token, body)
+            )
+        }
+    }
+
+    /** DELETE …/notification-channels/{channel}: without `location`, detaches from every location. */
+    fun detachFileBackupNotificationChannel(
+        token: String, backupId: Long, channelId: Long, location: String = ""
+    ): List<BackupNotificationChannel> {
+        require(location.isEmpty() || location in BACKUP_CHANNEL_LOCATIONS) {
+            "Unsupported notification location"
+        }
+        val suffix = if (location.isEmpty()) "" else "?location=$location"
+        return parseOrThrow {
+            parseBackupChannels(
+                write(
+                    "DELETE",
+                    "${fileBackupPath(backupId)}/notification-channels/${validateResourceId(channelId)}$suffix",
                     token, null
                 )
             )

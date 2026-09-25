@@ -289,7 +289,23 @@
     <string name="confirm_delete_database_user">Supprimer l\'utilisateur « %1$s » ? Il perdra l\'accès à cette base.</string>
     <string name="database_user_deleted">Utilisateur supprimé.</string>
     <string name="backups_tab">Sauvegardes</string>
+    <string name="backups_databases_tab">Bases</string>
+    <string name="backups_files_tab">Fichiers</string>
     <string name="empty_database_backups">Aucune sauvegarde de base pour ce serveur.</string>
+    <string name="empty_file_backups">Aucune sauvegarde de fichiers pour ce serveur.</string>
+    <string name="new_file_backup">Nouvelle sauvegarde de fichiers</string>
+    <string name="backup_no_sites">Aucun site disponible sur ce serveur.</string>
+    <string name="backup_sites_label">Sites à sauvegarder</string>
+    <string name="backup_site">Site : %1$s</string>
+    <string name="backup_path">Chemin : %1$s</string>
+    <string name="backup_site_path_label">Chemin à sauvegarder pour %1$s</string>
+    <string name="backup_server_path_label">Chemin sur le serveur (/home/utilisateur/domaine)</string>
+    <string name="backup_local_path_label">Chemin local de destination, doit commencer par / (optionnel)</string>
+    <string name="backup_excluded_dirs_label">Dossiers ou fichiers exclus, séparés par des virgules (optionnel)</string>
+    <string name="backup_interval_text">Intervalle : %1$s</string>
+    <string name="backup_interval_unknown">Intervalle non précisé</string>
+    <string name="file_backup_create_interval_hint">0 = chaque nuit ; sinon 10, 20, 30, 40, 50, 60, 120, 240, 480, 720 ou 1440</string>
+    <string name="file_backup_update_interval_hint">0 = chaque nuit ; sinon 60, 120, 240, 480, 720, 1440, 10080 ou 43800</string>
     <string name="new_database_backup">Nouvelle sauvegarde</string>
     <string name="backup_loading_options">Chargement des options…</string>
     <string name="backup_no_configurations">Aucune configuration de sauvegarde sur ce compte.</string>

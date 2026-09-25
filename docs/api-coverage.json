@@ -3396,7 +3396,7 @@
       "domain": "site",
       "title": "List site file backups",
       "operation": "List site file backups",
-      "status": "not_implemented"
+      "status": "implemented_locally_unverified_live"
     },
     {
       "method": "GET",
@@ -3405,7 +3405,7 @@
       "domain": "site",
       "title": "Get site file backup",
       "operation": "Get site file backup",
-      "status": "not_implemented"
+      "status": "implemented_locally_unverified_live"
     },
     {
       "method": "POST",
@@ -3414,7 +3414,7 @@
       "domain": "site",
       "title": "Create site file backup",
       "operation": "Create site file backup",
-      "status": "not_implemented"
+      "status": "implemented_locally_unverified_live"
     },
     {
       "method": "PATCH",
@@ -3423,7 +3423,7 @@
       "domain": "site",
       "title": "Update site file backup",
       "operation": "Update site file backup",
-      "status": "not_implemented"
+      "status": "implemented_locally_unverified_live"
     },
     {
       "method": "POST",
@@ -3432,7 +3432,7 @@
       "domain": "site",
       "title": "Run site file backup",
       "operation": "Run site file backup",
-      "status": "not_implemented"
+      "status": "implemented_locally_unverified_live"
     },
     {
       "method": "DELETE",
@@ -3441,7 +3441,7 @@
       "domain": "site",
       "title": "Delete site file backup",
       "operation": "Delete site file backup",
-      "status": "not_implemented"
+      "status": "implemented_locally_unverified_live"
     },
     {
       "method": "GET",
@@ -3450,7 +3450,7 @@
       "domain": "site",
       "title": "List site file backup notification channels",
       "operation": "List site file backup notification channels",
-      "status": "not_implemented"
+      "status": "implemented_locally_unverified_live"
     },
     {
       "method": "POST",
@@ -3459,7 +3459,7 @@
       "domain": "site",
       "title": "Attach site file backup notification channel",
       "operation": "Attach site file backup notification channel",
-      "status": "not_implemented"
+      "status": "implemented_locally_unverified_live"
     },
     {
       "method": "DELETE",
@@ -3468,7 +3468,7 @@
       "domain": "site",
       "title": "Detach site file backup notification channel",
       "operation": "Detach site file backup notification channel",
-      "status": "not_implemented"
+      "status": "implemented_locally_unverified_live"
     }
   ]
 }

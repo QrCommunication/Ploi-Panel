@@ -289,7 +289,23 @@
     <string name="confirm_delete_database_user">Delete user \"%1$s\"? They will lose access to this database.</string>
     <string name="database_user_deleted">User deleted.</string>
     <string name="backups_tab">Backups</string>
+    <string name="backups_databases_tab">Databases</string>
+    <string name="backups_files_tab">Files</string>
     <string name="empty_database_backups">No database backup for this server.</string>
+    <string name="empty_file_backups">No file backup for this server.</string>
+    <string name="new_file_backup">New file backup</string>
+    <string name="backup_no_sites">No site available on this server.</string>
+    <string name="backup_sites_label">Sites to back up</string>
+    <string name="backup_site">Site: %1$s</string>
+    <string name="backup_path">Path: %1$s</string>
+    <string name="backup_site_path_label">Path to back up for %1$s</string>
+    <string name="backup_server_path_label">Server path (/home/user/domain)</string>
+    <string name="backup_local_path_label">Local destination path, must start with / (optional)</string>
+    <string name="backup_excluded_dirs_label">Excluded directories or files, comma separated (optional)</string>
+    <string name="backup_interval_text">Interval: %1$s</string>
+    <string name="backup_interval_unknown">Interval not specified</string>
+    <string name="file_backup_create_interval_hint">0 = nightly; otherwise 10, 20, 30, 40, 50, 60, 120, 240, 480, 720 or 1440</string>
+    <string name="file_backup_update_interval_hint">0 = nightly; otherwise 60, 120, 240, 480, 720, 1440, 10080 or 43800</string>
     <string name="new_database_backup">New backup</string>
     <string name="backup_loading_options">Loading options…</string>
     <string name="backup_no_configurations">No backup configuration on this account.</string>

@@ -59,7 +59,7 @@ internal fun ServerDetailScreen(
             0 -> MonitoringView(token, server, refresh)
             1 -> SitesScreen(token, server.id, lock, activity)
             2 -> DatabasesScreen(token, server.id, lock, activity)
-            5 -> DatabaseBackupsScreen(token, server.id, lock, activity)
+            5 -> BackupsTab(token, server.id, lock, activity)
             3 -> ServerInfoTab(token, server, lock, activity, onChanged, onDeleted)
             else -> ServerLogsTab(token, server.id)
         }
