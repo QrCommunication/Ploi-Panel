@@ -502,4 +502,24 @@
     <string name="execution_finished_at">Terminé : %1$s</string>
     <string name="execution_output">Sortie</string>
     <string name="refresh_execution">Actualiser le statut</string>
+    <string name="status_pages_tab">Statuts</string>
+    <string name="empty_status_pages">Aucune page de statut dans ce compte.</string>
+    <string name="status_page_slug">Slug : %1$s</string>
+    <string name="status_page_incidents">Incidents</string>
+    <string name="incidents_title">Incidents de « %1$s »</string>
+    <string name="empty_incidents">Aucun incident pour cette page de statut.</string>
+    <string name="new_incident">Nouvel incident</string>
+    <string name="incident_title_label">Titre de l’incident</string>
+    <string name="incident_description_label">Description (facultative)</string>
+    <string name="incident_severity_label">Gravité</string>
+    <string name="incident_severity_value">Gravité : %1$s</string>
+    <string name="severity_normal">Normale</string>
+    <string name="severity_high">Haute</string>
+    <string name="severity_maintenance">Maintenance</string>
+    <string name="severity_resolved">Résolu</string>
+    <string name="create_incident_submit">Créer l’incident</string>
+    <string name="incident_created">Incident créé.</string>
+    <string name="incident_deleted">Incident supprimé.</string>
+    <string name="delete_incident">Supprimer</string>
+    <string name="confirm_delete_incident">Supprimer définitivement l’incident « %1$s » ? Il disparaîtra immédiatement de la page de statut publique.</string>
 </resources>

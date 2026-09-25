@@ -1668,7 +1668,7 @@
       "domain": "status-pages",
       "title": "List status pages",
       "operation": "List status pages",
-      "status": "not_implemented"
+      "status": "implemented_locally_unverified_live"
     },
     {
       "method": "GET",
@@ -1677,7 +1677,7 @@
       "domain": "status-pages",
       "title": "Get status page",
       "operation": "Get status page",
-      "status": "not_implemented"
+      "status": "implemented_locally_unverified_live"
     },
     {
       "method": "GET",
@@ -1686,7 +1686,7 @@
       "domain": "status-pages",
       "title": "Get status page incidents",
       "operation": "Get status page incidents",
-      "status": "not_implemented"
+      "status": "implemented_locally_unverified_live"
     },
     {
       "method": "POST",
@@ -1695,7 +1695,7 @@
       "domain": "status-pages",
       "title": "Create status page incident",
       "operation": "Create status page incident",
-      "status": "not_implemented"
+      "status": "implemented_locally_unverified_live"
     },
     {
       "method": "DELETE",
@@ -1704,7 +1704,7 @@
       "domain": "status-pages",
       "title": "Delete status page incident",
       "operation": "Delete status page incident",
-      "status": "not_implemented"
+      "status": "implemented_locally_unverified_live"
     },
     {
       "method": "GET",

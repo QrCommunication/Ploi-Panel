@@ -1070,6 +1070,65 @@ internal data class UpdateScriptActionRequest(
     }.toString()
 }
 
+/**
+ * Documented theme object of the status-pages domain
+ * (developers.ploi.io/status-pages pages): both documented examples share the
+ * same keys, with logo either null or an empty string and borders.header the
+ * only documented border flag.
+ */
+internal data class StatusPageTheme(
+    val primary: String, val secondary: String, val headerBorder: Boolean,
+    val lightMode: String, val logo: String, val branding: Boolean
+)
+
+/** Status page entry of GET /api/status-pages and GET /api/status-pages/{statusPage}. */
+internal data class StatusPage(
+    val id: Long, val name: String, val slug: String, val description: String,
+    val theme: StatusPageTheme
+)
+
+internal data class StatusPagePage(val statusPages: List<StatusPage>, val currentPage: Int, val lastPage: Int) {
+    val hasNext: Boolean get() = currentPage < lastPage
+}
+
+/** Incident entry of the status-pages domain (id/title/description/severity documented). */
+internal data class StatusPageIncident(
+    val id: Long, val title: String, val description: String, val severity: String
+)
+
+internal data class StatusPageIncidentPage(
+    val incidents: List<StatusPageIncident>, val currentPage: Int, val lastPage: Int
+) {
+    val hasNext: Boolean get() = currentPage < lastPage
+}
+
+/** Documented severity values for POST /api/status-pages/{statusPage}/incidents. */
+internal val STATUS_PAGE_INCIDENT_SEVERITIES = setOf("normal", "high", "maintenance", "resolved")
+
+/**
+ * Validated payload for POST /api/status-pages/{statusPage}/incidents: title is
+ * the documented required attribute; description and severity are optional and
+ * omitted when unset so the documented default (normal) applies server-side.
+ */
+internal data class CreateStatusPageIncidentRequest(
+    val title: String,
+    val description: String = "",
+    val severity: String = ""
+) {
+    init {
+        require(title.isNotBlank()) { "Incident title required" }
+        require(severity.isEmpty() || severity in STATUS_PAGE_INCIDENT_SEVERITIES) {
+            "Unsupported incident severity"
+        }
+    }
+
+    fun toJson(): String = JSONObject().apply {
+        put("title", title.trim())
+        if (description.isNotBlank()) put("description", description.trim())
+        if (severity.isNotEmpty()) put("severity", severity)
+    }.toString()
+}
+
 internal class PloiHttpException(val status: Int, val retryAfterSeconds: String? = null) : Exception("Ploi HTTP $status")
 
 /** Typed API surface. Never persist or log a bearer token. */
@@ -2399,6 +2458,110 @@ internal object PloiApi {
     /** DELETE /api/scripts/{script}/actions/{action}: documented message may be null. */
     fun deleteScriptAction(token: String, scriptId: Long, actionId: Long): String = parseOrThrow {
         parseOptionalMessage(write("DELETE", actionPath(scriptId, actionId), token, null))
+    }
+
+    // ---- Status pages domain ----
+
+    private fun statusPagesPath(): String = "/status-pages"
+
+    private fun statusPagePath(statusPageId: Long): String =
+        "${statusPagesPath()}/${validateResourceId(statusPageId)}"
+
+    private fun statusPageIncidentsPath(statusPageId: Long): String =
+        "${statusPagePath(statusPageId)}/incidents"
+
+    /** Documented delete route uses the singular /incident/{incident} segment. */
+    private fun statusPageIncidentPath(statusPageId: Long, incidentId: Long): String =
+        "${statusPagePath(statusPageId)}/incident/${validateResourceId(incidentId)}"
+
+    private fun parseStatusPageTheme(item: JSONObject): StatusPageTheme {
+        val borders = item.optJSONObject("borders")
+        return StatusPageTheme(
+            primary = item.optString("primary"),
+            secondary = item.optString("secondary"),
+            headerBorder = borders?.optBoolean("header", false) ?: false,
+            lightMode = item.optString("lightMode"),
+            logo = nullableString(item, "logo"),
+            branding = item.optBoolean("branding", false)
+        )
+    }
+
+    private fun parseStatusPageEntry(item: JSONObject): StatusPage = StatusPage(
+        id = item.getLong("id"),
+        name = item.getString("name"),
+        slug = item.optString("slug"),
+        description = nullableString(item, "description"),
+        theme = parseStatusPageTheme(item.optJSONObject("theme") ?: JSONObject())
+    )
+
+    /** Documented list shape: data array plus links/meta pagination. */
+    fun parseStatusPages(json: String): StatusPagePage {
+        val root = JSONObject(json)
+        val data = root.getJSONArray("data")
+        val (page, lastPage) = pageMeta(root)
+        return StatusPagePage(
+            (0 until data.length()).map { parseStatusPageEntry(data.getJSONObject(it)) }, page, lastPage
+        )
+    }
+
+    fun parseStatusPage(json: String): StatusPage =
+        parseStatusPageEntry(JSONObject(json).getJSONObject("data"))
+
+    /** GET /api/status-pages: paginated list of the account status pages. */
+    fun statusPages(token: String, page: Int = 1, perPage: Int = 15): StatusPagePage {
+        require(page >= 1) { "Page must be positive" }
+        return parseOrThrow {
+            parseStatusPages(get("${statusPagesPath()}?page=$page&per_page=${validatePageSize(perPage)}", token))
+        }
+    }
+
+    /** GET /api/status-pages/{statusPage}. */
+    fun statusPage(token: String, statusPageId: Long): StatusPage = parseOrThrow {
+        parseStatusPage(get(statusPagePath(statusPageId), token))
+    }
+
+    private fun parseStatusPageIncidentEntry(item: JSONObject): StatusPageIncident = StatusPageIncident(
+        id = item.getLong("id"),
+        title = item.getString("title"),
+        description = nullableString(item, "description"),
+        severity = item.optString("severity")
+    )
+
+    /** Documented incidents list shape: data array plus links/meta pagination, latest first. */
+    fun parseStatusPageIncidents(json: String): StatusPageIncidentPage {
+        val root = JSONObject(json)
+        val data = root.getJSONArray("data")
+        val (page, lastPage) = pageMeta(root)
+        return StatusPageIncidentPage(
+            (0 until data.length()).map { parseStatusPageIncidentEntry(data.getJSONObject(it)) }, page, lastPage
+        )
+    }
+
+    fun parseStatusPageIncident(json: String): StatusPageIncident =
+        parseStatusPageIncidentEntry(JSONObject(json).getJSONObject("data"))
+
+    /** GET /api/status-pages/{statusPage}/incidents: paginated, ordered by latest entry. */
+    fun statusPageIncidents(
+        token: String, statusPageId: Long, page: Int = 1, perPage: Int = 15
+    ): StatusPageIncidentPage {
+        require(page >= 1) { "Page must be positive" }
+        return parseOrThrow {
+            parseStatusPageIncidents(
+                get("${statusPageIncidentsPath(statusPageId)}?page=$page&per_page=${validatePageSize(perPage)}", token)
+            )
+        }
+    }
+
+    /** POST /api/status-pages/{statusPage}/incidents: creates a public incident. */
+    fun createStatusPageIncident(
+        token: String, statusPageId: Long, request: CreateStatusPageIncidentRequest
+    ): StatusPageIncident = parseOrThrow {
+        parseStatusPageIncident(write("POST", statusPageIncidentsPath(statusPageId), token, request.toJson()))
+    }
+
+    /** DELETE /api/status-pages/{statusPage}/incident/{incident} (singular segment documented). */
+    fun deleteStatusPageIncident(token: String, statusPageId: Long, incidentId: Long): String = parseOrThrow {
+        parseMessage(write("DELETE", statusPageIncidentPath(statusPageId, incidentId), token, null))
     }
 
     fun parseProviders(json: String): ProviderPage {

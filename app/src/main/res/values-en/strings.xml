@@ -502,4 +502,24 @@
     <string name="execution_finished_at">Finished: %1$s</string>
     <string name="execution_output">Output</string>
     <string name="refresh_execution">Refresh status</string>
+    <string name="status_pages_tab">Status</string>
+    <string name="empty_status_pages">No status page in this account.</string>
+    <string name="status_page_slug">Slug: %1$s</string>
+    <string name="status_page_incidents">Incidents</string>
+    <string name="incidents_title">Incidents of “%1$s”</string>
+    <string name="empty_incidents">No incident for this status page.</string>
+    <string name="new_incident">New incident</string>
+    <string name="incident_title_label">Incident title</string>
+    <string name="incident_description_label">Description (optional)</string>
+    <string name="incident_severity_label">Severity</string>
+    <string name="incident_severity_value">Severity: %1$s</string>
+    <string name="severity_normal">Normal</string>
+    <string name="severity_high">High</string>
+    <string name="severity_maintenance">Maintenance</string>
+    <string name="severity_resolved">Resolved</string>
+    <string name="create_incident_submit">Create incident</string>
+    <string name="incident_created">Incident created.</string>
+    <string name="incident_deleted">Incident deleted.</string>
+    <string name="delete_incident">Delete</string>
+    <string name="confirm_delete_incident">Permanently delete the incident “%1$s”? It will immediately disappear from the public status page.</string>
 </resources>
