@@ -522,4 +522,10 @@
     <string name="incident_deleted">Incident supprimé.</string>
     <string name="delete_incident">Supprimer</string>
     <string name="confirm_delete_incident">Supprimer définitivement l’incident « %1$s » ? Il disparaîtra immédiatement de la page de statut publique.</string>
+    <string name="webserver_templates_tab">Modèles</string>
+    <string name="empty_webserver_templates">Aucun modèle de serveur web dans ce compte.</string>
+    <string name="webserver_template_created_at">Créé : %1$s</string>
+    <string name="webserver_template_content">Contenu</string>
+    <string name="webserver_template_title">Modèle « %1$s »</string>
+    <string name="empty_webserver_template_content">Contenu vide.</string>
 </resources>

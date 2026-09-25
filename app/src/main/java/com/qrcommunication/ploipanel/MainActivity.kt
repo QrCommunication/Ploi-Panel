@@ -216,6 +216,7 @@ private fun PanelHome(lock: AppLock, activity: FragmentActivity, onLock: () -> U
                             2 -> stringResource(R.string.account)
                             3 -> stringResource(R.string.scripts_tab)
                             4 -> stringResource(R.string.status_pages_tab)
+                            5 -> stringResource(R.string.webserver_templates_tab)
                             else -> stringResource(R.string.servers)
                         },
                         style = MaterialTheme.typography.headlineMedium, fontWeight = FontWeight.Bold
@@ -246,6 +247,7 @@ private fun PanelHome(lock: AppLock, activity: FragmentActivity, onLock: () -> U
                 OutlinedButton(onClick = { panelTab = 2 }, enabled = panelTab != 2) { Text(stringResource(R.string.account)) }
                 OutlinedButton(onClick = { panelTab = 3 }, enabled = panelTab != 3) { Text(stringResource(R.string.scripts_tab)) }
                 OutlinedButton(onClick = { panelTab = 4 }, enabled = panelTab != 4) { Text(stringResource(R.string.status_pages_tab)) }
+                OutlinedButton(onClick = { panelTab = 5 }, enabled = panelTab != 5) { Text(stringResource(R.string.webserver_templates_tab)) }
             }
             Spacer(Modifier.height(12.dp))
             when (panelTab) {
@@ -253,6 +255,7 @@ private fun PanelHome(lock: AppLock, activity: FragmentActivity, onLock: () -> U
                 2 -> AccountScreen(token)
                 3 -> ScriptsScreen(token, lock, activity)
                 4 -> StatusPagesScreen(token, lock, activity)
+                5 -> WebserverTemplatesScreen(token)
                 else -> BoxWithConstraints(Modifier.fillMaxSize()) {
                 val expanded = maxWidth >= 720.dp
                 when {

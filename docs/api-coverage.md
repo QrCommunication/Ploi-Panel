@@ -2,7 +2,7 @@
 
 Extraction : 2026-09-24T18:31:36+00:00 ; source : [sitemap officiel](https://developers.ploi.io/sitemap.xml), puis en-têtes méthode/chemin des pages officielles. Base des requêtes : `https://ploi.io/api` (les chemins ci-dessous comprennent déjà `/api`).
 
-**231 opérations documentées**, 230 pages avec routes, 231 pages de référence API ; **107 non implémentées** (`not_implemented`), **124 implémentées et testées localement mais non vérifiées sur compte réel** (`implemented_locally_unverified_live`). Ce tableau inventorie la documentation, et ne constitue ni une preuve de disponibilité dans un compte donné, ni un contrat testé contre l’API. Le [JSON](api-coverage.json) conserve chaque entrée et la classification de toutes les URL du sitemap.
+**231 opérations documentées**, 230 pages avec routes, 231 pages de référence API ; **105 non implémentées** (`not_implemented`), **126 implémentées et testées localement mais non vérifiées sur compte réel** (`implemented_locally_unverified_live`). Ce tableau inventorie la documentation, et ne constitue ni une preuve de disponibilité dans un compte donné, ni un contrat testé contre l’API. Le [JSON](api-coverage.json) conserve chaque entrée et la classification de toutes les URL du sitemap.
 
 ## Périmètre et méthode
 
@@ -57,8 +57,8 @@ Extraction : 2026-09-24T18:31:36+00:00 ; source : [sitemap officiel](https://dev
 | `status-pages` | `GET` | `/api/status-pages/{statusPage}/incidents` | [Get status page incidents](https://developers.ploi.io/status-pages/get-status-page-incidents) | `implemented_locally_unverified_live` |
 | `status-pages` | `POST` | `/api/status-pages/{statusPage}/incidents` | [Create status page incident](https://developers.ploi.io/status-pages/create-status-page-incident) | `implemented_locally_unverified_live` |
 | `status-pages` | `DELETE` | `/api/status-pages/{statusPage}/incident/{incident}` | [Delete status page incident](https://developers.ploi.io/status-pages/delete-status-page-incident) | `implemented_locally_unverified_live` |
-| `webserver-templates` | `GET` | `/api/webserver-templates` | [List webserver templates](https://developers.ploi.io/webserver-templates/list-webserver-templates) | `not_implemented` |
-| `webserver-templates` | `GET` | `/api/webserver-templates/{id}` | [Get webserver template](https://developers.ploi.io/webserver-templates/get-webserver-template) | `not_implemented` |
+| `webserver-templates` | `GET` | `/api/webserver-templates` | [List webserver templates](https://developers.ploi.io/webserver-templates/list-webserver-templates) | `implemented_locally_unverified_live` |
+| `webserver-templates` | `GET` | `/api/webserver-templates/{id}` | [Get webserver template](https://developers.ploi.io/webserver-templates/get-webserver-template) | `implemented_locally_unverified_live` |
 | `projects` | `GET` | `/api/projects` | [List all projects](https://developers.ploi.io/projects/list-projects) | `not_implemented` |
 | `projects` | `POST` | `/api/projects` | [Create a project](https://developers.ploi.io/projects/create-project) | `not_implemented` |
 | `projects` | `GET` | `/api/projects/{project}` | [Get a project](https://developers.ploi.io/projects/get-project) | `not_implemented` |

@@ -522,4 +522,10 @@
     <string name="incident_deleted">Incident deleted.</string>
     <string name="delete_incident">Delete</string>
     <string name="confirm_delete_incident">Permanently delete the incident “%1$s”? It will immediately disappear from the public status page.</string>
+    <string name="webserver_templates_tab">Templates</string>
+    <string name="empty_webserver_templates">No webserver template in this account.</string>
+    <string name="webserver_template_created_at">Created: %1$s</string>
+    <string name="webserver_template_content">Content</string>
+    <string name="webserver_template_title">Template “%1$s”</string>
+    <string name="empty_webserver_template_content">Empty content.</string>
 </resources>

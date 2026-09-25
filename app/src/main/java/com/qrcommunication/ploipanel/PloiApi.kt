@@ -1129,6 +1129,20 @@ internal data class CreateStatusPageIncidentRequest(
     }.toString()
 }
 
+/** Webserver template entry of GET /api/webserver-templates and GET /api/webserver-templates/{id}. */
+internal data class WebserverTemplate(
+    val id: Long,
+    val label: String,
+    val content: String,
+    val createdAt: String
+)
+
+internal data class WebserverTemplatePage(
+    val templates: List<WebserverTemplate>, val currentPage: Int, val lastPage: Int
+) {
+    val hasNext: Boolean get() = currentPage < lastPage
+}
+
 internal class PloiHttpException(val status: Int, val retryAfterSeconds: String? = null) : Exception("Ploi HTTP $status")
 
 /** Typed API surface. Never persist or log a bearer token. */
@@ -2562,6 +2576,46 @@ internal object PloiApi {
     /** DELETE /api/status-pages/{statusPage}/incident/{incident} (singular segment documented). */
     fun deleteStatusPageIncident(token: String, statusPageId: Long, incidentId: Long): String = parseOrThrow {
         parseMessage(write("DELETE", statusPageIncidentPath(statusPageId, incidentId), token, null))
+    }
+
+    // ---- Webserver templates domain ----
+
+    private fun webserverTemplatesPath(): String = "/webserver-templates"
+
+    private fun webserverTemplatePath(templateId: Long): String =
+        "${webserverTemplatesPath()}/${validateResourceId(templateId)}"
+
+    private fun parseWebserverTemplateEntry(item: JSONObject): WebserverTemplate = WebserverTemplate(
+        id = item.getLong("id"),
+        label = item.getString("label"),
+        content = item.optString("content"),
+        createdAt = item.optString("created_at")
+    )
+
+    /** Documented list shape: data array plus links/meta pagination. */
+    fun parseWebserverTemplates(json: String): WebserverTemplatePage {
+        val root = JSONObject(json)
+        val data = root.getJSONArray("data")
+        val (page, lastPage) = pageMeta(root)
+        return WebserverTemplatePage(
+            (0 until data.length()).map { parseWebserverTemplateEntry(data.getJSONObject(it)) }, page, lastPage
+        )
+    }
+
+    fun parseWebserverTemplate(json: String): WebserverTemplate =
+        parseWebserverTemplateEntry(JSONObject(json).getJSONObject("data"))
+
+    /** GET /api/webserver-templates: paginated list of the account webserver templates. */
+    fun webserverTemplates(token: String, page: Int = 1, perPage: Int = 15): WebserverTemplatePage {
+        require(page >= 1) { "Page must be positive" }
+        return parseOrThrow {
+            parseWebserverTemplates(get("${webserverTemplatesPath()}?page=$page&per_page=${validatePageSize(perPage)}", token))
+        }
+    }
+
+    /** GET /api/webserver-templates/{id}. */
+    fun webserverTemplate(token: String, templateId: Long): WebserverTemplate = parseOrThrow {
+        parseWebserverTemplate(get(webserverTemplatePath(templateId), token))
     }
 
     fun parseProviders(json: String): ProviderPage {

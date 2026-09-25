@@ -1713,7 +1713,7 @@
       "domain": "webserver-templates",
       "title": "List webserver templates",
       "operation": "List webserver templates",
-      "status": "not_implemented"
+      "status": "implemented_locally_unverified_live"
     },
     {
       "method": "GET",
@@ -1722,7 +1722,7 @@
       "domain": "webserver-templates",
       "title": "Get webserver template",
       "operation": "Get webserver template",
-      "status": "not_implemented"
+      "status": "implemented_locally_unverified_live"
     },
     {
       "method": "GET",
