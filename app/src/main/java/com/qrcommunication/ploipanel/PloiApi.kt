@@ -112,6 +112,24 @@ internal data class SiteRepository(
 /** Toggled quick-deploy response: updated site plus the human-readable confirmation. */
 internal data class QuickDeployResult(val site: Site, val message: String)
 
+/** Database entry of GET/POST /api/servers/{server}/databases (type is null in duplicate responses). */
+internal data class PloiDatabase(
+    val id: Long, val type: String, val name: String, val serverId: Long, val status: String,
+    val siteId: Long? = null, val siteDomain: String = "", val createdAt: String = ""
+)
+internal data class DatabasePage(val databases: List<PloiDatabase>, val currentPage: Int, val lastPage: Int) {
+    val hasNext: Boolean get() = currentPage < lastPage
+}
+internal data class DatabaseUser(
+    val id: Long, val user: String, val remote: Boolean, val remoteIp: String,
+    val readonly: Boolean, val createdAt: String
+)
+internal data class DatabaseUserPage(val users: List<DatabaseUser>, val currentPage: Int, val lastPage: Int) {
+    val hasNext: Boolean get() = currentPage < lastPage
+}
+/** Duplicate response: the new database plus the human-readable confirmation. */
+internal data class DatabaseDuplication(val database: PloiDatabase, val message: String)
+
 /** Documented value sets for server creation (developers.ploi.io/servers/create-server). */
 internal val SERVER_TYPES = setOf("server", "load-balancer", "database-server", "redis-server")
 internal val CUSTOM_SERVER_TYPES = SERVER_TYPES + "storage-server"
@@ -137,6 +155,23 @@ internal val SITE_PHP_VERSIONS = PHP_VERSIONS - "none"
 internal val REPOSITORY_PROVIDERS = setOf("bitbucket", "github", "gitlab", "custom")
 internal const val DEPLOY_SCRIPT_MAX_LENGTH = 65_535
 internal const val ENV_CONTENT_MIN_LENGTH = 2
+internal const val DATABASE_NAME_MAX_LENGTH = 64
+internal const val DUPLICATE_NAME_MAX_LENGTH = 255
+internal const val DUPLICATE_PASSWORD_MAX_LENGTH = 50
+/** Database names and creation-time users: alpha-numeric, dashes and underscores, 2-64 (documented). */
+private val DATABASE_NAME_PATTERN = Regex("[A-Za-z0-9_-]+")
+/**
+ * Database user accounts: dashes are documented as forbidden while the official example uses
+ * `my_user`, so the accepted charset is alpha-numeric plus underscores.
+ */
+private val DATABASE_ACCOUNT_PATTERN = Regex("[A-Za-z0-9_]+")
+
+internal fun validateDatabaseName(name: String): String {
+    require(name.length in 2..DATABASE_NAME_MAX_LENGTH && DATABASE_NAME_PATTERN.matches(name)) {
+        "Database name must be 2-$DATABASE_NAME_MAX_LENGTH alpha-numeric characters, dashes or underscores"
+    }
+    return name
+}
 private val SCHEDULED_DEPLOY_PATTERN = Regex("""\d{4}-\d{2}-\d{2} \d{2}:\d{2}""")
 private val ROOT_DOMAIN_PATTERN = Regex("\\S+")
 private val WEB_DIRECTORY_PATTERN = Regex("[a-zA-Z0-9/]+")
@@ -318,6 +353,59 @@ internal data class InstallRepositoryRequest(
         put("name", name)
         sourceProviderId?.let { put("source_provider_id", it) }
         if (installComposer) put("install_composer", true)
+    }.toString()
+}
+
+/** Validated payload for POST /api/servers/{server}/databases. */
+internal data class CreateDatabaseRequest(
+    val name: String,
+    val user: String = "",
+    val password: String = "",
+    val description: String = "",
+    val siteId: Long? = null
+) {
+    init {
+        validateDatabaseName(name)
+        // Documented rules for the optional creation-time user mirror the database name rules.
+        if (user.isNotEmpty()) validateDatabaseName(user)
+        require(password.isEmpty() || password.isNotBlank()) { "Password must not be blank" }
+        require(siteId == null || siteId > 0) { "Invalid site ID" }
+    }
+
+    fun toJson(): String = JSONObject().apply {
+        put("name", name)
+        if (user.isNotEmpty()) put("user", user)
+        if (password.isNotEmpty()) put("password", password)
+        if (description.isNotBlank()) put("description", description)
+        siteId?.let { put("site_id", it) }
+    }.toString()
+}
+
+/** Validated payload for POST /api/servers/{server}/databases/{database}/users. */
+internal data class CreateDatabaseUserRequest(
+    val user: String,
+    val password: String,
+    val remote: Boolean = false,
+    val remoteIp: String = "",
+    val readonly: Boolean = false
+) {
+    init {
+        require(user.isNotBlank() && DATABASE_ACCOUNT_PATTERN.matches(user)) {
+            "Database user must be alpha-numeric with underscores, no dashes"
+        }
+        require(password.isNotBlank()) { "Password is required" }
+        // Documented: remote_ip is required when remote is true; "%" wildcards are legitimate values.
+        require(!remote || remoteIp.isNotBlank()) { "Remote IP is required for remote users" }
+    }
+
+    fun toJson(): String = JSONObject().apply {
+        put("user", user)
+        put("password", password)
+        if (remote) {
+            put("remote", true)
+            put("remote_ip", remoteIp)
+        }
+        if (readonly) put("readonly", true)
     }.toString()
 }
 
@@ -726,6 +814,154 @@ internal object PloiApi {
         return parseOrThrow {
             val body = JSONObject().put("content", content).toString()
             parseMessage(write("PATCH", "${sitePath(serverId, siteId)}/env", token, body))
+        }
+    }
+
+    // ---- Databases + database-users domains ----
+
+    private fun databasesPath(serverId: Long): String = "/servers/${validateResourceId(serverId)}/databases"
+
+    private fun databasePath(serverId: Long, databaseId: Long): String =
+        "${databasesPath(serverId)}/${validateResourceId(databaseId)}"
+
+    private fun parseDatabaseEntry(item: JSONObject): PloiDatabase {
+        val site = item.optJSONObject("site")
+        return PloiDatabase(
+            id = item.getLong("id"),
+            type = nullableString(item, "type"),
+            name = item.getString("name"),
+            serverId = item.getLong("server_id"),
+            status = item.optString("status"),
+            siteId = site?.optLong("id")?.takeIf { it > 0 },
+            siteDomain = site?.optString("root_domain").orEmpty(),
+            createdAt = item.optString("created_at")
+        )
+    }
+
+    fun parseDatabases(json: String): DatabasePage {
+        val root = JSONObject(json)
+        val data = root.getJSONArray("data")
+        val (page, lastPage) = pageMeta(root)
+        return DatabasePage((0 until data.length()).map { parseDatabaseEntry(data.getJSONObject(it)) }, page, lastPage)
+    }
+
+    fun parseDatabase(json: String): PloiDatabase = parseDatabaseEntry(JSONObject(json).getJSONObject("data"))
+
+    fun databases(token: String, serverId: Long, page: Int = 1, perPage: Int = 15): DatabasePage {
+        require(page >= 1) { "Page must be positive" }
+        return parseOrThrow {
+            parseDatabases(get("${databasesPath(serverId)}?page=$page&per_page=${validatePageSize(perPage)}", token))
+        }
+    }
+
+    fun database(token: String, serverId: Long, databaseId: Long): PloiDatabase = parseOrThrow {
+        parseDatabase(get(databasePath(serverId, databaseId), token))
+    }
+
+    fun createDatabase(token: String, serverId: Long, request: CreateDatabaseRequest): PloiDatabase = parseOrThrow {
+        parseDatabase(write("POST", databasesPath(serverId), token, request.toJson()))
+    }
+
+    /** DELETE /databases/{id}: documented response body is empty, so nothing is parsed. */
+    fun deleteDatabase(token: String, serverId: Long, databaseId: Long) {
+        write("DELETE", databasePath(serverId, databaseId), token, null)
+    }
+
+    /** POST /databases/acknowledge: registers a database created outside Ploi. */
+    fun acknowledgeDatabase(token: String, serverId: Long, name: String): PloiDatabase {
+        validateDatabaseName(name)
+        return parseOrThrow {
+            val body = JSONObject().put("name", name).toString()
+            parseDatabase(write("POST", "${databasesPath(serverId)}/acknowledge", token, body))
+        }
+    }
+
+    /** DELETE /databases/{id}/forget: removes Ploi's record without deleting server-side; empty body. */
+    fun forgetDatabase(token: String, serverId: Long, databaseId: Long) {
+        write("DELETE", "${databasePath(serverId, databaseId)}/forget", token, null)
+    }
+
+    fun parseDatabaseDuplication(json: String): DatabaseDuplication {
+        val root = JSONObject(json)
+        return DatabaseDuplication(parseDatabaseEntry(root.getJSONObject("data")), root.optString("message"))
+    }
+
+    /** POST /databases/{database}/duplicate: name is documented as free text (max 255), password max 50. */
+    fun duplicateDatabase(
+        token: String, serverId: Long, databaseId: Long,
+        name: String, user: String = "", password: String = ""
+    ): DatabaseDuplication {
+        require(name.isNotBlank() && name.length <= DUPLICATE_NAME_MAX_LENGTH) {
+            "New database name must be 1 to $DUPLICATE_NAME_MAX_LENGTH characters"
+        }
+        require(user.length <= DUPLICATE_NAME_MAX_LENGTH) { "New database user name too long" }
+        require(password.length <= DUPLICATE_PASSWORD_MAX_LENGTH) {
+            "New database password must be at most $DUPLICATE_PASSWORD_MAX_LENGTH characters"
+        }
+        val body = JSONObject().apply {
+            put("name", name)
+            if (user.isNotBlank()) put("user", user)
+            if (password.isNotBlank()) put("password", password)
+        }.toString()
+        return parseOrThrow {
+            parseDatabaseDuplication(write("POST", "${databasePath(serverId, databaseId)}/duplicate", token, body))
+        }
+    }
+
+    private fun parseDatabaseUserEntry(item: JSONObject) = DatabaseUser(
+        id = item.getLong("id"),
+        user = item.getString("user"),
+        remote = item.optBoolean("remote", false),
+        remoteIp = item.optString("remote_ip"),
+        readonly = item.optBoolean("readonly", false),
+        createdAt = item.optString("created_at")
+    )
+
+    fun parseDatabaseUsers(json: String): DatabaseUserPage {
+        val root = JSONObject(json)
+        val data = root.getJSONArray("data")
+        val (page, lastPage) = pageMeta(root)
+        return DatabaseUserPage(
+            (0 until data.length()).map { parseDatabaseUserEntry(data.getJSONObject(it)) }, page, lastPage
+        )
+    }
+
+    fun parseDatabaseUser(json: String): DatabaseUser =
+        parseDatabaseUserEntry(JSONObject(json).getJSONObject("data"))
+
+    private fun databaseUsersPath(serverId: Long, databaseId: Long): String =
+        "${databasePath(serverId, databaseId)}/users"
+
+    fun databaseUsers(token: String, serverId: Long, databaseId: Long, page: Int = 1, perPage: Int = 15): DatabaseUserPage {
+        require(page >= 1) { "Page must be positive" }
+        return parseOrThrow {
+            parseDatabaseUsers(
+                get("${databaseUsersPath(serverId, databaseId)}?page=$page&per_page=${validatePageSize(perPage)}", token)
+            )
+        }
+    }
+
+    fun databaseUser(token: String, serverId: Long, databaseId: Long, userId: Long): DatabaseUser = parseOrThrow {
+        parseDatabaseUser(get("${databaseUsersPath(serverId, databaseId)}/${validateResourceId(userId)}", token))
+    }
+
+    fun createDatabaseUser(
+        token: String, serverId: Long, databaseId: Long, request: CreateDatabaseUserRequest
+    ): DatabaseUser = parseOrThrow {
+        parseDatabaseUser(write("POST", databaseUsersPath(serverId, databaseId), token, request.toJson()))
+    }
+
+    /** DELETE …/users/{user}: documented response body is empty, so nothing is parsed. */
+    fun deleteDatabaseUser(token: String, serverId: Long, databaseId: Long, userId: Long) {
+        write("DELETE", "${databaseUsersPath(serverId, databaseId)}/${validateResourceId(userId)}", token, null)
+    }
+
+    /** POST …/users/attach: grants an existing server-level user access to this database. */
+    fun attachDatabaseUser(token: String, serverId: Long, databaseId: Long, userId: Long): DatabaseUser {
+        validateResourceId(userId)
+        return parseOrThrow {
+            val body = JSONObject().put("user_id", userId).toString()
+            parseDatabaseUser(write("POST", "${databaseUsersPath(serverId, databaseId)}/attach", token, body))
         }
     }
 

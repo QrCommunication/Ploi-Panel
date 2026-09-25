@@ -1875,7 +1875,7 @@
       "domain": "databases",
       "title": "List databases",
       "operation": "List all databases",
-      "status": "not_implemented"
+      "status": "implemented_locally_unverified_live"
     },
     {
       "method": "POST",
@@ -1884,7 +1884,7 @@
       "domain": "databases",
       "title": "Create database",
       "operation": "Create a database",
-      "status": "not_implemented"
+      "status": "implemented_locally_unverified_live"
     },
     {
       "method": "GET",
@@ -1893,7 +1893,7 @@
       "domain": "databases",
       "title": "Get database",
       "operation": "Get a database",
-      "status": "not_implemented"
+      "status": "implemented_locally_unverified_live"
     },
     {
       "method": "DELETE",
@@ -1902,7 +1902,7 @@
       "domain": "databases",
       "title": "Delete database",
       "operation": "Delete a database",
-      "status": "not_implemented"
+      "status": "implemented_locally_unverified_live"
     },
     {
       "method": "POST",
@@ -1911,7 +1911,7 @@
       "domain": "databases",
       "title": "Acknowledge database",
       "operation": "Acknowledge a database",
-      "status": "not_implemented"
+      "status": "implemented_locally_unverified_live"
     },
     {
       "method": "DELETE",
@@ -1920,7 +1920,7 @@
       "domain": "databases",
       "title": "Forget database",
       "operation": "Forget a database",
-      "status": "not_implemented"
+      "status": "implemented_locally_unverified_live"
     },
     {
       "method": "POST",
@@ -1929,7 +1929,7 @@
       "domain": "databases",
       "title": "Duplicate database",
       "operation": "Duplicate a database",
-      "status": "not_implemented"
+      "status": "implemented_locally_unverified_live"
     },
     {
       "method": "GET",
@@ -1938,7 +1938,7 @@
       "domain": "database-users",
       "title": "List database users",
       "operation": "List all database users",
-      "status": "not_implemented"
+      "status": "implemented_locally_unverified_live"
     },
     {
       "method": "POST",
@@ -1947,7 +1947,7 @@
       "domain": "database-users",
       "title": "Create database user",
       "operation": "Create a database user",
-      "status": "not_implemented"
+      "status": "implemented_locally_unverified_live"
     },
     {
       "method": "GET",
@@ -1956,7 +1956,7 @@
       "domain": "database-users",
       "title": "Get database user",
       "operation": "Get a database user",
-      "status": "not_implemented"
+      "status": "implemented_locally_unverified_live"
     },
     {
       "method": "DELETE",
@@ -1965,7 +1965,7 @@
       "domain": "database-users",
       "title": "Delete database user",
       "operation": "Delete a database user",
-      "status": "not_implemented"
+      "status": "implemented_locally_unverified_live"
     },
     {
       "method": "POST",
@@ -1974,7 +1974,7 @@
       "domain": "database-users",
       "title": "Attach user to database",
       "operation": "Attach user to database",
-      "status": "not_implemented"
+      "status": "implemented_locally_unverified_live"
     },
     {
       "method": "GET",

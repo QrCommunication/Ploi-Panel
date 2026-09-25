@@ -2,7 +2,7 @@
 
 Extraction : 2026-09-24T18:31:36+00:00 ; source : [sitemap officiel](https://developers.ploi.io/sitemap.xml), puis en-têtes méthode/chemin des pages officielles. Base des requêtes : `https://ploi.io/api` (les chemins ci-dessous comprennent déjà `/api`).
 
-**231 opérations documentées**, 230 pages avec routes, 231 pages de référence API ; **181 non implémentées** (`not_implemented`), **50 implémentées et testées localement mais non vérifiées sur compte réel** (`implemented_locally_unverified_live`). Ce tableau inventorie la documentation, et ne constitue ni une preuve de disponibilité dans un compte donné, ni un contrat testé contre l’API. Le [JSON](api-coverage.json) conserve chaque entrée et la classification de toutes les URL du sitemap.
+**231 opérations documentées**, 230 pages avec routes, 231 pages de référence API ; **169 non implémentées** (`not_implemented`), **62 implémentées et testées localement mais non vérifiées sur compte réel** (`implemented_locally_unverified_live`). Ce tableau inventorie la documentation, et ne constitue ni une preuve de disponibilité dans un compte donné, ni un contrat testé contre l’API. Le [JSON](api-coverage.json) conserve chaque entrée et la classification de toutes les URL du sitemap.
 
 ## Périmètre et méthode
 
@@ -75,18 +75,18 @@ Extraction : 2026-09-24T18:31:36+00:00 ; source : [sitemap officiel](https://dev
 | `servers` | `GET` | `/api/servers/monitored` | [List monitored servers](https://developers.ploi.io/servers/monitored) | `implemented_locally_unverified_live` |
 | `servers` | `GET` | `/api/servers/{server}/monitor` | [Get monitoring data](https://developers.ploi.io/servers/monitoring) | `implemented_locally_unverified_live` |
 | `servers` | `POST` | `/api/servers/{id}/restart` | [Restart a server](https://developers.ploi.io/servers/restart-server) | `implemented_locally_unverified_live` |
-| `databases` | `GET` | `/api/servers/{server}/databases` | [List all databases](https://developers.ploi.io/databases/list-databases) | `not_implemented` |
-| `databases` | `POST` | `/api/servers/{server}/databases` | [Create a database](https://developers.ploi.io/databases/create-database) | `not_implemented` |
-| `databases` | `GET` | `/api/servers/{server}/databases/{id}` | [Get a database](https://developers.ploi.io/databases/get-database) | `not_implemented` |
-| `databases` | `DELETE` | `/api/servers/{server}/databases/{id}` | [Delete a database](https://developers.ploi.io/databases/delete-database) | `not_implemented` |
-| `databases` | `POST` | `/api/servers/{server}/databases/acknowledge` | [Acknowledge a database](https://developers.ploi.io/databases/acknowledge-database) | `not_implemented` |
-| `databases` | `DELETE` | `/api/servers/{server}/databases/{id}/forget` | [Forget a database](https://developers.ploi.io/databases/forget-database) | `not_implemented` |
-| `databases` | `POST` | `/api/servers/{server}/databases/{database}/duplicate` | [Duplicate a database](https://developers.ploi.io/databases/duplicate-database) | `not_implemented` |
-| `database-users` | `GET` | `/api/servers/{server}/databases/{database}/users` | [List all database users](https://developers.ploi.io/database-users/list-database-users) | `not_implemented` |
-| `database-users` | `POST` | `/api/servers/{server}/databases/{database}/users` | [Create a database user](https://developers.ploi.io/database-users/create-database-user) | `not_implemented` |
-| `database-users` | `GET` | `/api/servers/{server}/databases/{database}/users/{user}` | [Get a database user](https://developers.ploi.io/database-users/get-database-user) | `not_implemented` |
-| `database-users` | `DELETE` | `/api/servers/{server}/databases/{database}/users/{user}` | [Delete a database user](https://developers.ploi.io/database-users/delete-database-user) | `not_implemented` |
-| `database-users` | `POST` | `/api/servers/{server}/databases/{database}/users/attach` | [Attach user to database](https://developers.ploi.io/database-users/attach-user-to-database) | `not_implemented` |
+| `databases` | `GET` | `/api/servers/{server}/databases` | [List all databases](https://developers.ploi.io/databases/list-databases) | `implemented_locally_unverified_live` |
+| `databases` | `POST` | `/api/servers/{server}/databases` | [Create a database](https://developers.ploi.io/databases/create-database) | `implemented_locally_unverified_live` |
+| `databases` | `GET` | `/api/servers/{server}/databases/{id}` | [Get a database](https://developers.ploi.io/databases/get-database) | `implemented_locally_unverified_live` |
+| `databases` | `DELETE` | `/api/servers/{server}/databases/{id}` | [Delete a database](https://developers.ploi.io/databases/delete-database) | `implemented_locally_unverified_live` |
+| `databases` | `POST` | `/api/servers/{server}/databases/acknowledge` | [Acknowledge a database](https://developers.ploi.io/databases/acknowledge-database) | `implemented_locally_unverified_live` |
+| `databases` | `DELETE` | `/api/servers/{server}/databases/{id}/forget` | [Forget a database](https://developers.ploi.io/databases/forget-database) | `implemented_locally_unverified_live` |
+| `databases` | `POST` | `/api/servers/{server}/databases/{database}/duplicate` | [Duplicate a database](https://developers.ploi.io/databases/duplicate-database) | `implemented_locally_unverified_live` |
+| `database-users` | `GET` | `/api/servers/{server}/databases/{database}/users` | [List all database users](https://developers.ploi.io/database-users/list-database-users) | `implemented_locally_unverified_live` |
+| `database-users` | `POST` | `/api/servers/{server}/databases/{database}/users` | [Create a database user](https://developers.ploi.io/database-users/create-database-user) | `implemented_locally_unverified_live` |
+| `database-users` | `GET` | `/api/servers/{server}/databases/{database}/users/{user}` | [Get a database user](https://developers.ploi.io/database-users/get-database-user) | `implemented_locally_unverified_live` |
+| `database-users` | `DELETE` | `/api/servers/{server}/databases/{database}/users/{user}` | [Delete a database user](https://developers.ploi.io/database-users/delete-database-user) | `implemented_locally_unverified_live` |
+| `database-users` | `POST` | `/api/servers/{server}/databases/{database}/users/attach` | [Attach user to database](https://developers.ploi.io/database-users/attach-user-to-database) | `implemented_locally_unverified_live` |
 | `crontabs` | `GET` | `/api/servers/{server}/crontabs` | [List all crontabs](https://developers.ploi.io/crontabs/list-crontabs) | `not_implemented` |
 | `crontabs` | `POST` | `/api/servers/{server}/crontabs` | [Create a crontab](https://developers.ploi.io/crontabs/create-crontab) | `not_implemented` |
 | `crontabs` | `GET` | `/api/servers/{server}/crontabs/{id}` | [Get a crontab](https://developers.ploi.io/crontabs/get-crontab) | `not_implemented` |
