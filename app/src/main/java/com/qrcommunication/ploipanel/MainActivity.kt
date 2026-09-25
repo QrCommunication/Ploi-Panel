@@ -136,12 +136,12 @@ private fun PloiPanel() {
                                 Column(Modifier.weight(1f)) {
                                     val server = selected
                                     if (server == null) Text(stringResource(R.string.select_server))
-                                    else MonitoringView(token!!, server, refresh)
+                                    else ServerDetail(token!!, server, refresh)
                                 }
                             }
                         } else if (selected != null) {
                             OutlinedButton(onClick = { selected = null }) { Text(stringResource(R.string.back)) }
-                            MonitoringView(token!!, selected!!, refresh)
+                            ServerDetail(token!!, selected!!, refresh)
                         } else {
                             ServerList(servers, loading, error, page, onPage = { page = it }, onRefresh = { refresh++ }, onSelect = { selected = it })
                         }
@@ -193,6 +193,18 @@ private fun ServerList(
                 }
             }
         }
+    }
+}
+
+@Composable
+private fun ServerDetail(token: String, server: Server, refresh: Int) {
+    var tab by remember(server.id, token) { mutableIntStateOf(0) }
+    Column(Modifier.fillMaxSize()) {
+        Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+            OutlinedButton(onClick = { tab = 0 }, enabled = tab != 0) { Text(stringResource(R.string.monitoring)) }
+            OutlinedButton(onClick = { tab = 1 }, enabled = tab != 1) { Text(stringResource(R.string.sites)) }
+        }
+        if (tab == 0) MonitoringView(token, server, refresh) else SitesScreen(token, server.id)
     }
 }
 

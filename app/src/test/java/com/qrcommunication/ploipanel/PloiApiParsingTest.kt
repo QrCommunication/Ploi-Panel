@@ -70,4 +70,28 @@ class PloiApiParsingTest {
     fun rejectsMalformedProviderPagination() {
         PloiApi.parseProviders("""{"data":[],"meta":{"current_page":2,"last_page":1}}""")
     }
+
+    @Test fun parsesSitesAndPagination() {
+        val page = PloiApi.parseSites("""{"data":[{"id":4,"server_id":9,"domain":"example.org",
+            "status":"active","php_version":8.4,"web_directory":"/public","health_url":null,
+            "disk_usage":{"human":"117 MB"}}],"meta":{"current_page":1,"last_page":2}}""")
+        assertEquals(4L, page.sites.single().id)
+        assertEquals("example.org", page.sites.single().domain)
+        assertEquals("8.4", page.sites.single().phpVersion)
+        assertEquals("117 MB", page.sites.single().diskUsage)
+        assertTrue(page.hasNext)
+    }
+
+    @Test fun parsesSiteDetailWithNullAndMissingOptionalFields() {
+        val site = PloiApi.parseSite("""{"data":{"id":5,"server_id":9,"domain":"hello.example",
+            "status":"active","php_version":null,"web_directory":"/","health_url":null}}""")
+        assertEquals(9L, site.serverId)
+        assertEquals("", site.phpVersion)
+        assertEquals("", site.healthUrl)
+    }
+
+    @Test(expected = IllegalArgumentException::class)
+    fun rejectsInvalidSiteIdentifier() {
+        PloiApi.validateResourceId(0)
+    }
 }

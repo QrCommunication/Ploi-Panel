@@ -33,4 +33,12 @@
     <string name="select_provider">Select a provider to view plans and regions.</string>
     <string name="add_provider">Add a provider on Ploi</string>
     <string name="back_providers">Back to providers</string>
+    <string name="sites">Sites</string>
+    <string name="select_site">Select a site to see its details.</string>
+    <string name="empty_sites">No sites on this server.</string>
+    <string name="back_sites">Back to sites</string>
+    <string name="site_php">PHP: %1$s</string>
+    <string name="site_directory">Web directory: %1$s</string>
+    <string name="site_disk">Disk usage: %1$s</string>
+    <string name="site_health">Health URL: %1$s</string>
 </resources>

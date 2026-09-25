@@ -9,6 +9,13 @@ internal data class ServerPage(val servers: List<Server>, val currentPage: Int, 
     val hasNext: Boolean get() = currentPage < lastPage
 }
 internal data class MonitorSample(val cpu: String, val ram: String, val disk: String, val load: String, val date: String)
+internal data class Site(
+    val id: Long, val serverId: Long, val domain: String, val status: String,
+    val phpVersion: String, val webDirectory: String, val healthUrl: String, val diskUsage: String
+)
+internal data class SitePage(val sites: List<Site>, val currentPage: Int, val lastPage: Int) {
+    val hasNext: Boolean get() = currentPage < lastPage
+}
 internal data class ProviderOption(val id: String, val name: String, val description: String = "")
 internal data class ProviderCredential(
     val id: Long, val name: String, val label: String, val plans: List<ProviderOption>, val regions: List<ProviderOption>
@@ -57,6 +64,43 @@ internal object PloiApi {
             sample.optString("load_average"), sample.getString("date")
         )
     }
+
+    fun validateResourceId(id: Long): Long {
+        require(id > 0) { "Resource ID must be positive" }
+        return id
+    }
+
+    fun parseSites(json: String): SitePage {
+        val root = JSONObject(json)
+        val meta = root.getJSONObject("meta")
+        val page = meta.getInt("current_page")
+        val lastPage = meta.getInt("last_page")
+        require(page >= 1 && lastPage >= 1 && page <= lastPage) { "Invalid pagination metadata" }
+        val data = root.getJSONArray("data")
+        return SitePage((0 until data.length()).map { parseSiteEntry(data.getJSONObject(it)) }, page, lastPage)
+    }
+
+    fun parseSite(json: String): Site = parseSiteEntry(JSONObject(json).getJSONObject("data"))
+
+    private fun parseSiteEntry(item: JSONObject): Site = Site(
+        id = item.getLong("id"),
+        serverId = item.getLong("server_id"),
+        domain = item.getString("domain"),
+        status = item.optString("status"),
+        phpVersion = item.opt("php_version")?.takeUnless { it == JSONObject.NULL }?.toString().orEmpty(),
+        webDirectory = item.optString("web_directory"),
+        healthUrl = if (item.isNull("health_url")) "" else item.getString("health_url"),
+        diskUsage = item.optJSONObject("disk_usage")?.optString("human").orEmpty()
+    )
+
+    fun sites(token: String, serverId: Long, page: Int = 1, perPage: Int = 15): SitePage {
+        require(page >= 1) { "Page must be positive" }
+        return parseSites(get("/servers/${validateResourceId(serverId)}/sites?page=$page&per_page=${validatePageSize(perPage)}", token))
+    }
+
+    fun site(token: String, serverId: Long, siteId: Long): Site = parseSite(
+        get("/servers/${validateResourceId(serverId)}/sites/${validateResourceId(siteId)}", token)
+    )
 
     fun parseProviders(json: String): ProviderPage {
         val root = JSONObject(json)

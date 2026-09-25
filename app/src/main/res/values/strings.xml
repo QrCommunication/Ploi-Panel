@@ -33,4 +33,12 @@
     <string name="select_provider">Sélectionnez un prestataire pour voir ses offres et régions.</string>
     <string name="add_provider">Ajouter un prestataire sur Ploi</string>
     <string name="back_providers">Retour aux prestataires</string>
+    <string name="sites">Sites</string>
+    <string name="select_site">Sélectionnez un site pour voir ses détails.</string>
+    <string name="empty_sites">Aucun site sur ce serveur.</string>
+    <string name="back_sites">Retour aux sites</string>
+    <string name="site_php">PHP : %1$s</string>
+    <string name="site_directory">Répertoire web : %1$s</string>
+    <string name="site_disk">Espace disque : %1$s</string>
+    <string name="site_health">URL de santé : %1$s</string>
 </resources>

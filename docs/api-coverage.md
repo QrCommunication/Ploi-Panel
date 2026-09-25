@@ -2,7 +2,7 @@
 
 Extraction : 2026-09-24T18:31:36+00:00 ; source : [sitemap officiel](https://developers.ploi.io/sitemap.xml), puis en-têtes méthode/chemin des pages officielles. Base des requêtes : `https://ploi.io/api` (les chemins ci-dessous comprennent déjà `/api`).
 
-**231 opérations documentées**, 230 pages avec routes, 231 pages de référence API ; **227 non implémentées** (`not_implemented`), **4 implémentées et testées localement mais non vérifiées sur compte réel** (`implemented_locally_unverified_live`). Ce tableau inventorie la documentation, et ne constitue ni une preuve de disponibilité dans un compte donné, ni un contrat testé contre l’API. Le [JSON](api-coverage.json) conserve chaque entrée et la classification de toutes les URL du sitemap.
+**231 opérations documentées**, 230 pages avec routes, 231 pages de référence API ; **225 non implémentées** (`not_implemented`), **6 implémentées et testées localement mais non vérifiées sur compte réel** (`implemented_locally_unverified_live`). Ce tableau inventorie la documentation, et ne constitue ni une preuve de disponibilité dans un compte donné, ni un contrat testé contre l’API. Le [JSON](api-coverage.json) conserve chaque entrée et la classification de toutes les URL du sitemap.
 
 ## Périmètre et méthode
 
@@ -130,9 +130,9 @@ Extraction : 2026-09-24T18:31:36+00:00 ; source : [sitemap officiel](https://dev
 | `insights` | `POST` | `/api/servers/{server}/insights/{id}/automatically-fix` | [Automatically fix insight](https://developers.ploi.io/insights/automatically-fix-insight) | `not_implemented` |
 | `insights` | `POST` | `/api/servers/{server}/insights/{id}/ignore` | [Ignore insight](https://developers.ploi.io/insights/ignore-insight) | `not_implemented` |
 | `insights` | `DELETE` | `/api/servers/{server}/insights/{id}` | [Delete insight](https://developers.ploi.io/insights/delete-insight) | `not_implemented` |
-| `sites` | `GET` | `/api/servers/{server}/sites` | [Get all sites](https://developers.ploi.io/sites/list-sites) | `not_implemented` |
+| `sites` | `GET` | `/api/servers/{server}/sites` | [Get all sites](https://developers.ploi.io/sites/list-sites) | `implemented_locally_unverified_live` |
 | `sites` | `POST` | `/api/servers/{server}/sites` | [Create a site](https://developers.ploi.io/sites/create-site) | `not_implemented` |
-| `sites` | `GET` | `/api/servers/{server}/sites/{id}` | [Get site](https://developers.ploi.io/sites/get-site) | `not_implemented` |
+| `sites` | `GET` | `/api/servers/{server}/sites/{id}` | [Get site](https://developers.ploi.io/sites/get-site) | `implemented_locally_unverified_live` |
 | `sites` | `PATCH` | `/api/servers/{server}/sites/{site}` | [Update site](https://developers.ploi.io/sites/update-site) | `not_implemented` |
 | `sites` | `DELETE` | `/api/servers/{server}/sites/{id}` | [Delete site](https://developers.ploi.io/sites/delete-site) | `not_implemented` |
 | `sites` | `GET` | `/api/servers/{server}/sites/{id}/log` | [Get site logs](https://developers.ploi.io/sites/log-site) | `not_implemented` |
