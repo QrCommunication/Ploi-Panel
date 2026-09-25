@@ -2,7 +2,7 @@
 
 Extraction : 2026-09-24T18:31:36+00:00 ; source : [sitemap officiel](https://developers.ploi.io/sitemap.xml), puis en-têtes méthode/chemin des pages officielles. Base des requêtes : `https://ploi.io/api` (les chemins ci-dessous comprennent déjà `/api`).
 
-**231 opérations documentées**, 230 pages avec routes, 231 pages de référence API ; **147 non implémentées** (`not_implemented`), **84 implémentées et testées localement mais non vérifiées sur compte réel** (`implemented_locally_unverified_live`). Ce tableau inventorie la documentation, et ne constitue ni une preuve de disponibilité dans un compte donné, ni un contrat testé contre l’API. Le [JSON](api-coverage.json) conserve chaque entrée et la classification de toutes les URL du sitemap.
+**231 opérations documentées**, 230 pages avec routes, 231 pages de référence API ; **141 non implémentées** (`not_implemented`), **90 implémentées et testées localement mais non vérifiées sur compte réel** (`implemented_locally_unverified_live`). Ce tableau inventorie la documentation, et ne constitue ni une preuve de disponibilité dans un compte donné, ni un contrat testé contre l’API. Le [JSON](api-coverage.json) conserve chaque entrée et la classification de toutes les URL du sitemap.
 
 ## Périmètre et méthode
 
@@ -87,20 +87,20 @@ Extraction : 2026-09-24T18:31:36+00:00 ; source : [sitemap officiel](https://dev
 | `database-users` | `GET` | `/api/servers/{server}/databases/{database}/users/{user}` | [Get a database user](https://developers.ploi.io/database-users/get-database-user) | `implemented_locally_unverified_live` |
 | `database-users` | `DELETE` | `/api/servers/{server}/databases/{database}/users/{user}` | [Delete a database user](https://developers.ploi.io/database-users/delete-database-user) | `implemented_locally_unverified_live` |
 | `database-users` | `POST` | `/api/servers/{server}/databases/{database}/users/attach` | [Attach user to database](https://developers.ploi.io/database-users/attach-user-to-database) | `implemented_locally_unverified_live` |
-| `crontabs` | `GET` | `/api/servers/{server}/crontabs` | [List all crontabs](https://developers.ploi.io/crontabs/list-crontabs) | `implemented_locally_unverified_live |
-| `crontabs` | `POST` | `/api/servers/{server}/crontabs` | [Create a crontab](https://developers.ploi.io/crontabs/create-crontab) | `implemented_locally_unverified_live |
-| `crontabs` | `GET` | `/api/servers/{server}/crontabs/{id}` | [Get a crontab](https://developers.ploi.io/crontabs/get-crontab) | `implemented_locally_unverified_live |
-| `crontabs` | `DELETE` | `/api/servers/{server}/crontabs/{id}` | [Delete a crontab](https://developers.ploi.io/crontabs/delete-crontab) | `implemented_locally_unverified_live |
+| `crontabs` | `GET` | `/api/servers/{server}/crontabs` | [List all crontabs](https://developers.ploi.io/crontabs/list-crontabs) | `implemented_locally_unverified_live` |
+| `crontabs` | `POST` | `/api/servers/{server}/crontabs` | [Create a crontab](https://developers.ploi.io/crontabs/create-crontab) | `implemented_locally_unverified_live` |
+| `crontabs` | `GET` | `/api/servers/{server}/crontabs/{id}` | [Get a crontab](https://developers.ploi.io/crontabs/get-crontab) | `implemented_locally_unverified_live` |
+| `crontabs` | `DELETE` | `/api/servers/{server}/crontabs/{id}` | [Delete a crontab](https://developers.ploi.io/crontabs/delete-crontab) | `implemented_locally_unverified_live` |
 | `network-rules` | `GET` | `/api/servers/{server}/network-rules` | [List all network rules](https://developers.ploi.io/network-rules/list-network-rules) | `not_implemented` |
 | `network-rules` | `POST` | `/api/servers/{server}/network-rules` | [Create a network rule](https://developers.ploi.io/network-rules/create-network-rule) | `not_implemented` |
 | `network-rules` | `GET` | `/api/servers/{server}/network-rules/{id}` | [Get a network rule](https://developers.ploi.io/network-rules/get-network-rule) | `not_implemented` |
 | `network-rules` | `DELETE` | `/api/servers/{server}/network-rules/{id}` | [Delete a network rule](https://developers.ploi.io/network-rules/delete-network-rule) | `not_implemented` |
-| `daemons` | `GET` | `/api/servers/{server}/daemons` | [List all daemons](https://developers.ploi.io/daemons/list-daemons) | `not_implemented` |
-| `daemons` | `POST` | `/api/servers/{server}/daemons` | [Create a daemon](https://developers.ploi.io/daemons/create-daemon) | `not_implemented` |
-| `daemons` | `GET` | `/api/servers/{server}/daemons/{daemon}` | [Get a daemon](https://developers.ploi.io/daemons/get-daemon) | `not_implemented` |
-| `daemons` | `POST` | `/api/servers/{server}/daemons/{daemon}/restart` | [Restart a daemon](https://developers.ploi.io/daemons/restart-daemon) | `not_implemented` |
-| `daemons` | `POST` | `/api/servers/{server}/daemons/{daemon}/toggle-pause` | [Toggle pause daemon](https://developers.ploi.io/daemons/pause-daemon) | `not_implemented` |
-| `daemons` | `DELETE` | `/api/servers/{server}/daemons/{daemon}` | [Delete a daemon](https://developers.ploi.io/daemons/delete-daemon) | `not_implemented` |
+| `daemons` | `GET` | `/api/servers/{server}/daemons` | [List all daemons](https://developers.ploi.io/daemons/list-daemons) | `implemented_locally_unverified_live` |
+| `daemons` | `POST` | `/api/servers/{server}/daemons` | [Create a daemon](https://developers.ploi.io/daemons/create-daemon) | `implemented_locally_unverified_live` |
+| `daemons` | `GET` | `/api/servers/{server}/daemons/{daemon}` | [Get a daemon](https://developers.ploi.io/daemons/get-daemon) | `implemented_locally_unverified_live` |
+| `daemons` | `POST` | `/api/servers/{server}/daemons/{daemon}/restart` | [Restart a daemon](https://developers.ploi.io/daemons/restart-daemon) | `implemented_locally_unverified_live` |
+| `daemons` | `POST` | `/api/servers/{server}/daemons/{daemon}/toggle-pause` | [Toggle pause daemon](https://developers.ploi.io/daemons/pause-daemon) | `implemented_locally_unverified_live` |
+| `daemons` | `DELETE` | `/api/servers/{server}/daemons/{daemon}` | [Delete a daemon](https://developers.ploi.io/daemons/delete-daemon) | `implemented_locally_unverified_live` |
 | `system-users` | `GET` | `/api/servers/{server}/system-users` | [List all system users](https://developers.ploi.io/system-users/list-system-users) | `not_implemented` |
 | `system-users` | `POST` | `/api/servers/{server}/system-users` | [Create a system user](https://developers.ploi.io/system-users/create-system-user) | `not_implemented` |
 | `system-users` | `GET` | `/api/servers/{server}/system-users/{systemUser}` | [Get a system user](https://developers.ploi.io/system-users/get-system-user) | `not_implemented` |

@@ -370,4 +370,24 @@
     <string name="delete_crontab">Supprimer</string>
     <string name="confirm_delete_crontab">Supprimer définitivement la tâche cron « %1$s » ? Cette action est irréversible.</string>
     <string name="crontab_deleted">Tâche cron supprimée.</string>
+    <string name="daemons_tab">Daemons</string>
+    <string name="empty_daemons">Aucun daemon sur ce serveur.</string>
+    <string name="new_daemon">Nouveau daemon</string>
+    <string name="daemon_command_label">Commande à exécuter (max 150 caractères)</string>
+    <string name="daemon_user_label">Utilisateur système (ex. ploi)</string>
+    <string name="daemon_processes_label">Nombre de processus</string>
+    <string name="daemon_directory_label">Répertoire de travail (optionnel)</string>
+    <string name="create_daemon_submit">Créer le daemon</string>
+    <string name="daemon_created">Daemon créé.</string>
+    <string name="daemon_status">Statut : %1$s</string>
+    <string name="daemon_processes">Processus : %1$d</string>
+    <string name="daemon_user">Utilisateur : %1$s</string>
+    <string name="daemon_directory">Répertoire : %1$s</string>
+    <string name="restart_daemon">Redémarrer</string>
+    <string name="daemon_restarted">Daemon redémarré.</string>
+    <string name="toggle_pause_daemon">Pause/Reprendre</string>
+    <string name="daemon_pause_toggled">État du daemon basculé.</string>
+    <string name="delete_daemon">Supprimer</string>
+    <string name="confirm_delete_daemon">Supprimer définitivement le daemon « %1$s » ? Cette action est irréversible.</string>
+    <string name="daemon_deleted">Daemon supprimé.</string>
 </resources>

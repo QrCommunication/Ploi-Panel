@@ -175,6 +175,19 @@ internal data class CrontabPage(val crontabs: List<Crontab>, val currentPage: In
     val hasNext: Boolean get() = currentPage < lastPage
 }
 
+/**
+ * Daemon entry of GET/POST /api/servers/{server}/daemons responses. The documented
+ * toggle-pause response carries only id/command/processes/status, so systemUser and
+ * directory are parsed tolerantly.
+ */
+internal data class Daemon(
+    val id: Long, val command: String, val processes: Int,
+    val systemUser: String, val directory: String, val status: String
+)
+internal data class DaemonPage(val daemons: List<Daemon>, val currentPage: Int, val lastPage: Int) {
+    val hasNext: Boolean get() = currentPage < lastPage
+}
+
 /** Documented value sets for server creation (developers.ploi.io/servers/create-server). */
 internal val SERVER_TYPES = setOf("server", "load-balancer", "database-server", "redis-server")
 internal val CUSTOM_SERVER_TYPES = SERVER_TYPES + "storage-server"
@@ -215,6 +228,8 @@ internal val BACKUP_CHANNEL_LOCATIONS = setOf("before-backup", "after-backup", "
 internal const val CRONTAB_USER_MAX_LENGTH = 255
 internal const val CRONTAB_COMMAND_MAX_LENGTH = 255
 internal const val CRONTAB_FREQUENCY_MAX_LENGTH = 50
+/** Documented maximum length for daemon creation (developers.ploi.io/daemons/create-daemon). */
+internal const val DAEMON_COMMAND_MAX_LENGTH = 150
 /** Documented shape of the optional next_backup_at schedule (`2025-01-16 03:00:00`). */
 private val NEXT_BACKUP_AT_PATTERN = Regex("""\d{4}-\d{2}-\d{2} \d{2}:\d{2}(:\d{2})?""")
 
@@ -669,6 +684,33 @@ internal data class CreateCrontabRequest(
         put("user", user)
         put("command", command)
         put("frequency", frequency)
+    }.toString()
+}
+
+/**
+ * Validated payload for POST /api/servers/{server}/daemons: command (max 150),
+ * system_user and processes are documented as required, directory is optional.
+ */
+internal data class CreateDaemonRequest(
+    val command: String,
+    val systemUser: String,
+    val processes: Int,
+    val directory: String = ""
+) {
+    init {
+        require(command.isNotBlank() && command.length <= DAEMON_COMMAND_MAX_LENGTH) {
+            "Daemon command must be 1 to $DAEMON_COMMAND_MAX_LENGTH characters"
+        }
+        require(systemUser.isNotBlank()) { "System user is required" }
+        require(processes >= 1) { "At least one process is required" }
+        require(directory.isEmpty() || directory.isNotBlank()) { "Directory must not be blank" }
+    }
+
+    fun toJson(): String = JSONObject().apply {
+        put("command", command)
+        put("system_user", systemUser)
+        put("processes", processes)
+        if (directory.isNotBlank()) put("directory", directory)
     }.toString()
 }
 
@@ -1562,6 +1604,64 @@ internal object PloiApi {
     /** DELETE /servers/{server}/crontabs/{id}: documented response body is empty, nothing is parsed. */
     fun deleteCrontab(token: String, serverId: Long, crontabId: Long) {
         write("DELETE", crontabPath(serverId, crontabId), token, null)
+    }
+
+    // ---- Daemons domain (background processes of a server) ----
+
+    private fun daemonsPath(serverId: Long): String = "/servers/${validateResourceId(serverId)}/daemons"
+
+    private fun daemonPath(serverId: Long, daemonId: Long): String =
+        "${daemonsPath(serverId)}/${validateResourceId(daemonId)}"
+
+    private fun parseDaemonEntry(item: JSONObject) = Daemon(
+        id = item.getLong("id"),
+        command = item.getString("command"),
+        processes = item.optInt("processes", 0),
+        systemUser = item.optString("system_user"),
+        directory = nullableString(item, "directory"),
+        status = item.optString("status")
+    )
+
+    fun parseDaemons(json: String): DaemonPage {
+        val root = JSONObject(json)
+        val data = root.getJSONArray("data")
+        val (page, lastPage) = pageMeta(root)
+        return DaemonPage(
+            (0 until data.length()).map { parseDaemonEntry(data.getJSONObject(it)) }, page, lastPage
+        )
+    }
+
+    fun parseDaemon(json: String): Daemon = parseDaemonEntry(JSONObject(json).getJSONObject("data"))
+
+    /** GET /servers/{server}/daemons: paginated list of background processes. */
+    fun daemons(token: String, serverId: Long, page: Int = 1, perPage: Int = 15): DaemonPage {
+        require(page >= 1) { "Page must be positive" }
+        return parseOrThrow {
+            parseDaemons(get("${daemonsPath(serverId)}?page=$page&per_page=${validatePageSize(perPage)}", token))
+        }
+    }
+
+    fun daemon(token: String, serverId: Long, daemonId: Long): Daemon = parseOrThrow {
+        parseDaemon(get(daemonPath(serverId, daemonId), token))
+    }
+
+    fun createDaemon(token: String, serverId: Long, request: CreateDaemonRequest): Daemon = parseOrThrow {
+        parseDaemon(write("POST", daemonsPath(serverId), token, request.toJson()))
+    }
+
+    /** POST /daemons/{daemon}/restart: the documented response carries only a message. */
+    fun restartDaemon(token: String, serverId: Long, daemonId: Long): String = parseOrThrow {
+        parseMessage(write("POST", "${daemonPath(serverId, daemonId)}/restart", token, null))
+    }
+
+    /** POST /daemons/{daemon}/toggle-pause: the documented response carries the updated daemon. */
+    fun togglePauseDaemon(token: String, serverId: Long, daemonId: Long): Daemon = parseOrThrow {
+        parseDaemon(write("POST", "${daemonPath(serverId, daemonId)}/toggle-pause", token, null))
+    }
+
+    /** DELETE /servers/{server}/daemons/{id}: documented response body is empty, nothing is parsed. */
+    fun deleteDaemon(token: String, serverId: Long, daemonId: Long) {
+        write("DELETE", daemonPath(serverId, daemonId), token, null)
     }
 
     fun parseProviders(json: String): ProviderPage {

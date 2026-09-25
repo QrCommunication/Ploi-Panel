@@ -2055,7 +2055,7 @@
       "domain": "daemons",
       "title": "List daemons",
       "operation": "List all daemons",
-      "status": "not_implemented"
+      "status": "implemented_locally_unverified_live"
     },
     {
       "method": "POST",
@@ -2064,7 +2064,7 @@
       "domain": "daemons",
       "title": "Create daemon",
       "operation": "Create a daemon",
-      "status": "not_implemented"
+      "status": "implemented_locally_unverified_live"
     },
     {
       "method": "GET",
@@ -2073,7 +2073,7 @@
       "domain": "daemons",
       "title": "Get daemon",
       "operation": "Get a daemon",
-      "status": "not_implemented"
+      "status": "implemented_locally_unverified_live"
     },
     {
       "method": "POST",
@@ -2082,7 +2082,7 @@
       "domain": "daemons",
       "title": "Restart daemon",
       "operation": "Restart a daemon",
-      "status": "not_implemented"
+      "status": "implemented_locally_unverified_live"
     },
     {
       "method": "POST",
@@ -2091,7 +2091,7 @@
       "domain": "daemons",
       "title": "Pause daemon",
       "operation": "Toggle pause daemon",
-      "status": "not_implemented"
+      "status": "implemented_locally_unverified_live"
     },
     {
       "method": "DELETE",
@@ -2100,7 +2100,7 @@
       "domain": "daemons",
       "title": "Delete daemon",
       "operation": "Delete a daemon",
-      "status": "not_implemented"
+      "status": "implemented_locally_unverified_live"
     },
     {
       "method": "GET",

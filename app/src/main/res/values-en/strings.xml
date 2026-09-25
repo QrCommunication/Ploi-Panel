@@ -370,4 +370,24 @@
     <string name="delete_crontab">Delete</string>
     <string name="confirm_delete_crontab">Permanently delete the cron job "%1$s"? This action cannot be undone.</string>
     <string name="crontab_deleted">Cron job deleted.</string>
+    <string name="daemons_tab">Daemons</string>
+    <string name="empty_daemons">No daemons on this server.</string>
+    <string name="new_daemon">New daemon</string>
+    <string name="daemon_command_label">Command to execute (max 150 characters)</string>
+    <string name="daemon_user_label">System user (e.g. ploi)</string>
+    <string name="daemon_processes_label">Number of processes</string>
+    <string name="daemon_directory_label">Working directory (optional)</string>
+    <string name="create_daemon_submit">Create daemon</string>
+    <string name="daemon_created">Daemon created.</string>
+    <string name="daemon_status">Status: %1$s</string>
+    <string name="daemon_processes">Processes: %1$d</string>
+    <string name="daemon_user">User: %1$s</string>
+    <string name="daemon_directory">Directory: %1$s</string>
+    <string name="restart_daemon">Restart</string>
+    <string name="daemon_restarted">Daemon restarted.</string>
+    <string name="toggle_pause_daemon">Pause/Resume</string>
+    <string name="daemon_pause_toggled">Daemon state toggled.</string>
+    <string name="delete_daemon">Delete</string>
+    <string name="confirm_delete_daemon">Permanently delete the daemon "%1$s"? This action cannot be undone.</string>
+    <string name="daemon_deleted">Daemon deleted.</string>
 </resources>
