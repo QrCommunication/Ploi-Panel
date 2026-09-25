@@ -1,8 +1,16 @@
 <resources>
     <string name="app_name">Ploi Panel</string>
-    <string name="intro">Connectez-vous avec un jeton API Ploi. Ce jalon ne le conserve qu’en mémoire ; il sera perdu à la fermeture de l’application.</string>
+    <string name="intro">Ajoutez un profil avec son jeton API Ploi. Les jetons sont chiffrés par Android Keystore, restent sur l’appareil et sont exclus des sauvegardes.</string>
     <string name="token">Jeton API Ploi</string>
-    <string name="connect">Afficher les serveurs</string>
+    <string name="profile_label">Nom du profil</string>
+    <string name="add_profile">Ajouter le profil</string>
+    <string name="profiles">Profils</string>
+    <string name="use_profile">Utiliser</string>
+    <string name="delete_profile">Supprimer</string>
+    <string name="profile_error_invalid">Nom ou jeton invalide.</string>
+    <string name="profile_error_duplicate">Un profil porte déjà ce nom.</string>
+    <string name="profile_error_limit">Nombre maximal de profils atteint.</string>
+    <string name="current_profile">Profil : %1$s</string>
     <string name="servers">Serveurs</string>
     <string name="reload">Actualiser</string>
     <string name="disconnect">Déconnexion</string>

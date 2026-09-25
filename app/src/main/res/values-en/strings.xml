@@ -1,8 +1,16 @@
 <resources>
     <string name="app_name">Ploi Panel</string>
-    <string name="intro">Connect using a Ploi API token. This milestone keeps it in memory only; closing the app discards it.</string>
+    <string name="intro">Add a profile with its Ploi API token. Tokens are encrypted by Android Keystore, stay on the device, and are excluded from backups.</string>
     <string name="token">Ploi API token</string>
-    <string name="connect">View servers</string>
+    <string name="profile_label">Profile name</string>
+    <string name="add_profile">Add profile</string>
+    <string name="profiles">Profiles</string>
+    <string name="use_profile">Use</string>
+    <string name="delete_profile">Delete</string>
+    <string name="profile_error_invalid">Invalid name or token.</string>
+    <string name="profile_error_duplicate">A profile already uses this name.</string>
+    <string name="profile_error_limit">Maximum number of profiles reached.</string>
+    <string name="current_profile">Profile: %1$s</string>
     <string name="servers">Servers</string>
     <string name="reload">Refresh</string>
     <string name="disconnect">Sign out</string>

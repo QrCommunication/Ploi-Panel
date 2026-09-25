@@ -61,8 +61,19 @@ private fun PloiPanel() {
     val colors = if (dark) darkColorScheme(primary = Color(0xFF82DAC3)) else lightColorScheme(primary = accent)
     MaterialTheme(colorScheme = colors) {
         Surface(modifier = Modifier.fillMaxSize()) {
+            val context = androidx.compose.ui.platform.LocalContext.current
+            val store = remember { ProfileStore(SharedPreferencesProfilePrefs(context), KeystoreTokenCipher()) }
+            var profilesVersion by remember { mutableIntStateOf(0) }
+            val profiles = remember(profilesVersion) { store.profiles() }
+            var draftLabel by remember { mutableStateOf("") }
             var draftToken by remember { mutableStateOf("") }
-            var token by remember { mutableStateOf<String?>(null) }
+            var activeProfile by remember {
+                mutableStateOf(store.activeProfileId()?.let { id ->
+                    profiles.firstOrNull { it.id == id }?.let { it to store.tokenFor(id) }
+                }?.takeIf { it.second != null })
+            }
+            val token = activeProfile?.second
+            var profileError by remember { mutableIntStateOf(0) }
             var page by remember { mutableIntStateOf(1) }
             var selected by remember { mutableStateOf<Server?>(null) }
             var showProviders by remember { mutableStateOf(false) }
@@ -92,6 +103,37 @@ private fun PloiPanel() {
                 Column(Modifier.fillMaxWidth().padding(24.dp), verticalArrangement = Arrangement.spacedBy(18.dp)) {
                     Text(stringResource(R.string.app_name), style = MaterialTheme.typography.headlineLarge, fontWeight = FontWeight.Bold)
                     Text(stringResource(R.string.intro), style = MaterialTheme.typography.bodyLarge)
+                    if (profiles.isNotEmpty()) {
+                        Text(stringResource(R.string.profiles), style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold)
+                        profiles.forEach { profile ->
+                            Card(shape = RoundedCornerShape(16.dp), modifier = Modifier.fillMaxWidth()) {
+                                Row(Modifier.fillMaxWidth().padding(16.dp), horizontalArrangement = Arrangement.SpaceBetween) {
+                                    Text(profile.label, style = MaterialTheme.typography.titleMedium, modifier = Modifier.padding(top = 12.dp))
+                                    Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                                        OutlinedButton(onClick = {
+                                            store.remove(profile.id)
+                                            profilesVersion++
+                                        }) { Text(stringResource(R.string.delete_profile)) }
+                                        Button(onClick = {
+                                            val profileToken = store.tokenFor(profile.id)
+                                            if (profileToken != null) {
+                                                store.activate(profile.id)
+                                                activeProfile = profile to profileToken
+                                            } else {
+                                                store.remove(profile.id)
+                                                profilesVersion++
+                                            }
+                                        }) { Text(stringResource(R.string.use_profile)) }
+                                    }
+                                }
+                            }
+                        }
+                    }
+                    OutlinedTextField(
+                        value = draftLabel, onValueChange = { draftLabel = it },
+                        label = { Text(stringResource(R.string.profile_label)) },
+                        singleLine = true, modifier = Modifier.fillMaxWidth()
+                    )
                     OutlinedTextField(
                         value = draftToken, onValueChange = { draftToken = it },
                         label = { Text(stringResource(R.string.token)) },
@@ -99,17 +141,36 @@ private fun PloiPanel() {
                         keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Password),
                         singleLine = true, modifier = Modifier.fillMaxWidth()
                     )
+                    if (profileError != 0) Text(stringResource(profileError), color = MaterialTheme.colorScheme.error)
                     Button(onClick = {
-                        token = draftToken.trim()
-                        draftToken = ""
-                    }, enabled = draftToken.isNotBlank()) { Text(stringResource(R.string.connect)) }
+                        try {
+                            val profile = store.add(draftLabel, draftToken.trim())
+                            store.activate(profile.id)
+                            profilesVersion++
+                            profileError = 0
+                            draftLabel = ""
+                            draftToken = ""
+                            activeProfile = profile to store.tokenFor(profile.id)
+                        } catch (invalid: IllegalArgumentException) {
+                            profileError = when (invalid.message) {
+                                "Duplicate profile label" -> R.string.profile_error_duplicate
+                                "Too many profiles" -> R.string.profile_error_limit
+                                else -> R.string.profile_error_invalid
+                            }
+                        }
+                    }, enabled = draftLabel.isNotBlank() && draftToken.isNotBlank()) { Text(stringResource(R.string.add_profile)) }
                 }
             } else {
                 Column(Modifier.fillMaxSize().padding(16.dp)) {
                     Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
-                        Text(if (showProviders) stringResource(R.string.providers) else stringResource(R.string.servers), style = MaterialTheme.typography.headlineMedium, fontWeight = FontWeight.Bold)
+                        Column {
+                            Text(if (showProviders) stringResource(R.string.providers) else stringResource(R.string.servers), style = MaterialTheme.typography.headlineMedium, fontWeight = FontWeight.Bold)
+                            Text(stringResource(R.string.current_profile, activeProfile?.first?.label.orEmpty()), style = MaterialTheme.typography.bodySmall)
+                        }
                         OutlinedButton(onClick = {
-                            token = null
+                            store.deactivate()
+                            activeProfile = null
+                            draftLabel = ""
                             draftToken = ""
                             selected = null
                             showProviders = false
