@@ -1,4 +1,4 @@
-<resources>
+<resources xmlns:tools="http://schemas.android.com/tools">
     <string name="app_name">Ploi Panel</string>
     <string name="intro">Ajoutez un profil avec son jeton API Ploi. Les jetons sont chiffrés par Android Keystore, restent sur l’appareil et sont exclus des sauvegardes.</string>
     <string name="token">Jeton API Ploi</string>
@@ -288,4 +288,57 @@
     <string name="delete_database_user">Supprimer</string>
     <string name="confirm_delete_database_user">Supprimer l\'utilisateur « %1$s » ? Il perdra l\'accès à cette base.</string>
     <string name="database_user_deleted">Utilisateur supprimé.</string>
+    <string name="backups_tab">Sauvegardes</string>
+    <string name="empty_database_backups">Aucune sauvegarde de base pour ce serveur.</string>
+    <string name="new_database_backup">Nouvelle sauvegarde</string>
+    <string name="backup_loading_options">Chargement des options…</string>
+    <string name="backup_no_configurations">Aucune configuration de sauvegarde sur ce compte.</string>
+    <string name="backup_no_databases">Aucune base disponible sur ce serveur.</string>
+    <string name="backup_configuration_label">Configuration de sauvegarde</string>
+    <string name="backup_databases_label">Bases à sauvegarder</string>
+    <string name="backup_interval_label">Intervalle (minutes)</string>
+    <string name="backup_interval_hint">0 = chaque nuit ; sinon 10, 20, 30, 40, 50, 60, 120, 240, 480, 720, 1440, 10080 ou 43800</string>
+    <string name="backup_keep_label">Nombre d\'archives conservées</string>
+    <string name="backup_path_label">Chemin distant (optionnel)</string>
+    <string name="backup_custom_name_label">Nom d\'archive personnalisé (optionnel)</string>
+    <string name="backup_table_exclusions_label">Tables exclues, séparées par des virgules (optionnel)</string>
+    <string name="backup_locations_label">Dossier Google Drive (optionnel)</string>
+    <string name="backup_password_label">Mot de passe de l\'archive ZIP (optionnel)</string>
+    <!-- Hyphens belong to the documented ISO schedule format, not prose. -->
+    <string name="backup_next_at_label" tools:ignore="TypographyDashes">Première exécution, ex. 2025-01-16 03:00:00 (optionnel)</string>
+    <string name="backup_delete_on_fail">Supprimer l\'archive locale en cas d\'échec</string>
+    <string name="backup_compression_label">Compression, ex. zip ou gzip (optionnel)</string>
+    <string name="backup_excluded_label">Tables exclues, séparées par des virgules (optionnel)</string>
+    <string name="create_backup_submit">Créer la sauvegarde</string>
+    <string name="backup_created">Configuration de sauvegarde créée.</string>
+    <string name="backup_type">Type : %1$s</string>
+    <string name="backup_database">Base : %1$s</string>
+    <string name="backup_interval_nightly">Chaque nuit</string>
+    <string name="backup_interval_minutes">Toutes les %1$d min</string>
+    <string name="backup_keep_count">Archives conservées : %1$d</string>
+    <string name="backup_last_run">Dernière exécution : %1$s</string>
+    <string name="backup_next_run">Prochaine exécution : %1$s</string>
+    <string name="backup_inactive">Sauvegarde inactive</string>
+    <string name="run_backup">Exécuter</string>
+    <string name="backup_run_started">Sauvegarde lancée.</string>
+    <string name="edit_backup">Modifier</string>
+    <string name="backup_updated">Sauvegarde mise à jour.</string>
+    <string name="delete_backup">Supprimer</string>
+    <string name="confirm_delete_backup">Supprimer la configuration de sauvegarde « %1$s » ? Les archives déjà stockées ne sont pas effacées.</string>
+    <string name="backup_deleted">Configuration de sauvegarde supprimée.</string>
+    <string name="backup_channels">Canaux</string>
+    <string name="backup_channels_title">Canaux de notification de « %1$s »</string>
+    <string name="empty_backup_channels">Aucun canal attaché à cette sauvegarde.</string>
+    <string name="backup_channel_location">Déclencheur : %1$s</string>
+    <string name="backup_channel_location_label">Déclencheur</string>
+    <string name="location_before_backup">avant la sauvegarde</string>
+    <string name="location_after_backup">après la sauvegarde</string>
+    <string name="location_failed_backup">en cas d\'échec</string>
+    <string name="attach_backup_channel">Attacher un canal</string>
+    <string name="backup_channel_label">Canal de notification</string>
+    <string name="backup_no_channels_available">Aucun canal de notification sur ce compte.</string>
+    <string name="attach_channel_submit">Attacher</string>
+    <string name="backup_channel_attached">Canal attaché.</string>
+    <string name="detach_backup_channel">Détacher</string>
+    <string name="backup_channel_detached">Canal détaché.</string>
 </resources>

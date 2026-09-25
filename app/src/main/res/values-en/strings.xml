@@ -1,4 +1,4 @@
-<resources>
+<resources xmlns:tools="http://schemas.android.com/tools">
     <string name="app_name">Ploi Panel</string>
     <string name="intro">Add a profile with its Ploi API token. Tokens are encrypted by Android Keystore, stay on the device, and are excluded from backups.</string>
     <string name="token">Ploi API token</string>
@@ -288,4 +288,57 @@
     <string name="delete_database_user">Delete</string>
     <string name="confirm_delete_database_user">Delete user \"%1$s\"? They will lose access to this database.</string>
     <string name="database_user_deleted">User deleted.</string>
+    <string name="backups_tab">Backups</string>
+    <string name="empty_database_backups">No database backup for this server.</string>
+    <string name="new_database_backup">New backup</string>
+    <string name="backup_loading_options">Loading options…</string>
+    <string name="backup_no_configurations">No backup configuration on this account.</string>
+    <string name="backup_no_databases">No database available on this server.</string>
+    <string name="backup_configuration_label">Backup configuration</string>
+    <string name="backup_databases_label">Databases to back up</string>
+    <string name="backup_interval_label">Interval (minutes)</string>
+    <string name="backup_interval_hint">0 = nightly; otherwise 10, 20, 30, 40, 50, 60, 120, 240, 480, 720, 1440, 10080 or 43800</string>
+    <string name="backup_keep_label">Kept archives count</string>
+    <string name="backup_path_label">Remote path (optional)</string>
+    <string name="backup_custom_name_label">Custom archive name (optional)</string>
+    <string name="backup_table_exclusions_label">Excluded tables, comma separated (optional)</string>
+    <string name="backup_locations_label">Google Drive folder (optional)</string>
+    <string name="backup_password_label">ZIP archive password (optional)</string>
+    <!-- Hyphens belong to the documented ISO schedule format, not prose. -->
+    <string name="backup_next_at_label" tools:ignore="TypographyDashes">First run, e.g. 2025-01-16 03:00:00 (optional)</string>
+    <string name="backup_delete_on_fail">Delete the local archive on failure</string>
+    <string name="backup_compression_label">Compression, e.g. zip or gzip (optional)</string>
+    <string name="backup_excluded_label">Excluded tables, comma separated (optional)</string>
+    <string name="create_backup_submit">Create the backup</string>
+    <string name="backup_created">Backup configuration created.</string>
+    <string name="backup_type">Type: %1$s</string>
+    <string name="backup_database">Database: %1$s</string>
+    <string name="backup_interval_nightly">Nightly</string>
+    <string name="backup_interval_minutes">Every %1$d min</string>
+    <string name="backup_keep_count">Kept archives: %1$d</string>
+    <string name="backup_last_run">Last run: %1$s</string>
+    <string name="backup_next_run">Next run: %1$s</string>
+    <string name="backup_inactive">Backup inactive</string>
+    <string name="run_backup">Run</string>
+    <string name="backup_run_started">Backup started.</string>
+    <string name="edit_backup">Edit</string>
+    <string name="backup_updated">Backup updated.</string>
+    <string name="delete_backup">Delete</string>
+    <string name="confirm_delete_backup">Delete the backup configuration \"%1$s\"? Already stored archives are not erased.</string>
+    <string name="backup_deleted">Backup configuration deleted.</string>
+    <string name="backup_channels">Channels</string>
+    <string name="backup_channels_title">Notification channels of \"%1$s\"</string>
+    <string name="empty_backup_channels">No channel attached to this backup.</string>
+    <string name="backup_channel_location">Trigger: %1$s</string>
+    <string name="backup_channel_location_label">Trigger</string>
+    <string name="location_before_backup">before the backup</string>
+    <string name="location_after_backup">after the backup</string>
+    <string name="location_failed_backup">on failure</string>
+    <string name="attach_backup_channel">Attach a channel</string>
+    <string name="backup_channel_label">Notification channel</string>
+    <string name="backup_no_channels_available">No notification channel on this account.</string>
+    <string name="attach_channel_submit">Attach</string>
+    <string name="backup_channel_attached">Channel attached.</string>
+    <string name="detach_backup_channel">Detach</string>
+    <string name="backup_channel_detached">Channel detached.</string>
 </resources>

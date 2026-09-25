@@ -51,6 +51,7 @@ internal fun ServerDetailScreen(
             OutlinedButton(onClick = { tab = 0 }, enabled = tab != 0) { Text(stringResource(R.string.monitoring)) }
             OutlinedButton(onClick = { tab = 1 }, enabled = tab != 1) { Text(stringResource(R.string.sites)) }
             OutlinedButton(onClick = { tab = 2 }, enabled = tab != 2) { Text(stringResource(R.string.databases_tab)) }
+            OutlinedButton(onClick = { tab = 5 }, enabled = tab != 5) { Text(stringResource(R.string.backups_tab)) }
             OutlinedButton(onClick = { tab = 3 }, enabled = tab != 3) { Text(stringResource(R.string.infos)) }
             OutlinedButton(onClick = { tab = 4 }, enabled = tab != 4) { Text(stringResource(R.string.logs)) }
         }
@@ -58,6 +59,7 @@ internal fun ServerDetailScreen(
             0 -> MonitoringView(token, server, refresh)
             1 -> SitesScreen(token, server.id, lock, activity)
             2 -> DatabasesScreen(token, server.id, lock, activity)
+            5 -> DatabaseBackupsScreen(token, server.id, lock, activity)
             3 -> ServerInfoTab(token, server, lock, activity, onChanged, onDeleted)
             else -> ServerLogsTab(token, server.id)
         }

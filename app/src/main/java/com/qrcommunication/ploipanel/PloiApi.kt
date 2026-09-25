@@ -1,5 +1,6 @@
 package com.qrcommunication.ploipanel
 
+import org.json.JSONArray
 import org.json.JSONObject
 
 internal data class Server(val id: Long, val name: String, val status: String, val ipAddress: String)
@@ -130,6 +131,24 @@ internal data class DatabaseUserPage(val users: List<DatabaseUser>, val currentP
 /** Duplicate response: the new database plus the human-readable confirmation. */
 internal data class DatabaseDuplication(val database: PloiDatabase, val message: String)
 
+/** Database backup entry of GET/PATCH /api/backups/database responses (both documented shapes). */
+internal data class DatabaseBackup(
+    val id: Long, val status: String, val label: String, val type: String, val typeHuman: String,
+    val path: String, val remotePath: String, val locations: String, val interval: Int,
+    val tableExclusions: String, val excludedTables: List<String>, val keepBackupAmount: Int,
+    val active: Boolean, val compression: String, val deleteOnFail: Boolean, val customName: String,
+    val serverId: Long, val serverName: String, val databaseId: Long, val databaseName: String,
+    val backupConfigurationId: Long, val backupConfigurationLabel: String,
+    val lastBackupAt: String, val nextBackupAt: String, val createdAt: String
+)
+internal data class DatabaseBackupPage(val backups: List<DatabaseBackup>, val currentPage: Int, val lastPage: Int) {
+    val hasNext: Boolean get() = currentPage < lastPage
+}
+/** Channel attached to a database backup; `location` documents when it is notified. */
+internal data class BackupNotificationChannel(
+    val id: Long, val type: String, val label: String, val location: String, val createdAt: String
+)
+
 /** Documented value sets for server creation (developers.ploi.io/servers/create-server). */
 internal val SERVER_TYPES = setOf("server", "load-balancer", "database-server", "redis-server")
 internal val CUSTOM_SERVER_TYPES = SERVER_TYPES + "storage-server"
@@ -158,6 +177,29 @@ internal const val ENV_CONTENT_MIN_LENGTH = 2
 internal const val DATABASE_NAME_MAX_LENGTH = 64
 internal const val DUPLICATE_NAME_MAX_LENGTH = 255
 internal const val DUPLICATE_PASSWORD_MAX_LENGTH = 50
+/** Documented database backup intervals in minutes; 0 = nightly (create + update documents). */
+internal val BACKUP_INTERVALS = setOf(0, 10, 20, 30, 40, 50, 60, 120, 240, 480, 720, 1440, 10080, 43800)
+/** Documented notification locations for database backup channels. */
+internal val BACKUP_CHANNEL_LOCATIONS = setOf("before-backup", "after-backup", "failed-backup")
+/** Documented shape of the optional next_backup_at schedule (`2025-01-16 03:00:00`). */
+private val NEXT_BACKUP_AT_PATTERN = Regex("""\d{4}-\d{2}-\d{2} \d{2}:\d{2}(:\d{2})?""")
+
+internal fun validateBackupInterval(interval: Int): Int {
+    require(interval in BACKUP_INTERVALS) { "Unsupported backup interval" }
+    return interval
+}
+
+private fun validateNextBackupAt(value: String): String {
+    require(value.isBlank() || NEXT_BACKUP_AT_PATTERN.matches(value)) {
+        "Next backup schedule must look like 2025-01-16 03:00:00"
+    }
+    return value
+}
+
+internal fun validateBackupChannelLocation(location: String): String {
+    require(location in BACKUP_CHANNEL_LOCATIONS) { "Unsupported notification location" }
+    return location
+}
 /** Database names and creation-time users: alpha-numeric, dashes and underscores, 2-64 (documented). */
 private val DATABASE_NAME_PATTERN = Regex("[A-Za-z0-9_-]+")
 /**
@@ -406,6 +448,78 @@ internal data class CreateDatabaseUserRequest(
             put("remote_ip", remoteIp)
         }
         if (readonly) put("readonly", true)
+    }.toString()
+}
+
+/** Validated payload for POST /api/backups/database (documented required + optional fields). */
+internal data class CreateDatabaseBackupRequest(
+    val backupConfiguration: Long,
+    val server: Long,
+    val databases: List<Long>,
+    val interval: Int,
+    val tableExclusions: String = "",
+    val locations: String = "",
+    val path: String = "",
+    val keepBackupAmount: Int? = null,
+    val customName: String = "",
+    val password: String = "",
+    val nextBackupAt: String = "",
+    val deleteOnFail: Boolean = false
+) {
+    init {
+        require(backupConfiguration > 0) { "Backup configuration must be a valid ID" }
+        require(server > 0) { "Server must be a valid ID" }
+        require(databases.isNotEmpty() && databases.all { it > 0 }) { "At least one valid database ID is required" }
+        validateBackupInterval(interval)
+        require(keepBackupAmount == null || keepBackupAmount >= 0) { "Keep backup amount must not be negative" }
+        validateNextBackupAt(nextBackupAt)
+    }
+
+    fun toJson(): String = JSONObject().apply {
+        put("backup_configuration", backupConfiguration)
+        put("server", server)
+        put("databases", JSONArray(databases))
+        put("interval", interval)
+        if (tableExclusions.isNotBlank()) put("table_exclusions", tableExclusions)
+        if (locations.isNotBlank()) put("locations", locations)
+        if (path.isNotBlank()) put("path", path)
+        keepBackupAmount?.let { put("keep_backup_amount", it) }
+        if (customName.isNotBlank()) put("custom_name", customName)
+        if (password.isNotEmpty()) put("password", password)
+        if (nextBackupAt.isNotBlank()) put("next_backup_at", nextBackupAt)
+        if (deleteOnFail) put("deleteOnFail", true)
+    }.toString()
+}
+
+/** Validated payload for PATCH /api/backups/database/{id} (interval + keep amount required). */
+internal data class UpdateDatabaseBackupRequest(
+    val interval: Int,
+    val keepBackupAmount: Int,
+    val deleteOnFail: Boolean? = null,
+    val customName: String = "",
+    val path: String = "",
+    val compression: String = "",
+    val excluded: List<String> = emptyList(),
+    val locations: String = "",
+    val nextBackupAt: String = ""
+) {
+    init {
+        validateBackupInterval(interval)
+        require(keepBackupAmount >= 0) { "Keep backup amount must not be negative" }
+        require(excluded.none { it.isBlank() }) { "Excluded tables must not be blank" }
+        validateNextBackupAt(nextBackupAt)
+    }
+
+    fun toJson(): String = JSONObject().apply {
+        put("interval", interval)
+        put("keep_backup_amount", keepBackupAmount)
+        deleteOnFail?.let { put("deleteOnFail", it) }
+        if (customName.isNotBlank()) put("custom_name", customName)
+        if (path.isNotBlank()) put("path", path)
+        if (compression.isNotBlank()) put("compression", compression)
+        if (excluded.isNotEmpty()) put("excluded", JSONArray(excluded))
+        if (locations.isNotBlank()) put("locations", locations)
+        if (nextBackupAt.isNotBlank()) put("next_backup_at", nextBackupAt)
     }.toString()
 }
 
@@ -965,6 +1079,153 @@ internal object PloiApi {
         }
     }
 
+    // ---- Database backups domain (database: /backups/database) ----
+
+    private fun databaseBackupPath(backupId: Long): String =
+        "/backups/database/${validateResourceId(backupId)}"
+
+    private fun parseDatabaseBackupEntry(item: JSONObject): DatabaseBackup {
+        val server = item.optJSONObject("server")
+        val database = item.optJSONObject("database")
+        val configuration = item.optJSONObject("backup_configuration")
+        val excluded = item.optJSONArray("excluded")
+        return DatabaseBackup(
+            id = item.getLong("id"),
+            status = item.optString("status"),
+            label = nullableString(item, "label"),
+            type = item.optString("type"),
+            typeHuman = nullableString(item, "type_human"),
+            path = nullableString(item, "path"),
+            remotePath = nullableString(item, "remote_path"),
+            locations = nullableString(item, "locations"),
+            interval = item.optInt("interval", 0),
+            tableExclusions = nullableString(item, "table_exclusions"),
+            excludedTables = excluded?.let { (0 until it.length()).map(it::getString) } ?: emptyList(),
+            keepBackupAmount = item.optInt("keep_backup_amount", 0),
+            active = item.optBoolean("active", false),
+            compression = nullableString(item, "compression"),
+            deleteOnFail = item.optBoolean("delete_on_fail", false),
+            customName = nullableString(item, "custom_name"),
+            serverId = server?.optLong("id") ?: 0L,
+            serverName = server?.optString("name").orEmpty(),
+            databaseId = database?.optLong("id") ?: 0L,
+            databaseName = database?.optString("name").orEmpty(),
+            backupConfigurationId = configuration?.optLong("id") ?: 0L,
+            backupConfigurationLabel = configuration?.optString("label").orEmpty(),
+            lastBackupAt = nullableString(item, "last_backup_at"),
+            nextBackupAt = nullableString(item, "next_backup_at"),
+            createdAt = item.optString("created_at")
+        )
+    }
+
+    fun parseDatabaseBackups(json: String): DatabaseBackupPage {
+        val root = JSONObject(json)
+        val data = root.getJSONArray("data")
+        val (page, lastPage) = pageMeta(root)
+        return DatabaseBackupPage(
+            (0 until data.length()).map { parseDatabaseBackupEntry(data.getJSONObject(it)) }, page, lastPage
+        )
+    }
+
+    fun parseDatabaseBackup(json: String): DatabaseBackup =
+        parseDatabaseBackupEntry(JSONObject(json).getJSONObject("data"))
+
+    /** GET /backups/database: optional documented `server` and `site` filters. */
+    fun databaseBackups(
+        token: String, serverId: Long? = null, siteId: Long? = null, page: Int = 1, perPage: Int = 15
+    ): DatabaseBackupPage {
+        require(page >= 1) { "Page must be positive" }
+        require(serverId == null || serverId > 0) { "Invalid server ID" }
+        require(siteId == null || siteId > 0) { "Invalid site ID" }
+        val query = buildString {
+            append("?page=$page&per_page=${validatePageSize(perPage)}")
+            serverId?.let { append("&server=$it") }
+            siteId?.let { append("&site=$it") }
+        }
+        return parseOrThrow { parseDatabaseBackups(get("/backups/database$query", token)) }
+    }
+
+    fun databaseBackup(token: String, backupId: Long): DatabaseBackup = parseOrThrow {
+        parseDatabaseBackup(get(databaseBackupPath(backupId), token))
+    }
+
+    /** POST /backups/database: the documented response carries only status + message. */
+    fun createDatabaseBackup(token: String, request: CreateDatabaseBackupRequest): String = parseOrThrow {
+        parseOptionalMessage(write("POST", "/backups/database", token, request.toJson()))
+    }
+
+    /** PATCH /backups/database/{id}: the documented response carries the updated backup. */
+    fun updateDatabaseBackup(
+        token: String, backupId: Long, request: UpdateDatabaseBackupRequest
+    ): DatabaseBackup = parseOrThrow {
+        parseDatabaseBackup(write("PATCH", databaseBackupPath(backupId), token, request.toJson()))
+    }
+
+    /** POST /backups/database/{id}/run: manual trigger, response carries only status + message. */
+    fun runDatabaseBackup(token: String, backupId: Long): String = parseOrThrow {
+        parseOptionalMessage(
+            write("POST", "${databaseBackupPath(backupId)}/run", token, JSONObject().toString())
+        )
+    }
+
+    /** DELETE /backups/database/{id}: the documented message may be null. */
+    fun deleteDatabaseBackup(token: String, backupId: Long): String = parseOrThrow {
+        parseOptionalMessage(write("DELETE", databaseBackupPath(backupId), token, null))
+    }
+
+    private fun parseBackupChannels(json: String): List<BackupNotificationChannel> {
+        val data = JSONObject(json).getJSONArray("data")
+        return (0 until data.length()).map { index ->
+            data.getJSONObject(index).let { item ->
+                BackupNotificationChannel(
+                    id = item.getLong("id"),
+                    type = item.optString("type"),
+                    label = nullableString(item, "label"),
+                    location = item.optString("location"),
+                    createdAt = item.optString("created_at")
+                )
+            }
+        }
+    }
+
+    fun databaseBackupNotificationChannels(token: String, backupId: Long): List<BackupNotificationChannel> =
+        parseOrThrow {
+            parseBackupChannels(get("${databaseBackupPath(backupId)}/notification-channels", token))
+        }
+
+    /** POST …/notification-channels: attaches one channel to one documented location. */
+    fun attachDatabaseBackupNotificationChannel(
+        token: String, backupId: Long, channelId: Long, location: String
+    ): List<BackupNotificationChannel> {
+        validateResourceId(channelId)
+        validateBackupChannelLocation(location)
+        return parseOrThrow {
+            val body = JSONObject().put("channel", channelId).put("location", location).toString()
+            parseBackupChannels(
+                write("POST", "${databaseBackupPath(backupId)}/notification-channels", token, body)
+            )
+        }
+    }
+
+    /** DELETE …/notification-channels/{channel}: without `location`, detaches from every location. */
+    fun detachDatabaseBackupNotificationChannel(
+        token: String, backupId: Long, channelId: Long, location: String = ""
+    ): List<BackupNotificationChannel> {
+        require(location.isEmpty() || location in BACKUP_CHANNEL_LOCATIONS) {
+            "Unsupported notification location"
+        }
+        val suffix = if (location.isEmpty()) "" else "?location=$location"
+        return parseOrThrow {
+            parseBackupChannels(
+                write(
+                    "DELETE",
+                    "${databaseBackupPath(backupId)}/notification-channels/${validateResourceId(channelId)}$suffix",
+                    token, null
+                )
+            )
+        }
+    }
+
     fun parseProviders(json: String): ProviderPage {
         val root = JSONObject(json)
         val data = root.getJSONArray("data")
@@ -1077,6 +1338,12 @@ internal object PloiApi {
     }
 
     fun parseMessage(json: String): String = JSONObject(json).getString("message")
+
+    /** Documented message that may legitimately be null (e.g. delete database backup response). */
+    fun parseOptionalMessage(json: String): String {
+        val root = JSONObject(json)
+        return if (root.isNull("message")) "" else root.optString("message")
+    }
 
     fun startCustomServerInstallation(
         token: String, serverId: Long, installMonitoring: Boolean = false, webhookUrl: String = ""

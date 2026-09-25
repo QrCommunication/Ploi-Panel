@@ -2,7 +2,7 @@
 
 Extraction : 2026-09-24T18:31:36+00:00 ; source : [sitemap officiel](https://developers.ploi.io/sitemap.xml), puis en-têtes méthode/chemin des pages officielles. Base des requêtes : `https://ploi.io/api` (les chemins ci-dessous comprennent déjà `/api`).
 
-**231 opérations documentées**, 230 pages avec routes, 231 pages de référence API ; **169 non implémentées** (`not_implemented`), **62 implémentées et testées localement mais non vérifiées sur compte réel** (`implemented_locally_unverified_live`). Ce tableau inventorie la documentation, et ne constitue ni une preuve de disponibilité dans un compte donné, ni un contrat testé contre l’API. Le [JSON](api-coverage.json) conserve chaque entrée et la classification de toutes les URL du sitemap.
+**231 opérations documentées**, 230 pages avec routes, 231 pages de référence API ; **160 non implémentées** (`not_implemented`), **71 implémentées et testées localement mais non vérifiées sur compte réel** (`implemented_locally_unverified_live`). Ce tableau inventorie la documentation, et ne constitue ni une preuve de disponibilité dans un compte donné, ni un contrat testé contre l’API. Le [JSON](api-coverage.json) conserve chaque entrée et la classification de toutes les URL du sitemap.
 
 ## Périmètre et méthode
 
@@ -235,15 +235,15 @@ Extraction : 2026-09-24T18:31:36+00:00 ; source : [sitemap officiel](https://dev
 | `containers` | `GET` | `/api/servers/{server}/docker/containers/{container}/logs` | [Get container logs](https://developers.ploi.io/containers/container-logs) | `not_implemented` |
 | `containers` | `POST` | `/api/servers/{server}/docker/containers/{container}/site/link` | [Link site to container](https://developers.ploi.io/containers/link-site) | `not_implemented` |
 | `containers` | `DELETE` | `/api/servers/{server}/docker/containers/{container}/site/unlink` | [Unlink site from container](https://developers.ploi.io/containers/unlink-site) | `not_implemented` |
-| `database` | `GET` | `/api/backups/database` | [List all database backups](https://developers.ploi.io/database/list-database-backups) | `not_implemented` |
-| `database` | `GET` | `/api/backups/database/{databaseBackupId}` | [Get database backup](https://developers.ploi.io/database/get-database-backup) | `not_implemented` |
-| `database` | `POST` | `/api/backups/database` | [Create database backup](https://developers.ploi.io/database/create-database-backup) | `not_implemented` |
-| `database` | `PATCH` | `/api/backups/database/{id}` | [Update database backup](https://developers.ploi.io/database/update-database-backup) | `not_implemented` |
-| `database` | `POST` | `/api/backups/database/{databaseBackupId}/run` | [Run database backup](https://developers.ploi.io/database/run-database-backup) | `not_implemented` |
-| `database` | `DELETE` | `/api/backups/database/{databaseBackupId}` | [Delete database backup](https://developers.ploi.io/database/delete-database-backup) | `not_implemented` |
-| `database` | `GET` | `/api/backups/database/{databaseBackupId}/notification-channels` | [List database backup notification channels](https://developers.ploi.io/database/list-database-backup-notification-channels) | `not_implemented` |
-| `database` | `POST` | `/api/backups/database/{databaseBackupId}/notification-channels` | [Attach database backup notification channel](https://developers.ploi.io/database/attach-database-backup-notification-channel) | `not_implemented` |
-| `database` | `DELETE` | `/api/backups/database/{databaseBackupId}/notification-channels/{channelId}` | [Detach database backup notification channel](https://developers.ploi.io/database/detach-database-backup-notification-channel) | `not_implemented` |
+| `database` | `GET` | `/api/backups/database` | [List all database backups](https://developers.ploi.io/database/list-database-backups) | `implemented_locally_unverified_live` |
+| `database` | `GET` | `/api/backups/database/{databaseBackupId}` | [Get database backup](https://developers.ploi.io/database/get-database-backup) | `implemented_locally_unverified_live` |
+| `database` | `POST` | `/api/backups/database` | [Create database backup](https://developers.ploi.io/database/create-database-backup) | `implemented_locally_unverified_live` |
+| `database` | `PATCH` | `/api/backups/database/{id}` | [Update database backup](https://developers.ploi.io/database/update-database-backup) | `implemented_locally_unverified_live` |
+| `database` | `POST` | `/api/backups/database/{databaseBackupId}/run` | [Run database backup](https://developers.ploi.io/database/run-database-backup) | `implemented_locally_unverified_live` |
+| `database` | `DELETE` | `/api/backups/database/{databaseBackupId}` | [Delete database backup](https://developers.ploi.io/database/delete-database-backup) | `implemented_locally_unverified_live` |
+| `database` | `GET` | `/api/backups/database/{databaseBackupId}/notification-channels` | [List database backup notification channels](https://developers.ploi.io/database/list-database-backup-notification-channels) | `implemented_locally_unverified_live` |
+| `database` | `POST` | `/api/backups/database/{databaseBackupId}/notification-channels` | [Attach database backup notification channel](https://developers.ploi.io/database/attach-database-backup-notification-channel) | `implemented_locally_unverified_live` |
+| `database` | `DELETE` | `/api/backups/database/{databaseBackupId}/notification-channels/{channelId}` | [Detach database backup notification channel](https://developers.ploi.io/database/detach-database-backup-notification-channel) | `implemented_locally_unverified_live` |
 | `site` | `GET` | `/api/backups/file` | [List site file backups](https://developers.ploi.io/site/list-site-file-backups) | `not_implemented` |
 | `site` | `GET` | `/api/backups/file/{fileBackupId}` | [Get site file backup](https://developers.ploi.io/site/get-site-file-backup) | `not_implemented` |
 | `site` | `POST` | `/api/backups/file` | [Create site file backup](https://developers.ploi.io/site/create-site-file-backup) | `not_implemented` |
