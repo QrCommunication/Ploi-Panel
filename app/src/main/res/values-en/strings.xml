@@ -49,4 +49,25 @@
     <string name="site_directory">Web directory: %1$s</string>
     <string name="site_disk">Disk usage: %1$s</string>
     <string name="site_health">Health URL: %1$s</string>
+    <string name="pin_setup_title">Create your PIN</string>
+    <string name="pin_setup_intro">This PIN protects access to your profiles and encrypted tokens. Use 4 to 12 digits, with no runs or repeats.</string>
+    <string name="pin_label">PIN code</string>
+    <string name="pin_confirm_label">Confirm PIN code</string>
+    <string name="pin_mismatch">The two codes do not match.</string>
+    <string name="pin_invalid">Invalid code: 4 to 12 digits, with no runs or repeats.</string>
+    <string name="set_pin">Save PIN</string>
+    <string name="unlock_title">Unlock Ploi Panel</string>
+    <string name="unlock">Unlock</string>
+    <plurals name="wrong_pin">
+        <item quantity="one">Incorrect code. %1$d attempt left.</item>
+        <item quantity="other">Incorrect code. %1$d attempts left.</item>
+    </plurals>
+    <string name="locked_wait">Too many attempts. Retry in %1$d s.</string>
+    <string name="use_biometric">Use biometrics</string>
+    <string name="biometric_toggle">Biometric unlock</string>
+    <string name="biometric_unavailable">Strong biometrics unavailable on this device.</string>
+    <string name="biometric_prompt_title">Unlock Ploi Panel</string>
+    <string name="biometric_prompt_subtitle">Confirm your identity to access profiles.</string>
+    <string name="biometric_cancel">Use PIN code</string>
+    <string name="lock_now">Lock</string>
 </resources>
