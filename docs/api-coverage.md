@@ -2,7 +2,7 @@
 
 Extraction : 2026-09-24T18:31:36+00:00 ; source : [sitemap officiel](https://developers.ploi.io/sitemap.xml), puis en-têtes méthode/chemin des pages officielles. Base des requêtes : `https://ploi.io/api` (les chemins ci-dessous comprennent déjà `/api`).
 
-**231 opérations documentées**, 230 pages avec routes, 231 pages de référence API ; **209 non implémentées** (`not_implemented`), **22 implémentées et testées localement mais non vérifiées sur compte réel** (`implemented_locally_unverified_live`). Ce tableau inventorie la documentation, et ne constitue ni une preuve de disponibilité dans un compte donné, ni un contrat testé contre l’API. Le [JSON](api-coverage.json) conserve chaque entrée et la classification de toutes les URL du sitemap.
+**231 opérations documentées**, 230 pages avec routes, 231 pages de référence API ; **192 non implémentées** (`not_implemented`), **39 implémentées et testées localement mais non vérifiées sur compte réel** (`implemented_locally_unverified_live`). Ce tableau inventorie la documentation, et ne constitue ni une preuve de disponibilité dans un compte donné, ni un contrat testé contre l’API. Le [JSON](api-coverage.json) conserve chaque entrée et la classification de toutes les URL du sitemap.
 
 ## Périmètre et méthode
 
@@ -131,24 +131,24 @@ Extraction : 2026-09-24T18:31:36+00:00 ; source : [sitemap officiel](https://dev
 | `insights` | `POST` | `/api/servers/{server}/insights/{id}/ignore` | [Ignore insight](https://developers.ploi.io/insights/ignore-insight) | `not_implemented` |
 | `insights` | `DELETE` | `/api/servers/{server}/insights/{id}` | [Delete insight](https://developers.ploi.io/insights/delete-insight) | `not_implemented` |
 | `sites` | `GET` | `/api/servers/{server}/sites` | [Get all sites](https://developers.ploi.io/sites/list-sites) | `implemented_locally_unverified_live` |
-| `sites` | `POST` | `/api/servers/{server}/sites` | [Create a site](https://developers.ploi.io/sites/create-site) | `not_implemented` |
+| `sites` | `POST` | `/api/servers/{server}/sites` | [Create a site](https://developers.ploi.io/sites/create-site) | `implemented_locally_unverified_live` |
 | `sites` | `GET` | `/api/servers/{server}/sites/{id}` | [Get site](https://developers.ploi.io/sites/get-site) | `implemented_locally_unverified_live` |
-| `sites` | `PATCH` | `/api/servers/{server}/sites/{site}` | [Update site](https://developers.ploi.io/sites/update-site) | `not_implemented` |
-| `sites` | `DELETE` | `/api/servers/{server}/sites/{id}` | [Delete site](https://developers.ploi.io/sites/delete-site) | `not_implemented` |
-| `sites` | `GET` | `/api/servers/{server}/sites/{id}/log` | [Get site logs](https://developers.ploi.io/sites/log-site) | `not_implemented` |
-| `sites` | `GET` | `/api/servers/{server}/sites/{id}/log/{log}` | [Get log entry](https://developers.ploi.io/sites/get-log-site) | `not_implemented` |
-| `sites` | `GET` | `/api/servers/{server}/sites/{id}/test-domain` | [Get test domain](https://developers.ploi.io/sites/get-test-domain) | `not_implemented` |
-| `sites` | `POST` | `/api/servers/{server}/sites/{id}/test-domain` | [Enable test domain](https://developers.ploi.io/sites/enable-test-domain) | `not_implemented` |
-| `sites` | `DELETE` | `/api/servers/{server}/sites/{id}/test-domain` | [Disable test domain](https://developers.ploi.io/sites/disable-test-domain) | `not_implemented` |
-| `sites` | `POST` | `/api/servers/{server}/sites/{id}/suspend` | [Suspend site](https://developers.ploi.io/sites/suspend-site) | `not_implemented` |
-| `sites` | `POST` | `/api/servers/{server}/sites/{id}/resume` | [Resume site](https://developers.ploi.io/sites/resume-site) | `not_implemented` |
-| `sites` | `PATCH` | `/api/servers/{server}/sites/{id}` | [Update robot access](https://developers.ploi.io/sites/robot-access) | `not_implemented` |
-| `sites` | `GET` | `/api/servers/{server}/sites/laravel/horizon/{type}` | [Get Horizon statistics](https://developers.ploi.io/sites/laravel-horizon-statistics) | `not_implemented` |
-| `sites` | `GET` | `/api/servers/{server}/sites/{site}/nginx-configuration` | [Get NGINX configuration](https://developers.ploi.io/sites/get-nginx-configuration) | `not_implemented` |
-| `sites` | `PATCH` | `/api/servers/{server}/sites/{site}/nginx-configuration` | [Update NGINX configuration](https://developers.ploi.io/sites/update-nginx-configuration) | `not_implemented` |
-| `sites` | `POST` | `/api/servers/{server}/sites/{site}/clone` | [Clone site](https://developers.ploi.io/sites/clone-site) | `not_implemented` |
-| `sites` | `POST` | `/api/servers/{server}/sites/{site}/php-version` | [Change PHP version](https://developers.ploi.io/sites/change-php-version) | `not_implemented` |
-| `sites` | `POST` | `/api/servers/{server}/sites/{id}/permission-reset` | [Reset permissions](https://developers.ploi.io/sites/reset-site-permissions) | `not_implemented` |
+| `sites` | `PATCH` | `/api/servers/{server}/sites/{site}` | [Update site](https://developers.ploi.io/sites/update-site) | `implemented_locally_unverified_live` |
+| `sites` | `DELETE` | `/api/servers/{server}/sites/{id}` | [Delete site](https://developers.ploi.io/sites/delete-site) | `implemented_locally_unverified_live` |
+| `sites` | `GET` | `/api/servers/{server}/sites/{id}/log` | [Get site logs](https://developers.ploi.io/sites/log-site) | `implemented_locally_unverified_live` |
+| `sites` | `GET` | `/api/servers/{server}/sites/{id}/log/{log}` | [Get log entry](https://developers.ploi.io/sites/get-log-site) | `implemented_locally_unverified_live` |
+| `sites` | `GET` | `/api/servers/{server}/sites/{id}/test-domain` | [Get test domain](https://developers.ploi.io/sites/get-test-domain) | `implemented_locally_unverified_live` |
+| `sites` | `POST` | `/api/servers/{server}/sites/{id}/test-domain` | [Enable test domain](https://developers.ploi.io/sites/enable-test-domain) | `implemented_locally_unverified_live` |
+| `sites` | `DELETE` | `/api/servers/{server}/sites/{id}/test-domain` | [Disable test domain](https://developers.ploi.io/sites/disable-test-domain) | `implemented_locally_unverified_live` |
+| `sites` | `POST` | `/api/servers/{server}/sites/{id}/suspend` | [Suspend site](https://developers.ploi.io/sites/suspend-site) | `implemented_locally_unverified_live` |
+| `sites` | `POST` | `/api/servers/{server}/sites/{id}/resume` | [Resume site](https://developers.ploi.io/sites/resume-site) | `implemented_locally_unverified_live` |
+| `sites` | `PATCH` | `/api/servers/{server}/sites/{id}` | [Update robot access](https://developers.ploi.io/sites/robot-access) | `implemented_locally_unverified_live` |
+| `sites` | `GET` | `/api/servers/{server}/sites/laravel/horizon/{type}` | [Get Horizon statistics](https://developers.ploi.io/sites/laravel-horizon-statistics) | `implemented_locally_unverified_live` |
+| `sites` | `GET` | `/api/servers/{server}/sites/{site}/nginx-configuration` | [Get NGINX configuration](https://developers.ploi.io/sites/get-nginx-configuration) | `implemented_locally_unverified_live` |
+| `sites` | `PATCH` | `/api/servers/{server}/sites/{site}/nginx-configuration` | [Update NGINX configuration](https://developers.ploi.io/sites/update-nginx-configuration) | `implemented_locally_unverified_live` |
+| `sites` | `POST` | `/api/servers/{server}/sites/{site}/clone` | [Clone site](https://developers.ploi.io/sites/clone-site) | `implemented_locally_unverified_live` |
+| `sites` | `POST` | `/api/servers/{server}/sites/{site}/php-version` | [Change PHP version](https://developers.ploi.io/sites/change-php-version) | `implemented_locally_unverified_live` |
+| `sites` | `POST` | `/api/servers/{server}/sites/{id}/permission-reset` | [Reset permissions](https://developers.ploi.io/sites/reset-site-permissions) | `implemented_locally_unverified_live` |
 | `deployments` | `GET` | `/api/servers/{server}/sites/{id}/deploy/script` | [Get deploy script](https://developers.ploi.io/deployments/get-deploy-script) | `not_implemented` |
 | `deployments` | `PATCH` | `/api/servers/{server}/sites/{id}/deploy/script` | [Update deploy script](https://developers.ploi.io/deployments/update-deploy-script) | `not_implemented` |
 | `deployments` | `POST` | `/api/servers/{server}/sites/{id}/deploy` | [Deploy site](https://developers.ploi.io/deployments/deploy-site) | `not_implemented` |

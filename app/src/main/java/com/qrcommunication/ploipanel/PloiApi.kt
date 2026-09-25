@@ -9,10 +9,39 @@ internal data class ServerPage(val servers: List<Server>, val currentPage: Int, 
 internal data class MonitorSample(val cpu: String, val ram: String, val disk: String, val load: String, val date: String)
 internal data class Site(
     val id: Long, val serverId: Long, val domain: String, val status: String,
-    val phpVersion: String, val webDirectory: String, val healthUrl: String, val diskUsage: String
+    val phpVersion: String, val webDirectory: String, val healthUrl: String, val diskUsage: String,
+    val testDomain: String = "", val projectType: String = "", val projectRoot: String = "",
+    val systemUser: String = "", val lastDeployAt: String = "", val createdAt: String = "",
+    val hasRepository: Boolean = false, val quickDeploy: Boolean = false,
+    val zeroDowntimeDeployment: Boolean = false, val disableRobots: Boolean = false,
+    val fastcgiCache: Boolean = false
 )
 internal data class SitePage(val sites: List<Site>, val currentPage: Int, val lastPage: Int) {
     val hasNext: Boolean get() = currentPage < lastPage
+}
+internal data class SiteLogEntry(
+    val id: Long, val description: String, val content: String, val type: String,
+    val createdAt: String, val createdAtHuman: String
+)
+internal data class SiteLogPage(val logs: List<SiteLogEntry>, val currentPage: Int, val lastPage: Int) {
+    val hasNext: Boolean get() = currentPage < lastPage
+}
+internal data class TestDomain(val id: Long, val domain: String, val testDomain: String, val fullTestDomain: String)
+internal data class HorizonQueue(val name: String, val length: Long, val wait: Long, val processes: Long)
+internal data class HorizonMaster(val name: String, val pid: String, val status: String, val supervisors: Int)
+internal data class HorizonFailedJob(
+    val id: String, val connection: String, val queue: String, val name: String,
+    val status: String, val exception: String
+)
+/** Response shapes of GET /servers/{server}/sites/laravel/horizon/{type}. */
+internal sealed interface HorizonStatistics {
+    data class Stats(
+        val failedJobs: Long, val jobsPerMinute: Long, val pausedMasters: Long,
+        val processes: Long, val recentJobs: Long, val status: String, val wait: Map<String, Long>
+    ) : HorizonStatistics
+    data class Workload(val queues: List<HorizonQueue>) : HorizonStatistics
+    data class Masters(val masters: List<HorizonMaster>) : HorizonStatistics
+    data class Failed(val total: Long, val jobs: List<HorizonFailedJob>) : HorizonStatistics
 }
 internal data class ProviderOption(val id: String, val name: String, val description: String = "")
 internal data class ProviderCredential(
@@ -88,6 +117,27 @@ internal val PHP_VERSIONS = setOf(
 internal val OS_TYPES = setOf("ubuntu-24-04-lts", "ubuntu-26-04-lts", "debian-12", "debian-13")
 internal val IP_TYPES = setOf("ipv4", "ipv6", "ipv4-ipv6", "ipv6-ipv4")
 internal val DEFAULT_OS_TYPE = "ubuntu-26-04-lts"
+
+/** Documented value sets for site management (developers.ploi.io/sites pages). */
+internal val SITE_PROJECT_TYPES = setOf(
+    "laravel", "nodejs", "statamic", "craft-cms", "symfony", "wordpress", "octobercms", "cakephp"
+)
+internal val HORIZON_TYPES = setOf("stats", "workload", "masters", "failed")
+internal val SITE_PHP_VERSIONS = PHP_VERSIONS - "none"
+private val ROOT_DOMAIN_PATTERN = Regex("\\S+")
+private val WEB_DIRECTORY_PATTERN = Regex("[a-zA-Z0-9/]+")
+
+internal fun validateRootDomain(domain: String): String {
+    require(domain.isNotBlank() && domain.length <= 100 && ROOT_DOMAIN_PATTERN.matches(domain)) {
+        "Invalid root domain"
+    }
+    return domain
+}
+
+internal fun validateWebDirectory(directory: String): String {
+    require(directory.length <= 50 && WEB_DIRECTORY_PATTERN.matches(directory)) { "Invalid web directory" }
+    return directory
+}
 private val SERVER_NAME_PATTERN = Regex("[A-Za-z0-9-]+")
 private val IPV4_PATTERN = Regex("""\d{1,3}(\.\d{1,3}){3}""")
 
@@ -200,6 +250,36 @@ internal data class CreateCustomServerRequest(
     }.toString()
 }
 
+/** Validated payload for POST /api/servers/{server}/sites. */
+internal data class CreateSiteRequest(
+    val rootDomain: String,
+    val webDirectory: String,
+    val projectRoot: String = "",
+    val projectType: String = "",
+    val systemUser: String = "",
+    val webserverTemplate: Long? = null,
+    val webhookUrl: String = ""
+) {
+    init {
+        validateRootDomain(rootDomain)
+        validateWebDirectory(webDirectory)
+        require(projectRoot.length <= 50) { "Project root too long" }
+        require(projectType.isEmpty() || projectType in SITE_PROJECT_TYPES) { "Unsupported project type" }
+        require(webserverTemplate == null || webserverTemplate > 0) { "Invalid webserver template" }
+        if (webhookUrl.isNotBlank()) validateWebhookUrl(webhookUrl)
+    }
+
+    fun toJson(): String = JSONObject().apply {
+        put("root_domain", rootDomain)
+        put("web_directory", webDirectory)
+        if (projectRoot.isNotBlank()) put("project_root", projectRoot)
+        if (projectType.isNotBlank()) put("project_type", projectType)
+        if (systemUser.isNotBlank()) put("system_user", systemUser)
+        webserverTemplate?.let { put("webserver_template", it) }
+        if (webhookUrl.isNotBlank()) put("webhook_url", webhookUrl)
+    }.toString()
+}
+
 internal class PloiHttpException(val status: Int, val retryAfterSeconds: String? = null) : Exception("Ploi HTTP $status")
 
 /** Typed API surface. Never persist or log a bearer token. */
@@ -269,7 +349,18 @@ internal object PloiApi {
         phpVersion = item.opt("php_version")?.takeUnless { it == JSONObject.NULL }?.toString().orEmpty(),
         webDirectory = item.optString("web_directory"),
         healthUrl = if (item.isNull("health_url")) "" else item.getString("health_url"),
-        diskUsage = item.optJSONObject("disk_usage")?.optString("human").orEmpty()
+        diskUsage = item.optJSONObject("disk_usage")?.optString("human").orEmpty(),
+        testDomain = nullableString(item, "test_domain"),
+        projectType = nullableString(item, "project_type"),
+        projectRoot = item.optString("project_root"),
+        systemUser = nullableString(item, "system_user"),
+        lastDeployAt = nullableString(item, "last_deploy_at"),
+        createdAt = item.optString("created_at"),
+        hasRepository = item.optBoolean("has_repository", false),
+        quickDeploy = item.optBoolean("quick_deploy", false),
+        zeroDowntimeDeployment = item.optBoolean("zero_downtime_deployment", false),
+        disableRobots = item.optBoolean("disable_robots", false),
+        fastcgiCache = item.optBoolean("fastcgi_cache", false)
     )
 
     fun sites(token: String, serverId: Long, page: Int = 1, perPage: Int = 15): SitePage {
@@ -279,6 +370,215 @@ internal object PloiApi {
 
     fun site(token: String, serverId: Long, siteId: Long): Site = parseOrThrow {
         parseSite(get("/servers/${validateResourceId(serverId)}/sites/${validateResourceId(siteId)}", token))
+    }
+
+    // ---- Sites domain: full documented read + write surface ----
+
+    private fun sitePath(serverId: Long, siteId: Long): String =
+        "/servers/${validateResourceId(serverId)}/sites/${validateResourceId(siteId)}"
+
+    fun createSite(token: String, serverId: Long, request: CreateSiteRequest): Site = parseOrThrow {
+        parseSite(write("POST", "/servers/${validateResourceId(serverId)}/sites", token, request.toJson()))
+    }
+
+    /**
+     * PATCH /sites/{site}: only present parameters are sent (root_domain, zero_downtime_deployment,
+     * disable_robots per the update-site and robot-access documents, which share this route).
+     */
+    fun updateSite(
+        token: String, serverId: Long, siteId: Long,
+        rootDomain: String = "", zeroDowntimeDeployment: Boolean? = null, disableRobots: Boolean? = null
+    ): Site {
+        require(rootDomain.isNotBlank() || zeroDowntimeDeployment != null || disableRobots != null) {
+            "At least one site attribute to update"
+        }
+        if (rootDomain.isNotBlank()) validateRootDomain(rootDomain)
+        val body = JSONObject().apply {
+            if (rootDomain.isNotBlank()) put("root_domain", rootDomain)
+            zeroDowntimeDeployment?.let { put("zero_downtime_deployment", it) }
+            disableRobots?.let { put("disable_robots", it) }
+        }.toString()
+        return parseOrThrow { parseSite(write("PATCH", sitePath(serverId, siteId), token, body)) }
+    }
+
+    /** Dedicated documented robot-access operation on the same PATCH route. */
+    fun updateRobotAccess(token: String, serverId: Long, siteId: Long, disableRobots: Boolean): Site =
+        parseOrThrow {
+            val body = JSONObject().put("disable_robots", disableRobots).toString()
+            parseSite(write("PATCH", sitePath(serverId, siteId), token, body))
+        }
+
+    fun deleteSite(token: String, serverId: Long, siteId: Long): String = parseOrThrow {
+        parseMessage(write("DELETE", sitePath(serverId, siteId), token, null))
+    }
+
+    private fun parseSiteLogEntry(item: JSONObject) = SiteLogEntry(
+        id = item.getLong("id"),
+        description = item.getString("description"),
+        content = item.optString("content"),
+        type = nullableString(item, "type"),
+        createdAt = item.optString("created_at"),
+        createdAtHuman = nullableString(item, "created_at_human")
+    )
+
+    fun parseSiteLogs(json: String): SiteLogPage {
+        val root = JSONObject(json)
+        val data = root.getJSONArray("data")
+        val (page, lastPage) = pageMeta(root)
+        return SiteLogPage((0 until data.length()).map { parseSiteLogEntry(data.getJSONObject(it)) }, page, lastPage)
+    }
+
+    fun parseSiteLog(json: String): SiteLogEntry = parseSiteLogEntry(JSONObject(json).getJSONObject("data"))
+
+    fun siteLogs(token: String, serverId: Long, siteId: Long, page: Int = 1, perPage: Int = 15): SiteLogPage {
+        require(page >= 1) { "Page must be positive" }
+        return parseOrThrow {
+            parseSiteLogs(get("${sitePath(serverId, siteId)}/log?page=$page&per_page=${validatePageSize(perPage)}", token))
+        }
+    }
+
+    fun siteLog(token: String, serverId: Long, siteId: Long, logId: Long): SiteLogEntry = parseOrThrow {
+        parseSiteLog(get("${sitePath(serverId, siteId)}/log/${validateResourceId(logId)}", token))
+    }
+
+    fun parseTestDomain(json: String): TestDomain {
+        val data = JSONObject(json).getJSONObject("data")
+        return TestDomain(
+            id = data.getLong("id"),
+            domain = data.getString("domain"),
+            testDomain = nullableString(data, "test_domain"),
+            fullTestDomain = nullableString(data, "full_test_domain")
+        )
+    }
+
+    fun testDomain(token: String, serverId: Long, siteId: Long): TestDomain = parseOrThrow {
+        parseTestDomain(get("${sitePath(serverId, siteId)}/test-domain", token))
+    }
+
+    fun enableTestDomain(token: String, serverId: Long, siteId: Long): TestDomain = parseOrThrow {
+        parseTestDomain(write("POST", "${sitePath(serverId, siteId)}/test-domain", token, null))
+    }
+
+    fun disableTestDomain(token: String, serverId: Long, siteId: Long): TestDomain = parseOrThrow {
+        parseTestDomain(write("DELETE", "${sitePath(serverId, siteId)}/test-domain", token, null))
+    }
+
+    fun suspendSite(token: String, serverId: Long, siteId: Long, reason: String = ""): Site = parseOrThrow {
+        val body = JSONObject().apply { if (reason.isNotBlank()) put("reason", reason) }.toString()
+        parseSite(write("POST", "${sitePath(serverId, siteId)}/suspend", token, body))
+    }
+
+    fun resumeSite(token: String, serverId: Long, siteId: Long): Site = parseOrThrow {
+        parseSite(write("POST", "${sitePath(serverId, siteId)}/resume", token, null))
+    }
+
+    fun parseHorizonStatistics(type: String, json: String): HorizonStatistics {
+        require(type in HORIZON_TYPES) { "Unsupported Horizon statistics type" }
+        val data = JSONObject(json).get("data")
+        return when (type) {
+            "workload" -> {
+                val entries = (data as org.json.JSONArray)
+                HorizonStatistics.Workload((0 until entries.length()).map { index ->
+                    entries.getJSONObject(index).let { item ->
+                        HorizonQueue(
+                            name = item.getString("name"), length = item.optLong("length"),
+                            wait = item.optLong("wait"), processes = item.optLong("processes")
+                        )
+                    }
+                })
+            }
+            "masters" -> {
+                val masters = (data as JSONObject)
+                HorizonStatistics.Masters(masters.keys().asSequence().map { key ->
+                    masters.getJSONObject(key).let { item ->
+                        HorizonMaster(
+                            name = item.optString("name", key), pid = item.optString("pid"),
+                            status = item.optString("status"),
+                            supervisors = item.optJSONArray("supervisors")?.length() ?: 0
+                        )
+                    }
+                }.toList())
+            }
+            "failed" -> {
+                val failed = (data as JSONObject)
+                val jobs = failed.optJSONArray("jobs")
+                HorizonStatistics.Failed(
+                    total = failed.optLong("total"),
+                    jobs = jobs?.let { array ->
+                        (0 until array.length()).map { index ->
+                            array.getJSONObject(index).let { item ->
+                                HorizonFailedJob(
+                                    id = item.optString("id"), connection = item.optString("connection"),
+                                    queue = item.optString("queue"), name = item.optString("name"),
+                                    status = item.optString("status"), exception = item.optString("exception")
+                                )
+                            }
+                        }
+                    }.orEmpty()
+                )
+            }
+            else -> {
+                val stats = (data as JSONObject)
+                val wait = stats.optJSONObject("wait")
+                HorizonStatistics.Stats(
+                    failedJobs = stats.optLong("failedJobs"),
+                    jobsPerMinute = stats.optLong("jobsPerMinute"),
+                    pausedMasters = stats.optLong("pausedMasters"),
+                    processes = stats.optLong("processes"),
+                    recentJobs = stats.optLong("recentJobs"),
+                    status = stats.optString("status"),
+                    wait = wait?.let { queues ->
+                        queues.keys().asSequence().associateWith { queues.optLong(it) }
+                    }.orEmpty()
+                )
+            }
+        }
+    }
+
+    fun horizonStatistics(token: String, serverId: Long, type: String = "stats"): HorizonStatistics {
+        require(type in HORIZON_TYPES) { "Unsupported Horizon statistics type" }
+        return parseOrThrow {
+            parseHorizonStatistics(
+                type,
+                get("/servers/${validateResourceId(serverId)}/sites/laravel/horizon/$type", token)
+            )
+        }
+    }
+
+    fun parseConfigurationContent(json: String): String = JSONObject(json).getString("content")
+
+    fun nginxConfiguration(token: String, serverId: Long, siteId: Long): String = parseOrThrow {
+        parseConfigurationContent(get("${sitePath(serverId, siteId)}/nginx-configuration", token))
+    }
+
+    fun updateNginxConfiguration(token: String, serverId: Long, siteId: Long, content: String): String {
+        require(content.isNotBlank()) { "NGINX configuration content required" }
+        return parseOrThrow {
+            val body = JSONObject().put("content", content).toString()
+            parseMessage(write("PATCH", "${sitePath(serverId, siteId)}/nginx-configuration", token, body))
+        }
+    }
+
+    fun cloneSite(token: String, serverId: Long, siteId: Long, targetServerId: Long, domain: String = ""): String {
+        validateResourceId(targetServerId)
+        if (domain.isNotBlank()) validateRootDomain(domain)
+        val body = JSONObject().apply {
+            put("clone_to_server", targetServerId)
+            if (domain.isNotBlank()) put("domain", domain)
+        }.toString()
+        return parseOrThrow { parseMessage(write("POST", "${sitePath(serverId, siteId)}/clone", token, body)) }
+    }
+
+    fun changeSitePhpVersion(token: String, serverId: Long, siteId: Long, phpVersion: String): Site {
+        require(phpVersion in SITE_PHP_VERSIONS) { "Unsupported PHP version" }
+        return parseOrThrow {
+            val body = JSONObject().put("php_version", phpVersion).toString()
+            parseSite(write("POST", "${sitePath(serverId, siteId)}/php-version", token, body))
+        }
+    }
+
+    fun resetSitePermissions(token: String, serverId: Long, siteId: Long): Site = parseOrThrow {
+        parseSite(write("POST", "${sitePath(serverId, siteId)}/permission-reset", token, null))
     }
 
     fun parseProviders(json: String): ProviderPage {

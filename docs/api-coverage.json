@@ -2379,7 +2379,7 @@
       "domain": "sites",
       "title": "Create site",
       "operation": "Create a site",
-      "status": "not_implemented"
+      "status": "implemented_locally_unverified_live"
     },
     {
       "method": "GET",
@@ -2397,7 +2397,7 @@
       "domain": "sites",
       "title": "Update site",
       "operation": "Update site",
-      "status": "not_implemented"
+      "status": "implemented_locally_unverified_live"
     },
     {
       "method": "DELETE",
@@ -2406,7 +2406,7 @@
       "domain": "sites",
       "title": "Delete site",
       "operation": "Delete site",
-      "status": "not_implemented"
+      "status": "implemented_locally_unverified_live"
     },
     {
       "method": "GET",
@@ -2415,7 +2415,7 @@
       "domain": "sites",
       "title": "Log site",
       "operation": "Get site logs",
-      "status": "not_implemented"
+      "status": "implemented_locally_unverified_live"
     },
     {
       "method": "GET",
@@ -2424,7 +2424,7 @@
       "domain": "sites",
       "title": "Get log site",
       "operation": "Get log entry",
-      "status": "not_implemented"
+      "status": "implemented_locally_unverified_live"
     },
     {
       "method": "GET",
@@ -2433,7 +2433,7 @@
       "domain": "sites",
       "title": "Get test domain",
       "operation": "Get test domain",
-      "status": "not_implemented"
+      "status": "implemented_locally_unverified_live"
     },
     {
       "method": "POST",
@@ -2442,7 +2442,7 @@
       "domain": "sites",
       "title": "Enable test domain",
       "operation": "Enable test domain",
-      "status": "not_implemented"
+      "status": "implemented_locally_unverified_live"
     },
     {
       "method": "DELETE",
@@ -2451,7 +2451,7 @@
       "domain": "sites",
       "title": "Disable test domain",
       "operation": "Disable test domain",
-      "status": "not_implemented"
+      "status": "implemented_locally_unverified_live"
     },
     {
       "method": "POST",
@@ -2460,7 +2460,7 @@
       "domain": "sites",
       "title": "Suspend site",
       "operation": "Suspend site",
-      "status": "not_implemented"
+      "status": "implemented_locally_unverified_live"
     },
     {
       "method": "POST",
@@ -2469,7 +2469,7 @@
       "domain": "sites",
       "title": "Resume site",
       "operation": "Resume site",
-      "status": "not_implemented"
+      "status": "implemented_locally_unverified_live"
     },
     {
       "method": "PATCH",
@@ -2478,7 +2478,7 @@
       "domain": "sites",
       "title": "Robot access",
       "operation": "Update robot access",
-      "status": "not_implemented"
+      "status": "implemented_locally_unverified_live"
     },
     {
       "method": "GET",
@@ -2487,7 +2487,7 @@
       "domain": "sites",
       "title": "Laravel Horizon statistics",
       "operation": "Get Horizon statistics",
-      "status": "not_implemented"
+      "status": "implemented_locally_unverified_live"
     },
     {
       "method": "GET",
@@ -2496,7 +2496,7 @@
       "domain": "sites",
       "title": "Get NGINX configuration",
       "operation": "Get NGINX configuration",
-      "status": "not_implemented"
+      "status": "implemented_locally_unverified_live"
     },
     {
       "method": "PATCH",
@@ -2505,7 +2505,7 @@
       "domain": "sites",
       "title": "Update NGINX configuration",
       "operation": "Update NGINX configuration",
-      "status": "not_implemented"
+      "status": "implemented_locally_unverified_live"
     },
     {
       "method": "POST",
@@ -2514,7 +2514,7 @@
       "domain": "sites",
       "title": "Clone site",
       "operation": "Clone site",
-      "status": "not_implemented"
+      "status": "implemented_locally_unverified_live"
     },
     {
       "method": "POST",
@@ -2523,7 +2523,7 @@
       "domain": "sites",
       "title": "Change PHP version",
       "operation": "Change PHP version",
-      "status": "not_implemented"
+      "status": "implemented_locally_unverified_live"
     },
     {
       "method": "POST",
@@ -2532,7 +2532,7 @@
       "domain": "sites",
       "title": "Reset site permissions",
       "operation": "Reset permissions",
-      "status": "not_implemented"
+      "status": "implemented_locally_unverified_live"
     },
     {
       "method": "GET",
