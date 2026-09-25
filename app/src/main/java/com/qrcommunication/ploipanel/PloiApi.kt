@@ -102,6 +102,15 @@ internal data class ServerLogPage(val logs: List<ServerLogEntry>, val currentPag
 internal data class MonitoredServer(
     val id: Long, val name: String, val ip: String, val url: String, val statistics: List<MonitorSample>
 )
+/** Repository view of a site (GET/POST/DELETE …/sites/{site}/repository responses). */
+internal data class SiteRepository(
+    val id: Long, val domain: String, val webDirectory: String, val wordpress: Boolean,
+    val laravel: Boolean, val projectRoot: String, val lastDeployAt: String,
+    val quickDeploy: Boolean, val createdAt: String,
+    val branch: String, val repositoryUser: String, val repositoryName: String, val provider: String
+)
+/** Toggled quick-deploy response: updated site plus the human-readable confirmation. */
+internal data class QuickDeployResult(val site: Site, val message: String)
 
 /** Documented value sets for server creation (developers.ploi.io/servers/create-server). */
 internal val SERVER_TYPES = setOf("server", "load-balancer", "database-server", "redis-server")
@@ -124,6 +133,11 @@ internal val SITE_PROJECT_TYPES = setOf(
 )
 internal val HORIZON_TYPES = setOf("stats", "workload", "masters", "failed")
 internal val SITE_PHP_VERSIONS = PHP_VERSIONS - "none"
+/** Documented value sets for deployments/repositories/environment (developers.ploi.io). */
+internal val REPOSITORY_PROVIDERS = setOf("bitbucket", "github", "gitlab", "custom")
+internal const val DEPLOY_SCRIPT_MAX_LENGTH = 65_535
+internal const val ENV_CONTENT_MIN_LENGTH = 2
+private val SCHEDULED_DEPLOY_PATTERN = Regex("""\d{4}-\d{2}-\d{2} \d{2}:\d{2}""")
 private val ROOT_DOMAIN_PATTERN = Regex("\\S+")
 private val WEB_DIRECTORY_PATTERN = Regex("[a-zA-Z0-9/]+")
 
@@ -277,6 +291,33 @@ internal data class CreateSiteRequest(
         if (systemUser.isNotBlank()) put("system_user", systemUser)
         webserverTemplate?.let { put("webserver_template", it) }
         if (webhookUrl.isNotBlank()) put("webhook_url", webhookUrl)
+    }.toString()
+}
+
+/** Validated payload for POST /api/servers/{server}/sites/{site}/repository. */
+internal data class InstallRepositoryRequest(
+    val provider: String,
+    val branch: String,
+    val name: String,
+    val sourceProviderId: Long? = null,
+    val installComposer: Boolean = false
+) {
+    init {
+        require(provider in REPOSITORY_PROVIDERS) { "Unsupported repository provider" }
+        require(branch.isNotBlank()) { "Branch is required" }
+        require(name.isNotBlank()) { "Repository name is required" }
+        require(provider != "custom" || name.endsWith(".git")) {
+            "Custom repositories must be a GIT URL ending with .git"
+        }
+        require(sourceProviderId == null || sourceProviderId > 0) { "Invalid source provider ID" }
+    }
+
+    fun toJson(): String = JSONObject().apply {
+        put("provider", provider)
+        put("branch", branch)
+        put("name", name)
+        sourceProviderId?.let { put("source_provider_id", it) }
+        if (installComposer) put("install_composer", true)
     }.toString()
 }
 
@@ -579,6 +620,113 @@ internal object PloiApi {
 
     fun resetSitePermissions(token: String, serverId: Long, siteId: Long): Site = parseOrThrow {
         parseSite(write("POST", "${sitePath(serverId, siteId)}/permission-reset", token, null))
+    }
+
+    // ---- Deployments domain: deploy script + deploy triggers ----
+
+    fun parseDeployScript(json: String): String = JSONObject(json).getString("deploy_script")
+
+    fun deployScript(token: String, serverId: Long, siteId: Long): String = parseOrThrow {
+        parseDeployScript(get("${sitePath(serverId, siteId)}/deploy/script", token))
+    }
+
+    fun updateDeployScript(token: String, serverId: Long, siteId: Long, script: String): String {
+        require(script.isNotBlank() && script.length <= DEPLOY_SCRIPT_MAX_LENGTH) {
+            "Deploy script must be 1 to $DEPLOY_SCRIPT_MAX_LENGTH characters"
+        }
+        return parseOrThrow {
+            val body = JSONObject().put("deploy_script", script).toString()
+            parseMessage(write("PATCH", "${sitePath(serverId, siteId)}/deploy/script", token, body))
+        }
+    }
+
+    /** POST /sites/{id}/deploy; optional scheduled time uses the documented 'yyyy-MM-dd HH:mm' format. */
+    fun deploySite(
+        token: String, serverId: Long, siteId: Long,
+        scheduled: String = "", variables: Map<String, String> = emptyMap()
+    ): String {
+        require(scheduled.isBlank() || SCHEDULED_DEPLOY_PATTERN.matches(scheduled)) {
+            "Scheduled deployment must use 'yyyy-MM-dd HH:mm'"
+        }
+        variables.keys.forEach { require(it.isNotBlank()) { "Variable names must not be blank" } }
+        val body = JSONObject().apply {
+            if (scheduled.isNotBlank()) put("scheduled", scheduled)
+            if (variables.isNotEmpty()) put("variables", JSONObject(variables))
+        }.toString()
+        return parseOrThrow { parseMessage(write("POST", "${sitePath(serverId, siteId)}/deploy", token, body)) }
+    }
+
+    fun deployToProduction(token: String, serverId: Long, siteId: Long): String = parseOrThrow {
+        parseMessage(write("POST", "${sitePath(serverId, siteId)}/deploy-to-production", token, JSONObject().toString()))
+    }
+
+    // ---- Repositories domain ----
+
+    private fun repositoryPath(serverId: Long, siteId: Long): String = "${sitePath(serverId, siteId)}/repository"
+
+    private fun parseSiteRepositoryEntry(item: JSONObject): SiteRepository {
+        val repository = item.optJSONObject("repository")
+        return SiteRepository(
+            id = item.getLong("id"),
+            domain = item.getString("domain"),
+            webDirectory = item.optString("web_directory"),
+            wordpress = item.optBoolean("wordpress", false),
+            laravel = item.optBoolean("laravel", false),
+            projectRoot = item.optString("project_root"),
+            lastDeployAt = nullableString(item, "last_deploy_at"),
+            quickDeploy = item.optBoolean("quick_deploy", false),
+            createdAt = item.optString("created_at"),
+            branch = repository?.optString("branch").orEmpty(),
+            repositoryUser = repository?.optString("user").orEmpty(),
+            repositoryName = repository?.optString("name").orEmpty(),
+            provider = repository?.optString("provider").orEmpty()
+        )
+    }
+
+    fun parseSiteRepository(json: String): SiteRepository =
+        parseSiteRepositoryEntry(JSONObject(json).getJSONObject("data"))
+
+    fun repository(token: String, serverId: Long, siteId: Long): SiteRepository = parseOrThrow {
+        parseSiteRepository(get(repositoryPath(serverId, siteId), token))
+    }
+
+    fun installRepository(token: String, serverId: Long, siteId: Long, request: InstallRepositoryRequest): SiteRepository =
+        parseOrThrow { parseSiteRepository(write("POST", repositoryPath(serverId, siteId), token, request.toJson())) }
+
+    fun enableCustomDeployments(token: String, serverId: Long, siteId: Long, script: String = ""): SiteRepository {
+        val body = JSONObject().apply { if (script.isNotBlank()) put("script", script) }.toString()
+        return parseOrThrow {
+            parseSiteRepository(write("POST", "${repositoryPath(serverId, siteId)}/custom-deployments", token, body))
+        }
+    }
+
+    fun deleteRepository(token: String, serverId: Long, siteId: Long): SiteRepository = parseOrThrow {
+        parseSiteRepository(write("DELETE", repositoryPath(serverId, siteId), token, null))
+    }
+
+    fun parseQuickDeploy(json: String): QuickDeployResult {
+        val root = JSONObject(json)
+        return QuickDeployResult(parseSiteEntry(root.getJSONObject("data")), root.optString("message"))
+    }
+
+    fun toggleQuickDeploy(token: String, serverId: Long, siteId: Long): QuickDeployResult = parseOrThrow {
+        parseQuickDeploy(write("POST", "${repositoryPath(serverId, siteId)}/quick-deploy", token, JSONObject().toString()))
+    }
+
+    // ---- Environment domain: .env read/update (same {content} envelope as NGINX) ----
+
+    fun environmentFile(token: String, serverId: Long, siteId: Long): String = parseOrThrow {
+        parseConfigurationContent(get("${sitePath(serverId, siteId)}/env", token))
+    }
+
+    fun updateEnvironmentFile(token: String, serverId: Long, siteId: Long, content: String): String {
+        require(content.length >= ENV_CONTENT_MIN_LENGTH) {
+            "Environment file content must be at least $ENV_CONTENT_MIN_LENGTH characters"
+        }
+        return parseOrThrow {
+            val body = JSONObject().put("content", content).toString()
+            parseMessage(write("PATCH", "${sitePath(serverId, siteId)}/env", token, body))
+        }
     }
 
     fun parseProviders(json: String): ProviderPage {

@@ -238,6 +238,11 @@ private fun SiteDetail(
     var logsDialog by remember { mutableStateOf(false) }
     var horizonDialog by remember { mutableStateOf(false) }
     var nginxDialog by remember { mutableStateOf(false) }
+    var repositoryDialog by remember { mutableStateOf(false) }
+    var deployScriptDialog by remember { mutableStateOf(false) }
+    var envDialog by remember { mutableStateOf(false) }
+    var confirmDeploy by remember { mutableStateOf(false) }
+    var confirmDeployProduction by remember { mutableStateOf(false) }
     var pendingSuspendReason by remember { mutableStateOf("") }
     var confirmSuspend by remember { mutableStateOf(false) }
     var confirmDelete by remember { mutableStateOf(false) }
@@ -250,6 +255,8 @@ private fun SiteDetail(
     val clonedMessage = stringResource(R.string.site_cloned)
     val permissionsMessage = stringResource(R.string.permissions_reset)
     val nginxSavedMessage = stringResource(R.string.nginx_saved)
+    val deployStartedMessage = stringResource(R.string.deploy_started)
+    val deployProductionStartedMessage = stringResource(R.string.deploy_production_started)
 
     LaunchedEffect(token, serverId, siteId, refresh) {
         loading = true
@@ -349,6 +356,25 @@ private fun SiteDetail(
                 }
                 OutlinedButton(onClick = { horizonDialog = true }, enabled = !busy) {
                     Text(stringResource(R.string.horizon_statistics))
+                }
+            }
+            Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                OutlinedButton(onClick = { repositoryDialog = true }, enabled = !busy) {
+                    Text(stringResource(R.string.repository_title))
+                }
+                OutlinedButton(onClick = { confirmDeploy = true }, enabled = !busy) {
+                    Text(stringResource(R.string.deploy_site))
+                }
+                OutlinedButton(onClick = { confirmDeployProduction = true }, enabled = !busy) {
+                    Text(stringResource(R.string.deploy_production))
+                }
+            }
+            Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                OutlinedButton(onClick = { deployScriptDialog = true }, enabled = !busy) {
+                    Text(stringResource(R.string.deploy_script))
+                }
+                OutlinedButton(onClick = { envDialog = true }, enabled = !busy) {
+                    Text(stringResource(R.string.env_file))
                 }
             }
             TestDomainSection(token, serverId, siteId, busy,
@@ -453,6 +479,43 @@ private fun SiteDetail(
     }
     if (logsDialog) SiteLogsDialog(token, serverId, siteId, onDismiss = { logsDialog = false })
     if (horizonDialog) HorizonDialog(token, serverId, onDismiss = { horizonDialog = false })
+    if (confirmDeploy && site != null) {
+        SensitiveConfirmDialog(lock = lock, activity = activity,
+            message = stringResource(R.string.confirm_deploy_site, site!!.domain),
+            confirmLabel = R.string.deploy_site,
+            onConfirmed = {
+                confirmDeploy = false
+                runAction(deployStartedMessage, refreshAfter = false) {
+                    PloiApi.deploySite(token, serverId, siteId)
+                }
+            },
+            onDismiss = { confirmDeploy = false })
+    }
+    if (confirmDeployProduction && site != null) {
+        SensitiveConfirmDialog(lock = lock, activity = activity,
+            message = stringResource(R.string.confirm_deploy_production, site!!.domain),
+            confirmLabel = R.string.deploy_production,
+            onConfirmed = {
+                confirmDeployProduction = false
+                runAction(deployProductionStartedMessage, refreshAfter = false) {
+                    PloiApi.deployToProduction(token, serverId, siteId)
+                }
+            },
+            onDismiss = { confirmDeployProduction = false })
+    }
+    if (repositoryDialog && site != null) {
+        RepositoryDialog(token, serverId, siteId, site!!.domain, lock, activity,
+            onChanged = { refresh++; onChanged() },
+            onDismiss = { repositoryDialog = false })
+    }
+    if (deployScriptDialog && site != null) {
+        DeployScriptDialog(token, serverId, siteId, site!!.domain, lock, activity,
+            onDismiss = { deployScriptDialog = false })
+    }
+    if (envDialog && site != null) {
+        EnvDialog(token, serverId, siteId, site!!.domain, lock, activity,
+            onDismiss = { envDialog = false })
+    }
     if (nginxDialog) {
         NginxDialog(token, serverId, siteId, onSave = { content ->
             nginxDialog = false

@@ -2541,7 +2541,7 @@
       "domain": "deployments",
       "title": "Get deploy script",
       "operation": "Get deploy script",
-      "status": "not_implemented"
+      "status": "implemented_locally_unverified_live"
     },
     {
       "method": "PATCH",
@@ -2550,7 +2550,7 @@
       "domain": "deployments",
       "title": "Update deploy script",
       "operation": "Update deploy script",
-      "status": "not_implemented"
+      "status": "implemented_locally_unverified_live"
     },
     {
       "method": "POST",
@@ -2559,7 +2559,7 @@
       "domain": "deployments",
       "title": "Deploy site",
       "operation": "Deploy site",
-      "status": "not_implemented"
+      "status": "implemented_locally_unverified_live"
     },
     {
       "method": "POST",
@@ -2568,7 +2568,7 @@
       "domain": "deployments",
       "title": "Deploy staging site to production",
       "operation": "Deploy to production",
-      "status": "not_implemented"
+      "status": "implemented_locally_unverified_live"
     },
     {
       "method": "GET",
@@ -2577,7 +2577,7 @@
       "domain": "repositories",
       "title": "Get repository",
       "operation": "Get repository",
-      "status": "not_implemented"
+      "status": "implemented_locally_unverified_live"
     },
     {
       "method": "POST",
@@ -2586,7 +2586,7 @@
       "domain": "repositories",
       "title": "Install repository",
       "operation": "Install repository",
-      "status": "not_implemented"
+      "status": "implemented_locally_unverified_live"
     },
     {
       "method": "POST",
@@ -2595,7 +2595,7 @@
       "domain": "repositories",
       "title": "Custom deployment",
       "operation": "Enable custom deployments",
-      "status": "not_implemented"
+      "status": "implemented_locally_unverified_live"
     },
     {
       "method": "DELETE",
@@ -2604,7 +2604,7 @@
       "domain": "repositories",
       "title": "Delete repository",
       "operation": "Delete repository",
-      "status": "not_implemented"
+      "status": "implemented_locally_unverified_live"
     },
     {
       "method": "POST",
@@ -2613,7 +2613,7 @@
       "domain": "repositories",
       "title": "Toggle quick deploy",
       "operation": "Toggle quick deploy",
-      "status": "not_implemented"
+      "status": "implemented_locally_unverified_live"
     },
     {
       "method": "GET",
@@ -2622,7 +2622,7 @@
       "domain": "environment",
       "title": "Get .env from site",
       "operation": "Get environment file",
-      "status": "not_implemented"
+      "status": "implemented_locally_unverified_live"
     },
     {
       "method": "PATCH",
@@ -2631,7 +2631,7 @@
       "domain": "environment",
       "title": "Update .env from site",
       "operation": "Update environment file",
-      "status": "not_implemented"
+      "status": "implemented_locally_unverified_live"
     },
     {
       "method": "GET",

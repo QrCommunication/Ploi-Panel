@@ -2,7 +2,7 @@
 
 Extraction : 2026-09-24T18:31:36+00:00 ; source : [sitemap officiel](https://developers.ploi.io/sitemap.xml), puis en-têtes méthode/chemin des pages officielles. Base des requêtes : `https://ploi.io/api` (les chemins ci-dessous comprennent déjà `/api`).
 
-**231 opérations documentées**, 230 pages avec routes, 231 pages de référence API ; **192 non implémentées** (`not_implemented`), **39 implémentées et testées localement mais non vérifiées sur compte réel** (`implemented_locally_unverified_live`). Ce tableau inventorie la documentation, et ne constitue ni une preuve de disponibilité dans un compte donné, ni un contrat testé contre l’API. Le [JSON](api-coverage.json) conserve chaque entrée et la classification de toutes les URL du sitemap.
+**231 opérations documentées**, 230 pages avec routes, 231 pages de référence API ; **181 non implémentées** (`not_implemented`), **50 implémentées et testées localement mais non vérifiées sur compte réel** (`implemented_locally_unverified_live`). Ce tableau inventorie la documentation, et ne constitue ni une preuve de disponibilité dans un compte donné, ni un contrat testé contre l’API. Le [JSON](api-coverage.json) conserve chaque entrée et la classification de toutes les URL du sitemap.
 
 ## Périmètre et méthode
 
@@ -149,17 +149,17 @@ Extraction : 2026-09-24T18:31:36+00:00 ; source : [sitemap officiel](https://dev
 | `sites` | `POST` | `/api/servers/{server}/sites/{site}/clone` | [Clone site](https://developers.ploi.io/sites/clone-site) | `implemented_locally_unverified_live` |
 | `sites` | `POST` | `/api/servers/{server}/sites/{site}/php-version` | [Change PHP version](https://developers.ploi.io/sites/change-php-version) | `implemented_locally_unverified_live` |
 | `sites` | `POST` | `/api/servers/{server}/sites/{id}/permission-reset` | [Reset permissions](https://developers.ploi.io/sites/reset-site-permissions) | `implemented_locally_unverified_live` |
-| `deployments` | `GET` | `/api/servers/{server}/sites/{id}/deploy/script` | [Get deploy script](https://developers.ploi.io/deployments/get-deploy-script) | `not_implemented` |
-| `deployments` | `PATCH` | `/api/servers/{server}/sites/{id}/deploy/script` | [Update deploy script](https://developers.ploi.io/deployments/update-deploy-script) | `not_implemented` |
-| `deployments` | `POST` | `/api/servers/{server}/sites/{id}/deploy` | [Deploy site](https://developers.ploi.io/deployments/deploy-site) | `not_implemented` |
-| `deployments` | `POST` | `/api/servers/{server}/sites/{id}/deploy-to-production` | [Deploy to production](https://developers.ploi.io/deployments/deploy-staging-site-to-production) | `not_implemented` |
-| `repositories` | `GET` | `/api/servers/{server}/sites/{site}/repository` | [Get repository](https://developers.ploi.io/repositories/get-repository) | `not_implemented` |
-| `repositories` | `POST` | `/api/servers/{server}/sites/{site}/repository` | [Install repository](https://developers.ploi.io/repositories/install-repository) | `not_implemented` |
-| `repositories` | `POST` | `/api/servers/{server}/sites/{site}/repository/custom-deployments` | [Enable custom deployments](https://developers.ploi.io/repositories/custom-deployment) | `not_implemented` |
-| `repositories` | `DELETE` | `/api/servers/{server}/sites/{site}/repository` | [Delete repository](https://developers.ploi.io/repositories/delete-repository) | `not_implemented` |
-| `repositories` | `POST` | `/api/servers/{server}/sites/{site}/repository/quick-deploy` | [Toggle quick deploy](https://developers.ploi.io/repositories/toggle-quick-deploy) | `not_implemented` |
-| `environment` | `GET` | `/api/servers/{server}/sites/{id}/env` | [Get environment file](https://developers.ploi.io/environment/get-env-from-site) | `not_implemented` |
-| `environment` | `PATCH` | `/api/servers/{server}/sites/{id}/env` | [Update environment file](https://developers.ploi.io/environment/update-env-from-site) | `not_implemented` |
+| `deployments` | `GET` | `/api/servers/{server}/sites/{id}/deploy/script` | [Get deploy script](https://developers.ploi.io/deployments/get-deploy-script) | `implemented_locally_unverified_live` |
+| `deployments` | `PATCH` | `/api/servers/{server}/sites/{id}/deploy/script` | [Update deploy script](https://developers.ploi.io/deployments/update-deploy-script) | `implemented_locally_unverified_live` |
+| `deployments` | `POST` | `/api/servers/{server}/sites/{id}/deploy` | [Deploy site](https://developers.ploi.io/deployments/deploy-site) | `implemented_locally_unverified_live` |
+| `deployments` | `POST` | `/api/servers/{server}/sites/{id}/deploy-to-production` | [Deploy to production](https://developers.ploi.io/deployments/deploy-staging-site-to-production) | `implemented_locally_unverified_live` |
+| `repositories` | `GET` | `/api/servers/{server}/sites/{site}/repository` | [Get repository](https://developers.ploi.io/repositories/get-repository) | `implemented_locally_unverified_live` |
+| `repositories` | `POST` | `/api/servers/{server}/sites/{site}/repository` | [Install repository](https://developers.ploi.io/repositories/install-repository) | `implemented_locally_unverified_live` |
+| `repositories` | `POST` | `/api/servers/{server}/sites/{site}/repository/custom-deployments` | [Enable custom deployments](https://developers.ploi.io/repositories/custom-deployment) | `implemented_locally_unverified_live` |
+| `repositories` | `DELETE` | `/api/servers/{server}/sites/{site}/repository` | [Delete repository](https://developers.ploi.io/repositories/delete-repository) | `implemented_locally_unverified_live` |
+| `repositories` | `POST` | `/api/servers/{server}/sites/{site}/repository/quick-deploy` | [Toggle quick deploy](https://developers.ploi.io/repositories/toggle-quick-deploy) | `implemented_locally_unverified_live` |
+| `environment` | `GET` | `/api/servers/{server}/sites/{id}/env` | [Get environment file](https://developers.ploi.io/environment/get-env-from-site) | `implemented_locally_unverified_live` |
+| `environment` | `PATCH` | `/api/servers/{server}/sites/{id}/env` | [Update environment file](https://developers.ploi.io/environment/update-env-from-site) | `implemented_locally_unverified_live` |
 | `queue-workers` | `GET` | `/api/servers/{server}/sites/{id}/queues` | [Get all queue workers](https://developers.ploi.io/queue-workers/list-queue-workers) | `not_implemented` |
 | `queue-workers` | `POST` | `/api/servers/{server}/sites/{id}/queues` | [Create queue worker](https://developers.ploi.io/queue-workers/create-queue-worker) | `not_implemented` |
 | `queue-workers` | `GET` | `/api/servers/{server}/sites/{id}/queues/{queueId}` | [Get queue worker](https://developers.ploi.io/queue-workers/get-queue-worker) | `not_implemented` |
