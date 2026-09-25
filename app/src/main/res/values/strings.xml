@@ -357,4 +357,17 @@
     <string name="backup_channel_attached">Canal attaché.</string>
     <string name="detach_backup_channel">Détacher</string>
     <string name="backup_channel_detached">Canal détaché.</string>
+    <string name="crontabs_tab">Crons</string>
+    <string name="empty_crontabs">Aucune tâche cron sur ce serveur.</string>
+    <string name="new_crontab">Nouvelle tâche cron</string>
+    <string name="crontab_user_label">Utilisateur système (ex. ploi)</string>
+    <string name="crontab_command_label">Commande à exécuter</string>
+    <string name="crontab_frequency_label">Fréquence cron (ex. * * * * *)</string>
+    <string name="create_crontab_submit">Créer la tâche</string>
+    <string name="crontab_created">Tâche cron créée.</string>
+    <string name="crontab_frequency">Fréquence : %1$s</string>
+    <string name="crontab_user">Utilisateur : %1$s</string>
+    <string name="delete_crontab">Supprimer</string>
+    <string name="confirm_delete_crontab">Supprimer définitivement la tâche cron « %1$s » ? Cette action est irréversible.</string>
+    <string name="crontab_deleted">Tâche cron supprimée.</string>
 </resources>

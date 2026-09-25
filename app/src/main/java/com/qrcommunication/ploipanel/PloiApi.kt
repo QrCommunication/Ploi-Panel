@@ -167,6 +167,14 @@ internal data class FileBackupPage(val backups: List<FileBackup>, val currentPag
     val hasNext: Boolean get() = currentPage < lastPage
 }
 
+/** Cron job entry of GET/POST /api/servers/{server}/crontabs responses (both documented shapes). */
+internal data class Crontab(
+    val id: Long, val command: String, val user: String, val frequency: String, val createdAt: String
+)
+internal data class CrontabPage(val crontabs: List<Crontab>, val currentPage: Int, val lastPage: Int) {
+    val hasNext: Boolean get() = currentPage < lastPage
+}
+
 /** Documented value sets for server creation (developers.ploi.io/servers/create-server). */
 internal val SERVER_TYPES = setOf("server", "load-balancer", "database-server", "redis-server")
 internal val CUSTOM_SERVER_TYPES = SERVER_TYPES + "storage-server"
@@ -203,6 +211,10 @@ internal val FILE_BACKUP_CREATE_INTERVALS = setOf(0, 10, 20, 30, 40, 50, 60, 120
 internal val FILE_BACKUP_UPDATE_INTERVALS = setOf(0, 60, 120, 240, 480, 720, 1440, 10080, 43800)
 /** Documented notification locations for database backup channels. */
 internal val BACKUP_CHANNEL_LOCATIONS = setOf("before-backup", "after-backup", "failed-backup")
+/** Documented maximum lengths for crontab creation (developers.ploi.io/crontabs/create-crontab). */
+internal const val CRONTAB_USER_MAX_LENGTH = 255
+internal const val CRONTAB_COMMAND_MAX_LENGTH = 255
+internal const val CRONTAB_FREQUENCY_MAX_LENGTH = 50
 /** Documented shape of the optional next_backup_at schedule (`2025-01-16 03:00:00`). */
 private val NEXT_BACKUP_AT_PATTERN = Regex("""\d{4}-\d{2}-\d{2} \d{2}:\d{2}(:\d{2})?""")
 
@@ -632,6 +644,31 @@ internal data class UpdateFileBackupRequest(
         if (excluded.isNotEmpty()) put("excluded", JSONArray(excluded))
         if (locations.isNotBlank()) put("locations", locations)
         if (nextBackupAt.isNotBlank()) put("next_backup_at", nextBackupAt)
+    }.toString()
+}
+
+/** Validated payload for POST /api/servers/{server}/crontabs (three documented required fields). */
+internal data class CreateCrontabRequest(
+    val user: String,
+    val command: String,
+    val frequency: String
+) {
+    init {
+        require(user.isNotBlank() && user.length <= CRONTAB_USER_MAX_LENGTH) {
+            "Cron user must be 1 to $CRONTAB_USER_MAX_LENGTH characters"
+        }
+        require(command.isNotBlank() && command.length <= CRONTAB_COMMAND_MAX_LENGTH) {
+            "Cron command must be 1 to $CRONTAB_COMMAND_MAX_LENGTH characters"
+        }
+        require(frequency.isNotBlank() && frequency.length <= CRONTAB_FREQUENCY_MAX_LENGTH) {
+            "Cron frequency must be 1 to $CRONTAB_FREQUENCY_MAX_LENGTH characters"
+        }
+    }
+
+    fun toJson(): String = JSONObject().apply {
+        put("user", user)
+        put("command", command)
+        put("frequency", frequency)
     }.toString()
 }
 
@@ -1478,6 +1515,53 @@ internal object PloiApi {
                 )
             )
         }
+    }
+
+    // ---- Crontabs domain (cron jobs of a server) ----
+
+    private fun crontabsPath(serverId: Long): String = "/servers/${validateResourceId(serverId)}/crontabs"
+
+    private fun crontabPath(serverId: Long, crontabId: Long): String =
+        "${crontabsPath(serverId)}/${validateResourceId(crontabId)}"
+
+    private fun parseCrontabEntry(item: JSONObject) = Crontab(
+        id = item.getLong("id"),
+        command = item.getString("command"),
+        user = item.optString("user"),
+        frequency = item.optString("frequency"),
+        createdAt = item.optString("created_at")
+    )
+
+    fun parseCrontabs(json: String): CrontabPage {
+        val root = JSONObject(json)
+        val data = root.getJSONArray("data")
+        val (page, lastPage) = pageMeta(root)
+        return CrontabPage(
+            (0 until data.length()).map { parseCrontabEntry(data.getJSONObject(it)) }, page, lastPage
+        )
+    }
+
+    fun parseCrontab(json: String): Crontab = parseCrontabEntry(JSONObject(json).getJSONObject("data"))
+
+    /** GET /servers/{server}/crontabs: paginated list of cron jobs. */
+    fun crontabs(token: String, serverId: Long, page: Int = 1, perPage: Int = 15): CrontabPage {
+        require(page >= 1) { "Page must be positive" }
+        return parseOrThrow {
+            parseCrontabs(get("${crontabsPath(serverId)}?page=$page&per_page=${validatePageSize(perPage)}", token))
+        }
+    }
+
+    fun crontab(token: String, serverId: Long, crontabId: Long): Crontab = parseOrThrow {
+        parseCrontab(get(crontabPath(serverId, crontabId), token))
+    }
+
+    fun createCrontab(token: String, serverId: Long, request: CreateCrontabRequest): Crontab = parseOrThrow {
+        parseCrontab(write("POST", crontabsPath(serverId), token, request.toJson()))
+    }
+
+    /** DELETE /servers/{server}/crontabs/{id}: documented response body is empty, nothing is parsed. */
+    fun deleteCrontab(token: String, serverId: Long, crontabId: Long) {
+        write("DELETE", crontabPath(serverId, crontabId), token, null)
     }
 
     fun parseProviders(json: String): ProviderPage {

@@ -1983,7 +1983,7 @@
       "domain": "crontabs",
       "title": "List crontabs",
       "operation": "List all crontabs",
-      "status": "not_implemented"
+      "status": "implemented_locally_unverified_live"
     },
     {
       "method": "POST",
@@ -1992,7 +1992,7 @@
       "domain": "crontabs",
       "title": "Create crontab",
       "operation": "Create a crontab",
-      "status": "not_implemented"
+      "status": "implemented_locally_unverified_live"
     },
     {
       "method": "GET",
@@ -2001,7 +2001,7 @@
       "domain": "crontabs",
       "title": "Get crontab",
       "operation": "Get a crontab",
-      "status": "not_implemented"
+      "status": "implemented_locally_unverified_live"
     },
     {
       "method": "DELETE",
@@ -2010,7 +2010,7 @@
       "domain": "crontabs",
       "title": "Delete crontab",
       "operation": "Delete a crontab",
-      "status": "not_implemented"
+      "status": "implemented_locally_unverified_live"
     },
     {
       "method": "GET",

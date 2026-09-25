@@ -357,4 +357,17 @@
     <string name="backup_channel_attached">Channel attached.</string>
     <string name="detach_backup_channel">Detach</string>
     <string name="backup_channel_detached">Channel detached.</string>
+    <string name="crontabs_tab">Cron jobs</string>
+    <string name="empty_crontabs">No cron jobs on this server.</string>
+    <string name="new_crontab">New cron job</string>
+    <string name="crontab_user_label">System user (e.g. ploi)</string>
+    <string name="crontab_command_label">Command to execute</string>
+    <string name="crontab_frequency_label">Cron frequency (e.g. * * * * *)</string>
+    <string name="create_crontab_submit">Create cron job</string>
+    <string name="crontab_created">Cron job created.</string>
+    <string name="crontab_frequency">Frequency: %1$s</string>
+    <string name="crontab_user">User: %1$s</string>
+    <string name="delete_crontab">Delete</string>
+    <string name="confirm_delete_crontab">Permanently delete the cron job "%1$s"? This action cannot be undone.</string>
+    <string name="crontab_deleted">Cron job deleted.</string>
 </resources>
