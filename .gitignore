@@ -1,0 +1,14 @@
+# No sensitive data, generated output or machine-specific SDK paths.
+.gradle/
+**/build/
+/local.properties
+*.iml
+.idea/
+*.jks
+*.keystore
+*.p12
+*.pem
+.env
+.env.*
+*.log
+captures/
