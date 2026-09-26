@@ -1,7 +1,9 @@
 package com.qrcommunication.ploipanel
 
+import android.content.res.Configuration
 import android.os.Bundle
 import android.view.WindowManager
+import androidx.activity.compose.LocalActivity
 import androidx.activity.compose.setContent
 import androidx.compose.foundation.isSystemInDarkTheme
 import androidx.compose.foundation.layout.Arrangement
@@ -39,8 +41,10 @@ import androidx.compose.material3.Text
 import androidx.compose.material3.darkColorScheme
 import androidx.compose.material3.lightColorScheme
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.SideEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableStateOf
@@ -49,6 +53,8 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.toArgb
+import androidx.compose.ui.platform.LocalConfiguration
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.res.stringResource
@@ -57,12 +63,14 @@ import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.text.input.PasswordVisualTransformation
 import androidx.compose.ui.unit.dp
 import androidx.fragment.app.FragmentActivity
+import androidx.core.view.WindowCompat
 import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.LifecycleEventObserver
 import androidx.lifecycle.compose.LocalLifecycleOwner
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
+import java.util.Locale
 
 class MainActivity : FragmentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
@@ -76,14 +84,39 @@ private val accent = Color(0xFF137A69)
 
 @Composable
 private fun PloiPanel() {
-    val dark = isSystemInDarkTheme()
+    val activity = LocalActivity.current as FragmentActivity
+    val systemConfiguration = LocalConfiguration.current
+    val preferences = remember(activity) { UiPreferences(SharedPreferencesProfilePrefs(activity)) }
+    var theme by remember { mutableStateOf(preferences.theme()) }
+    var language by remember { mutableStateOf(preferences.language()) }
+    val configuration = remember(systemConfiguration, language) {
+        Configuration(systemConfiguration).apply {
+            when (language) {
+                AppLanguage.FRENCH -> setLocale(Locale.FRENCH)
+                AppLanguage.ENGLISH -> setLocale(Locale.ENGLISH)
+                AppLanguage.SYSTEM -> Unit
+            }
+        }
+    }
+    val localizedContext = remember(activity, configuration) { activity.createConfigurationContext(configuration) }
+    val dark = when (theme) {
+        AppTheme.LIGHT -> false
+        AppTheme.DARK -> true
+        AppTheme.SYSTEM -> isSystemInDarkTheme()
+    }
     val colors = if (dark) darkColorScheme(primary = Color(0xFF82DAC3)) else lightColorScheme(primary = accent)
+    SideEffect {
+        activity.window.decorView.setBackgroundColor(colors.background.toArgb())
+        val controller = WindowCompat.getInsetsController(activity.window, activity.window.decorView)
+        controller.isAppearanceLightStatusBars = !dark
+        controller.isAppearanceLightNavigationBars = !dark
+    }
+    CompositionLocalProvider(LocalContext provides localizedContext, LocalConfiguration provides configuration) {
     MaterialTheme(colorScheme = colors) {
         // API 35+ draws edge-to-edge even without an explicit enableEdgeToEdge call.
         // Consume system bars once at the root; the IME then reduces the usable viewport.
         Surface(modifier = Modifier.fillMaxSize().safeDrawingPadding().imePadding()) {
-            val context = LocalContext.current
-            val activity = context as FragmentActivity
+            val context = activity
             val lock = remember { AppLock(SharedPreferencesProfilePrefs(context)) }
             var lockVersion by remember { mutableIntStateOf(0) }
             val hasPin = remember(lockVersion) { lock.hasPin() }
@@ -106,15 +139,25 @@ private fun PloiPanel() {
                     unlocked = true
                 }
                 !unlocked -> PinUnlockScreen(lock, activity) { unlocked = true }
-                else -> PanelHome(lock, activity, onLock = { unlocked = false })
+                else -> PanelHome(
+                    lock, activity, theme, language,
+                    onThemeChanged = { preferences.setTheme(it); theme = it },
+                    onLanguageChanged = { preferences.setLanguage(it); language = it },
+                    onLock = { unlocked = false }
+                )
             }
         }
+    }
     }
 }
 
 /** Authenticated content. Leaves composition entirely while locked, dropping in-memory tokens. */
 @Composable
-private fun PanelHome(lock: AppLock, activity: FragmentActivity, onLock: () -> Unit) {
+private fun PanelHome(
+    lock: AppLock, activity: FragmentActivity, theme: AppTheme, language: AppLanguage,
+    onThemeChanged: (AppTheme) -> Unit, onLanguageChanged: (AppLanguage) -> Unit,
+    onLock: () -> Unit
+) {
     val context = LocalContext.current
     val store = remember { ProfileStore(SharedPreferencesProfilePrefs(context), KeystoreTokenCipher()) }
     var profilesVersion by remember { mutableIntStateOf(0) }
@@ -128,6 +171,7 @@ private fun PanelHome(lock: AppLock, activity: FragmentActivity, onLock: () -> U
     }
     val token = activeProfile?.second
     var profileError by remember { mutableIntStateOf(0) }
+    var pendingProfileRemoval by remember { mutableStateOf<PloiProfile?>(null) }
     var page by remember { mutableIntStateOf(1) }
     var selected by remember { mutableStateOf<Server?>(null) }
     var panelTab by remember { mutableIntStateOf(0) }
@@ -172,18 +216,16 @@ private fun PanelHome(lock: AppLock, activity: FragmentActivity, onLock: () -> U
                         Column(Modifier.fillMaxWidth().padding(16.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
                             Text(profile.label, style = MaterialTheme.typography.titleMedium)
                             FlowRow(horizontalArrangement = Arrangement.spacedBy(8.dp), verticalArrangement = Arrangement.spacedBy(4.dp)) {
-                                OutlinedButton(onClick = {
-                                    store.remove(profile.id)
-                                    profilesVersion++
-                                }) { Text(stringResource(R.string.delete_profile)) }
+                                OutlinedButton(onClick = { pendingProfileRemoval = profile }) {
+                                    Text(stringResource(R.string.delete_profile))
+                                }
                                 Button(onClick = {
                                     val profileToken = store.tokenFor(profile.id)
                                     if (profileToken != null) {
                                         store.activate(profile.id)
                                         activeProfile = profile to profileToken
                                     } else {
-                                        store.remove(profile.id)
-                                        profilesVersion++
+                                        profileError = R.string.settings_profile_token_invalid
                                     }
                                 }) { Text(stringResource(R.string.use_profile)) }
                             }
@@ -222,6 +264,19 @@ private fun PanelHome(lock: AppLock, activity: FragmentActivity, onLock: () -> U
                 }
             }, enabled = draftLabel.isNotBlank() && draftToken.isNotBlank()) { Text(stringResource(R.string.add_profile)) }
         }
+        pendingProfileRemoval?.let { profile ->
+            SensitiveConfirmDialog(
+                lock, activity,
+                stringResource(R.string.settings_profile_delete_confirm, profile.label),
+                R.string.delete_profile,
+                onConfirmed = {
+                    store.remove(profile.id)
+                    pendingProfileRemoval = null
+                    profilesVersion++
+                },
+                onDismiss = { pendingProfileRemoval = null }
+            )
+        }
     } else {
         val keyboardVisible = WindowInsets.ime.getBottom(LocalDensity.current) > 0
         Column(Modifier.fillMaxSize().padding(horizontal = 16.dp, vertical = 8.dp)) {
@@ -237,6 +292,7 @@ private fun PanelHome(lock: AppLock, activity: FragmentActivity, onLock: () -> U
                                 4 -> stringResource(R.string.status_pages_tab)
                                 5 -> stringResource(R.string.webserver_templates_tab)
                                 6 -> stringResource(R.string.projects_tab)
+                                7 -> stringResource(R.string.settings_tab)
                                 else -> stringResource(R.string.servers)
                             },
                             style = MaterialTheme.typography.titleLarge, fontWeight = FontWeight.Bold
@@ -261,7 +317,8 @@ private fun PanelHome(lock: AppLock, activity: FragmentActivity, onLock: () -> U
                 Spacer(Modifier.height(8.dp))
                 val sections = listOf(
                     R.string.servers, R.string.providers, R.string.account, R.string.scripts_tab,
-                    R.string.status_pages_tab, R.string.webserver_templates_tab, R.string.projects_tab
+                    R.string.status_pages_tab, R.string.webserver_templates_tab, R.string.projects_tab,
+                    R.string.settings_tab
                 )
                 val navigationState = rememberLazyListState()
                 LaunchedEffect(panelTab) { navigationState.animateScrollToItem(panelTab) }
@@ -283,14 +340,25 @@ private fun PanelHome(lock: AppLock, activity: FragmentActivity, onLock: () -> U
             BoxWithConstraints(Modifier.weight(1f).fillMaxWidth()) {
                 when (panelTab) {
                     1 -> ProvidersScreen(token)
-                    2 -> Column(Modifier.fillMaxSize()) {
-                        BiometricToggle(lock, activity)
-                        AccountScreen(token)
-                    }
+                    2 -> AccountScreen(token)
                     3 -> ScriptsScreen(token, lock, activity)
                     4 -> StatusPagesScreen(token, lock, activity)
                     5 -> WebserverTemplatesScreen(token)
                     6 -> ProjectsScreen(token, lock, activity)
+                    7 -> SettingsScreen(
+                        store = store, profiles = profiles, active = activeProfile?.first,
+                        lock = lock, activity = activity, theme = theme, language = language,
+                        onThemeChanged = onThemeChanged, onLanguageChanged = onLanguageChanged,
+                        onProfilesChanged = { profilesVersion++ },
+                        onActiveChanged = { profile ->
+                            activeProfile = profile?.let { it to store.tokenFor(it.id) }
+                            selected = null
+                            servers = null
+                            page = 1
+                            refresh++
+                        },
+                        onLock = onLock
+                    )
                     else -> {
                         val expanded = maxWidth >= 720.dp
                         when {
@@ -341,7 +409,7 @@ private fun PanelHome(lock: AppLock, activity: FragmentActivity, onLock: () -> U
  * disabling is immediate. Hidden entirely when no strong biometric hardware is present.
  */
 @Composable
-private fun BiometricToggle(lock: AppLock, activity: FragmentActivity) {
+internal fun BiometricToggle(lock: AppLock, activity: FragmentActivity) {
     if (!biometricAvailable(activity)) {
         Text(stringResource(R.string.biometric_unavailable), style = MaterialTheme.typography.bodySmall)
         return

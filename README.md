@@ -2,7 +2,7 @@
 
 Application Android native et open source pour administrer plusieurs comptes Ploi et leurs serveurs/sites depuis un téléphone ou un appareil pliable.
 
-> **Statut : premier jalon exécutable, non publiable.** L'APK de développement permet de saisir un jeton Ploi **uniquement en mémoire**, lister les serveurs avec pagination, consulter leurs dernières métriques Ploi et parcourir les prestataires associés (offres/régions). Il ne propose pas encore multi-profils persistants, code/biométrie, OCR, SSH, widgets ni les opérations de gestion. Ne pas distribuer l'APK comme version finale. Voir [le cahier produit](docs/product.md) et [le plan de réalisation](docs/implementation.md). Ne pas saisir de jeton Ploi dans les issues, les commits ou les discussions.
+> **Statut : APK de développement, non publiable.** Les 231 opérations inventoriées de l'API Ploi disposent d'un client local et de tests simulés, mais toutes les opérations d'écriture n'ont pas été validées contre un compte réel. Les profils et jetons sont stockés localement (jetons chiffrés via Android Keystore), l'accès est protégé par PIN et la biométrie forte est activable dans **Paramètres**. La langue (système/français/anglais), le thème (système/clair/sombre), les profils et la version y sont également accessibles. Les vues de monitoring affichent des jauges et une courbe uniquement si des échantillons historiques existent. Widgets, export/import portable, SSH et OCR restent à développer : ne pas distribuer cet APK comme version finale. Voir [le cahier produit](docs/product.md) et [le plan de réalisation](docs/implementation.md). Ne jamais saisir de jeton Ploi dans les issues ou les commits.
 
 ## Développement
 

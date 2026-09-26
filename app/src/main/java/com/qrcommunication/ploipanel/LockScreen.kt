@@ -124,7 +124,9 @@ internal fun PinUnlockScreen(lock: AppLock, activity: FragmentActivity, onUnlock
     }
     LaunchedEffect(Unit) {
         if (biometric && lockedMs <= 0) {
-            showBiometricPrompt(activity, onSuccess = onUnlocked)
+            showBiometricPrompt(activity, onSuccess = {
+                if (!lock.isLocked()) onUnlocked()
+            })
         }
     }
 
@@ -163,7 +165,9 @@ internal fun PinUnlockScreen(lock: AppLock, activity: FragmentActivity, onUnlock
         ) { Text(stringResource(R.string.unlock)) }
         if (biometric) {
             OutlinedButton(
-                onClick = { showBiometricPrompt(activity, onSuccess = onUnlocked) },
+                onClick = { showBiometricPrompt(activity, onSuccess = {
+                    if (!lock.isLocked()) onUnlocked()
+                }) },
                 enabled = lockedMs <= 0
             ) { Text(stringResource(R.string.use_biometric)) }
         }

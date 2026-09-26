@@ -34,6 +34,20 @@ class ResponsiveLayoutContractTest {
         assertTrue(detail.contains("FilterChip(") && main.contains("FilterChip("))
     }
 
+    @Test fun settingsExposeProfileAppearanceLanguageAndBiometricUnlock() {
+        val main = source("${ui}MainActivity.kt")
+        val settings = source("${ui}SettingsScreen.kt")
+        val lockScreen = source("${ui}LockScreen.kt")
+        assertTrue(main.contains("7 -> SettingsScreen("))
+        assertTrue(main.contains("LocalConfiguration provides configuration"))
+        assertTrue(settings.contains("BiometricToggle(lock, activity)"))
+        assertTrue(settings.contains("AppTheme.SYSTEM, AppTheme.LIGHT, AppTheme.DARK"))
+        assertTrue(settings.contains("AppLanguage.SYSTEM, AppLanguage.FRENCH, AppLanguage.ENGLISH"))
+        assertTrue(settings.contains("BuildConfig.VERSION_NAME"))
+        assertTrue(lockScreen.contains("if (biometric && lockedMs <= 0)"))
+        assertTrue(lockScreen.contains("R.string.use_biometric"))
+    }
+
     @Test fun onboardingAndLongSiteActionsRemainScrollable() {
         val onboarding = source("${ui}LockScreen.kt")
         val site = source("${ui}SitesScreen.kt")

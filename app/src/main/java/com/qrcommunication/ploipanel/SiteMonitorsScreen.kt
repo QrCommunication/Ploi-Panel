@@ -98,6 +98,12 @@ internal fun SiteMonitorsScreen(token: String, serverId: Long, siteId: Long, loc
                         Column(Modifier.padding(12.dp), verticalArrangement = Arrangement.spacedBy(6.dp)) {
                             Text(monitor.label.ifBlank { "#${monitor.id}" }, style = MaterialTheme.typography.titleMedium)
                             Text(stringResource(R.string.monitor_uptime, monitor.location, monitor.averageUptime))
+                            monitoringPercent(monitor.averageUptime)?.let { percent ->
+                                PercentProgress(
+                                    percent,
+                                    if (percent >= 95f) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.error
+                                )
+                            }
                             FlowRow(horizontalArrangement = Arrangement.spacedBy(8.dp), verticalArrangement = Arrangement.spacedBy(4.dp)) {
                                 OutlinedButton(
                                     onClick = {
@@ -144,6 +150,7 @@ internal fun SiteMonitorsScreen(token: String, serverId: Long, siteId: Long, loc
                     verticalArrangement = Arrangement.spacedBy(4.dp)
                 ) {
                     if (responses.isEmpty()) Text(stringResource(R.string.empty_uptime_responses))
+                    ResponseTimeTrend(responses)
                     responses.take(50).forEach { response ->
                         Text(
                             stringResource(

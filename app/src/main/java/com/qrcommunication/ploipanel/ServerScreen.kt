@@ -100,38 +100,37 @@ internal fun ServerDetailScreen(
 
 @Composable
 internal fun MonitoringView(token: String, server: Server, refresh: Int) {
-    var sample by remember(server.id, token) { mutableStateOf<MonitorSample?>(null) }
+    var samples by remember(server.id, token) { mutableStateOf<List<MonitorSample>>(emptyList()) }
     var loading by remember(server.id, token) { mutableStateOf(true) }
     var error by remember(server.id, token) { mutableStateOf<Throwable?>(null) }
     LaunchedEffect(server.id, token, refresh) {
         loading = true
         error = null
         try {
-            sample = withContext(Dispatchers.IO) { PloiApi.monitoring(token, server.id) }
+            samples = withContext(Dispatchers.IO) { PloiApi.monitoringHistory(token, server.id) }
         } catch (cancelled: CancellationException) {
             throw cancelled
         } catch (failure: Exception) {
-            sample = null
+            samples = emptyList()
             error = failure
         } finally {
             loading = false
         }
     }
-    Column(Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
+    Column(Modifier.padding(16.dp).verticalScroll(rememberScrollState()), verticalArrangement = Arrangement.spacedBy(12.dp)) {
         Text(server.name, style = MaterialTheme.typography.headlineSmall, fontWeight = FontWeight.Bold)
         Text(stringResource(R.string.monitoring), style = MaterialTheme.typography.titleLarge)
         if (loading) CircularProgressIndicator()
         if (error is PloiHttpException && (error as PloiHttpException).status == 422) {
             Text(stringResource(R.string.monitoring_unavailable))
         } else if (error != null) ApiErrorText(error!!)
-        else if (!loading && sample == null) Text(stringResource(R.string.monitoring_unavailable))
-        if (sample != null) {
+        else if (!loading && samples.isEmpty()) Text(stringResource(R.string.monitoring_unavailable))
+        if (!loading && error == null && samples.isNotEmpty()) {
+            val latest = samples.last()
             Text(stringResource(R.string.stale_warning))
-            Text(stringResource(R.string.updated, sample!!.date))
-            Metric(stringResource(R.string.metric_cpu), "${sample!!.cpu} %")
-            Metric(stringResource(R.string.metric_ram), "${sample!!.ram} %")
-            Metric(stringResource(R.string.metric_disk), "${sample!!.disk} %")
-            Metric(stringResource(R.string.metric_load), sample!!.load)
+            Text(stringResource(R.string.updated, latest.date))
+            MonitoringCharts(samples)
+            Metric(stringResource(R.string.metric_load), latest.load.ifBlank { "—" })
         }
     }
 }
@@ -439,7 +438,7 @@ internal fun MonitoredServersScreen(token: String) {
             if (list.isEmpty()) Text(stringResource(R.string.no_monitored_servers))
             LazyColumn(verticalArrangement = Arrangement.spacedBy(8.dp)) {
                 items(list, key = { it.id }) { server ->
-                    val latest = server.statistics.maxByOrNull { it.date }
+                    val latest = server.statistics.lastOrNull()
                     Card(modifier = Modifier.fillMaxWidth()) {
                         Column(Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(6.dp)) {
                             Text(server.name, style = MaterialTheme.typography.titleMedium)
@@ -448,10 +447,8 @@ internal fun MonitoredServersScreen(token: String) {
                                 Text(stringResource(R.string.monitoring_unavailable))
                             } else {
                                 Text(stringResource(R.string.updated, latest.date))
-                                Metric(stringResource(R.string.metric_cpu), "${latest.cpu} %")
-                                Metric(stringResource(R.string.metric_ram), "${latest.ram} %")
-                                Metric(stringResource(R.string.metric_disk), "${latest.disk} %")
-                                Metric(stringResource(R.string.metric_load), latest.load)
+                                MonitoringCharts(server.statistics)
+                                Metric(stringResource(R.string.metric_load), latest.load.ifBlank { "—" })
                             }
                         }
                     }

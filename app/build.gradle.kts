@@ -27,7 +27,16 @@ android {
         sourceCompatibility = JavaVersion.VERSION_17
         targetCompatibility = JavaVersion.VERSION_17
     }
-    buildFeatures { compose = true }
+    buildFeatures {
+        compose = true
+        buildConfig = true
+    }
+    // Both bundled locales must remain available for the in-app language switcher.
+    bundle {
+        language {
+            enableSplit = false
+        }
+    }
     packaging {
         jniLibs {
             // Upstream AndroidX binary is already packaged without strippable symbols.

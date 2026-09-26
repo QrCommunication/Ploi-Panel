@@ -11,6 +11,7 @@ import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableLongStateOf
@@ -24,6 +25,7 @@ import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.text.input.PasswordVisualTransformation
 import androidx.compose.ui.unit.dp
 import androidx.fragment.app.FragmentActivity
+import kotlinx.coroutines.delay
 
 /**
  * Re-authentication gate for destructive or disruptive actions (delete, restart).
@@ -41,16 +43,29 @@ internal fun SensitiveConfirmDialog(
 ) {
     val useBiometric = lock.biometricEnabled() && biometricAvailable(activity)
     var pin by remember { mutableStateOf("") }
+    var pinFallback by remember { mutableStateOf(false) }
     var attemptsLeft by remember { mutableIntStateOf(-1) }
-    var lockedMs by remember { mutableLongStateOf(0) }
+    var lockedMs by remember { mutableLongStateOf(lock.remainingLockMs()) }
+    LaunchedEffect(lockedMs > 0) {
+        while (lock.remainingLockMs() > 0) {
+            lockedMs = lock.remainingLockMs()
+            delay(1_000)
+        }
+        lockedMs = 0
+    }
     AlertDialog(
         onDismissRequest = onDismiss,
         title = { Text(stringResource(R.string.confirm_sensitive_title)) },
         text = {
             Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
                 Text(message)
-                if (useBiometric) {
+                if (useBiometric && !pinFallback) {
                     Text(stringResource(R.string.confirm_sensitive_biometric))
+                    OutlinedButton(onClick = { pinFallback = true }) { Text(stringResource(R.string.biometric_cancel)) }
+                    if (lockedMs > 0) Text(
+                        stringResource(R.string.locked_wait, (lockedMs + 999) / 1_000),
+                        color = MaterialTheme.colorScheme.error
+                    )
                 } else {
                     Text(stringResource(R.string.confirm_sensitive_pin))
                     OutlinedTextField(
@@ -77,8 +92,10 @@ internal fun SensitiveConfirmDialog(
         confirmButton = {
             Button(
                 onClick = {
-                    if (useBiometric) {
-                        showBiometricPrompt(activity, onSuccess = onConfirmed)
+                    if (useBiometric && !pinFallback) {
+                        showBiometricPrompt(activity, onSuccess = {
+                            if (!lock.isLocked()) onConfirmed()
+                        }, onDismissed = { pinFallback = true })
                     } else {
                         when (val result = lock.verify(pin)) {
                             is AppLock.UnlockResult.Unlocked -> onConfirmed()
@@ -93,7 +110,8 @@ internal fun SensitiveConfirmDialog(
                         }
                     }
                 },
-                enabled = useBiometric || (pin.isNotEmpty() && lockedMs <= 0)
+                enabled = if (useBiometric && !pinFallback) !lock.isLocked() && lockedMs <= 0
+                    else pin.isNotEmpty() && !lock.isLocked() && lockedMs <= 0
             ) { Text(stringResource(confirmLabel)) }
         },
         dismissButton = {

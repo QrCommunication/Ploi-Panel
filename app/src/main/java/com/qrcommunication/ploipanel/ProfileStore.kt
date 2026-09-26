@@ -69,6 +69,18 @@ internal class ProfileStore(private val prefs: ProfilePrefs, private val cipher:
         return profile
     }
 
+    fun rename(id: String, label: String): PloiProfile {
+        val cleanLabel = validateLabel(label)
+        val existing = profiles()
+        require(existing.any { it.id == id }) { "Unknown profile" }
+        require(existing.none { it.id != id && it.label.equals(cleanLabel, ignoreCase = true) }) {
+            "Duplicate profile label"
+        }
+        val updated = PloiProfile(id, cleanLabel)
+        persist(existing.map { if (it.id == id) updated else it })
+        return updated
+    }
+
     fun remove(id: String) {
         persist(profiles().filterNot { it.id == id })
         prefs.write(TOKEN_PREFIX + id, null)

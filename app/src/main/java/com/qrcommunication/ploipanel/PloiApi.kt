@@ -9,6 +9,13 @@ internal data class ServerPage(val servers: List<Server>, val currentPage: Int, 
     val hasNext: Boolean get() = currentPage < lastPage
 }
 internal data class MonitorSample(val cpu: String, val ram: String, val disk: String, val load: String, val date: String)
+
+/** Invalid percentages are unknown, not zero; out-of-range numeric readings are bounded for display. */
+internal fun monitoringPercent(raw: String): Float? {
+    val number = raw.trim().removeSuffix("%").trim()
+    if (!number.matches(Regex("[+-]?(?:\\d+(?:\\.\\d*)?|\\.\\d+)"))) return null
+    return number.toFloatOrNull()?.takeIf { it.isFinite() }?.coerceIn(0f, 100f)
+}
 internal data class Site(
     val id: Long, val serverId: Long, val domain: String, val status: String,
     val phpVersion: String, val webDirectory: String, val healthUrl: String, val diskUsage: String,
@@ -1440,15 +1447,17 @@ internal object PloiApi {
         return ServerPage(servers, page, lastPage)
     }
 
-    fun parseMonitoring(json: String): MonitorSample? {
+    /** The monitor endpoint returns actual samples (not a single latest reading). */
+    fun parseMonitoringHistory(json: String): List<MonitorSample> {
         val data = JSONObject(json).getJSONArray("data")
-        if (data.length() == 0) return null
-        return parseMonitorSample((0 until data.length()).map(data::getJSONObject).maxBy { it.getString("date") })
+        return (0 until data.length()).map { parseMonitorSample(data.getJSONObject(it)) }.sortedBy { it.date }
     }
 
+    fun parseMonitoring(json: String): MonitorSample? = parseMonitoringHistory(json).lastOrNull()
+
     private fun parseMonitorSample(sample: JSONObject) = MonitorSample(
-        sample.optString("cpu"), sample.optString("ram"), sample.optString("disk"),
-        sample.optString("load_average"), sample.getString("date")
+        nullableString(sample, "cpu"), nullableString(sample, "ram"), nullableString(sample, "disk"),
+        nullableString(sample, "load_average"), nullableString(sample, "date")
     )
 
     fun validateResourceId(id: Long): Long {
@@ -2920,10 +2929,12 @@ internal object PloiApi {
         return parseOrThrow { parseServers(get("/servers?page=$page&per_page=${validatePageSize(perPage)}", token)) }
     }
 
-    fun monitoring(token: String, serverId: Long): MonitorSample? {
+    fun monitoringHistory(token: String, serverId: Long): List<MonitorSample> {
         require(serverId > 0) { "Invalid server ID" }
-        return parseOrThrow { parseMonitoring(get("/servers/$serverId/monitor", token)) }
+        return parseOrThrow { parseMonitoringHistory(get("/servers/$serverId/monitor", token)) }
     }
+
+    fun monitoring(token: String, serverId: Long): MonitorSample? = monitoringHistory(token, serverId).lastOrNull()
 
     // ---- Servers domain: read + write documented routes ----
 
@@ -3067,7 +3078,7 @@ internal object PloiApi {
                 ip = item.optString("ip"),
                 url = item.optString("url"),
                 statistics = statistics?.let { array ->
-                    (0 until array.length()).map { parseMonitorSample(array.getJSONObject(it)) }
+                    (0 until array.length()).map { parseMonitorSample(array.getJSONObject(it)) }.sortedBy { it.date }
                 }.orEmpty()
             )
         }

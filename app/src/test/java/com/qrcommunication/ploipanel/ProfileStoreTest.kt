@@ -127,6 +127,32 @@ class ProfileStoreTest {
         assertNull(store.activeProfileId())
     }
 
+    @Test fun renamePreservesProfileIdActiveSelectionAndEncryptedToken() {
+        val prefs = MemoryPrefs()
+        val store = newStore(prefs)
+        val profile = store.add("Old", "private-token")
+        store.activate(profile.id)
+        val ciphertext = prefs.map[ProfileStore.TOKEN_PREFIX + profile.id]
+        val renamed = store.rename(profile.id, "  New  ")
+        assertEquals(PloiProfile(profile.id, "New"), renamed)
+        assertEquals(profile.id, store.activeProfileId())
+        assertEquals("private-token", store.tokenFor(profile.id))
+        assertEquals(ciphertext, prefs.map[ProfileStore.TOKEN_PREFIX + profile.id])
+    }
+
+    @Test(expected = IllegalArgumentException::class)
+    fun renameRejectsDuplicateLabel() {
+        val store = newStore()
+        val first = store.add("Production", "token-one")
+        store.add("Staging", "token-two")
+        store.rename(first.id, "STAGING")
+    }
+
+    @Test(expected = IllegalArgumentException::class)
+    fun renameRejectsUnknownProfile() {
+        newStore().rename("unknown", "Label")
+    }
+
     @Test fun profilesSurviveStoreRecreation() {
         val prefs = MemoryPrefs()
         val profile = newStore(prefs).add("Prod", "persistent-token")
