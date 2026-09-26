@@ -3,6 +3,7 @@ package com.qrcommunication.ploipanel
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.FlowRow
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.padding
@@ -99,7 +100,7 @@ internal fun ScriptsScreen(token: String, lock: AppLock, activity: FragmentActiv
     }
 
     Column(Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(10.dp)) {
-        Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+        FlowRow(horizontalArrangement = Arrangement.spacedBy(8.dp), verticalArrangement = Arrangement.spacedBy(4.dp)) {
             OutlinedButton(onClick = { refresh++ }, enabled = !loading && !busy) {
                 Text(stringResource(R.string.reload))
             }
@@ -115,7 +116,7 @@ internal fun ScriptsScreen(token: String, lock: AppLock, activity: FragmentActiv
         }
         result?.let { data ->
             if (data.scripts.isEmpty()) Text(stringResource(R.string.empty_scripts))
-            Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+            FlowRow(horizontalArrangement = Arrangement.spacedBy(8.dp), verticalArrangement = Arrangement.spacedBy(4.dp)) {
                 OutlinedButton(onClick = { page-- }, enabled = page > 1) {
                     Text(stringResource(R.string.previous))
                 }
@@ -136,7 +137,7 @@ internal fun ScriptsScreen(token: String, lock: AppLock, activity: FragmentActiv
                             if (script.createdAt.isNotBlank()) {
                                 Text(stringResource(R.string.system_user_created_at, script.createdAt))
                             }
-                            Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                            FlowRow(horizontalArrangement = Arrangement.spacedBy(8.dp), verticalArrangement = Arrangement.spacedBy(4.dp)) {
                                 OutlinedButton(onClick = { running = script }, enabled = !busy) {
                                     Text(stringResource(R.string.run_script))
                                 }
@@ -466,7 +467,7 @@ private fun ScriptSchedulesDialog(
                     stringResource(R.string.schedule_pro_note),
                     style = MaterialTheme.typography.bodySmall
                 )
-                Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                FlowRow(horizontalArrangement = Arrangement.spacedBy(8.dp), verticalArrangement = Arrangement.spacedBy(4.dp)) {
                     OutlinedButton(onClick = { refresh++ }, enabled = !loading && !busy) {
                         Text(stringResource(R.string.reload))
                     }
@@ -480,7 +481,7 @@ private fun ScriptSchedulesDialog(
                 result?.let { data ->
                     if (data.schedules.isEmpty()) Text(stringResource(R.string.empty_schedules))
                     if (data.lastPage > 1) {
-                        Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                        FlowRow(horizontalArrangement = Arrangement.spacedBy(8.dp), verticalArrangement = Arrangement.spacedBy(4.dp)) {
                             OutlinedButton(onClick = { page-- }, enabled = page > 1) {
                                 Text(stringResource(R.string.previous))
                             }
@@ -513,7 +514,7 @@ private fun ScriptSchedulesDialog(
                                     if (schedule.lastRunAt.isNotBlank()) {
                                         Text(stringResource(R.string.schedule_last_run, schedule.lastRunAt))
                                     }
-                                    Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                                    FlowRow(horizontalArrangement = Arrangement.spacedBy(8.dp), verticalArrangement = Arrangement.spacedBy(4.dp)) {
                                         OutlinedButton(
                                             onClick = {
                                                 busy = true
@@ -752,7 +753,7 @@ private fun ScriptActionsDialog(
                     stringResource(R.string.action_unlimited_note),
                     style = MaterialTheme.typography.bodySmall
                 )
-                Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                FlowRow(horizontalArrangement = Arrangement.spacedBy(8.dp), verticalArrangement = Arrangement.spacedBy(4.dp)) {
                     OutlinedButton(onClick = { refresh++ }, enabled = !loading && !busy) {
                         Text(stringResource(R.string.reload))
                     }
@@ -800,7 +801,7 @@ private fun ScriptActionsDialog(
                                             )
                                         }
                                     }
-                                    Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                                    FlowRow(horizontalArrangement = Arrangement.spacedBy(8.dp), verticalArrangement = Arrangement.spacedBy(4.dp)) {
                                         OutlinedButton(
                                             onClick = {
                                                 busy = true
@@ -835,7 +836,7 @@ private fun ScriptActionsDialog(
                                             Text(stringResource(R.string.edit_site))
                                         }
                                     }
-                                    Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                                    FlowRow(horizontalArrangement = Arrangement.spacedBy(8.dp), verticalArrangement = Arrangement.spacedBy(4.dp)) {
                                         OutlinedButton(onClick = { confirmRotate = action }, enabled = !busy) {
                                             Text(stringResource(R.string.rotate_action_secret))
                                         }

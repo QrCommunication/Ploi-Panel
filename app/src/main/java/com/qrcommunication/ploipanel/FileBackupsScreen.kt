@@ -3,6 +3,7 @@ package com.qrcommunication.ploipanel
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.FlowRow
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.lazy.LazyColumn
@@ -124,7 +125,7 @@ internal fun FileBackupsScreen(token: String, serverId: Long, lock: AppLock, act
     }
 
     Column(Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(10.dp)) {
-        Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+        FlowRow(horizontalArrangement = Arrangement.spacedBy(8.dp), verticalArrangement = Arrangement.spacedBy(4.dp)) {
             OutlinedButton(onClick = { refresh++ }, enabled = !loading && !busy) {
                 Text(stringResource(R.string.reload))
             }
@@ -137,7 +138,7 @@ internal fun FileBackupsScreen(token: String, serverId: Long, lock: AppLock, act
         if (feedback.isNotEmpty()) Text(feedback)
         result?.let { data ->
             if (data.backups.isEmpty()) Text(stringResource(R.string.empty_file_backups))
-            Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+            FlowRow(horizontalArrangement = Arrangement.spacedBy(8.dp), verticalArrangement = Arrangement.spacedBy(4.dp)) {
                 OutlinedButton(onClick = { page-- }, enabled = page > 1) {
                     Text(stringResource(R.string.previous))
                 }
@@ -193,7 +194,7 @@ internal fun FileBackupsScreen(token: String, serverId: Long, lock: AppLock, act
                             if (backup.createdAt.isNotBlank()) {
                                 Text(stringResource(R.string.detail_created, backup.createdAt))
                             }
-                            Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                            FlowRow(horizontalArrangement = Arrangement.spacedBy(8.dp), verticalArrangement = Arrangement.spacedBy(4.dp)) {
                                 OutlinedButton(
                                     onClick = {
                                         runAction(runMessage) { PloiApi.runFileBackup(token, backup.id) }
@@ -204,7 +205,7 @@ internal fun FileBackupsScreen(token: String, serverId: Long, lock: AppLock, act
                                     Text(stringResource(R.string.edit_backup))
                                 }
                             }
-                            Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                            FlowRow(horizontalArrangement = Arrangement.spacedBy(8.dp), verticalArrangement = Arrangement.spacedBy(4.dp)) {
                                 OutlinedButton(onClick = { channelsFor = backup }, enabled = !busy) {
                                     Text(stringResource(R.string.backup_channels))
                                 }
@@ -326,7 +327,7 @@ private fun CreateFileBackupDialog(
             ) {
                 if (optionsError != null) ApiErrorText(optionsError!!)
                 if (configurations == null || sites == null) {
-                    Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                    FlowRow(horizontalArrangement = Arrangement.spacedBy(8.dp), verticalArrangement = Arrangement.spacedBy(4.dp)) {
                         CircularProgressIndicator()
                         Text(stringResource(R.string.backup_loading_options), Modifier.padding(top = 12.dp))
                     }

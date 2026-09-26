@@ -3,6 +3,7 @@ package com.qrcommunication.ploipanel
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.FlowRow
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.lazy.LazyColumn
@@ -83,7 +84,7 @@ internal fun QueueWorkersScreen(token: String, serverId: Long, siteId: Long, loc
     }
 
     Column(Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(10.dp)) {
-        Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+        FlowRow(horizontalArrangement = Arrangement.spacedBy(8.dp), verticalArrangement = Arrangement.spacedBy(4.dp)) {
             OutlinedButton(onClick = { refresh++ }, enabled = !loading && !busy) {
                 Text(stringResource(R.string.reload))
             }
@@ -102,7 +103,7 @@ internal fun QueueWorkersScreen(token: String, serverId: Long, siteId: Long, loc
                         Column(Modifier.padding(12.dp), verticalArrangement = Arrangement.spacedBy(6.dp)) {
                             Text("${worker.connection} / ${worker.queue}", style = MaterialTheme.typography.titleMedium)
                             Text(stringResource(R.string.queue_worker_status, worker.status, worker.processes))
-                            Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                            FlowRow(horizontalArrangement = Arrangement.spacedBy(8.dp), verticalArrangement = Arrangement.spacedBy(4.dp)) {
                                 OutlinedButton(
                                     onClick = {
                                         runAction(doneMessage) {

@@ -3,6 +3,7 @@ package com.qrcommunication.ploipanel
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.FlowRow
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.lazy.LazyColumn
@@ -89,7 +90,7 @@ internal fun SystemUsersScreen(token: String, serverId: Long, lock: AppLock, act
     }
 
     Column(Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(10.dp)) {
-        Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+        FlowRow(horizontalArrangement = Arrangement.spacedBy(8.dp), verticalArrangement = Arrangement.spacedBy(4.dp)) {
             OutlinedButton(onClick = { refresh++ }, enabled = !loading && !busy) {
                 Text(stringResource(R.string.reload))
             }
@@ -102,7 +103,7 @@ internal fun SystemUsersScreen(token: String, serverId: Long, lock: AppLock, act
         if (feedback.isNotEmpty()) Text(feedback)
         result?.let { data ->
             if (data.users.isEmpty()) Text(stringResource(R.string.empty_system_users))
-            Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+            FlowRow(horizontalArrangement = Arrangement.spacedBy(8.dp), verticalArrangement = Arrangement.spacedBy(4.dp)) {
                 OutlinedButton(onClick = { page-- }, enabled = page > 1) {
                     Text(stringResource(R.string.previous))
                 }

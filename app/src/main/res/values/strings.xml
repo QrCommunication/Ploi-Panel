@@ -21,7 +21,7 @@
     <string name="monitoring_unavailable">Monitoring indisponible pour ce serveur ou cet abonnement.</string>
     <string name="server_status">État : %1$s</string>
     <string name="updated">Mesure : %1$s</string>
-    <string name="back">Retour aux serveurs</string>
+    <string name="back">Retour</string>
     <string name="error_auth">Jeton invalide ou expiré (401).</string>
     <string name="error_permission">Droit insuffisant ou fonction non disponible (403).</string>
     <string name="error_rate">Limite Ploi atteinte. Réessayez dans %1$s secondes.</string>

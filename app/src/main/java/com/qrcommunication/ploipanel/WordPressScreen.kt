@@ -3,6 +3,7 @@ package com.qrcommunication.ploipanel
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.FlowRow
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.lazy.LazyColumn
@@ -45,7 +46,7 @@ import kotlinx.coroutines.withContext
 internal fun WordPressScreen(token: String, serverId: Long, siteId: Long, lock: AppLock, activity: FragmentActivity) {
     var tab by remember(token, serverId, siteId) { mutableIntStateOf(0) }
     Column(Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(10.dp)) {
-        Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+        FlowRow(horizontalArrangement = Arrangement.spacedBy(8.dp), verticalArrangement = Arrangement.spacedBy(4.dp)) {
             OutlinedButton(onClick = { tab = 0 }, enabled = tab != 0) { Text(stringResource(R.string.wp_plugins_tab)) }
             OutlinedButton(onClick = { tab = 1 }, enabled = tab != 1) { Text(stringResource(R.string.wp_themes_tab)) }
             OutlinedButton(onClick = { tab = 2 }, enabled = tab != 2) { Text(stringResource(R.string.wp_tools_tab)) }
@@ -112,7 +113,7 @@ private fun WpExtensionsTab(
     }
 
     Column(verticalArrangement = Arrangement.spacedBy(10.dp)) {
-        Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+        FlowRow(horizontalArrangement = Arrangement.spacedBy(8.dp), verticalArrangement = Arrangement.spacedBy(4.dp)) {
             OutlinedButton(onClick = { refresh++ }, enabled = !loading && !busy) {
                 Text(stringResource(R.string.reload))
             }
@@ -140,7 +141,7 @@ private fun WpExtensionsTab(
                                     extension.updateVersion.ifBlank { "—" }
                                 )
                             )
-                            Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                            FlowRow(horizontalArrangement = Arrangement.spacedBy(8.dp), verticalArrangement = Arrangement.spacedBy(4.dp)) {
                                 if (extension.status != "active") {
                                     OutlinedButton(
                                         onClick = {
@@ -197,7 +198,7 @@ private fun WpExtensionsTab(
                         label = { Text(stringResource(R.string.wp_slug_label)) },
                         singleLine = true, modifier = Modifier.fillMaxWidth()
                     )
-                    Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                    FlowRow(horizontalArrangement = Arrangement.spacedBy(8.dp), verticalArrangement = Arrangement.spacedBy(4.dp)) {
                         OutlinedButton(onClick = { activate = !activate }) {
                             Text(
                                 stringResource(if (activate) R.string.wp_activate_after_yes else R.string.wp_activate_after_no)
@@ -295,7 +296,7 @@ private fun WpToolsTab(token: String, serverId: Long, siteId: Long, lock: AppLoc
                 Text(output, Modifier.padding(12.dp), style = MaterialTheme.typography.bodySmall)
             }
         }
-        Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+        FlowRow(horizontalArrangement = Arrangement.spacedBy(8.dp), verticalArrangement = Arrangement.spacedBy(4.dp)) {
             OutlinedButton(onClick = { cliDialog = true }, enabled = !busy) {
                 Text(stringResource(R.string.wp_cli_run))
             }
@@ -303,7 +304,7 @@ private fun WpToolsTab(token: String, serverId: Long, siteId: Long, lock: AppLoc
                 Text(stringResource(R.string.wp_search_replace))
             }
         }
-        Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+        FlowRow(horizontalArrangement = Arrangement.spacedBy(8.dp), verticalArrangement = Arrangement.spacedBy(4.dp)) {
             OutlinedButton(onClick = { confirmXmlrpc = true }, enabled = !busy) {
                 Text(stringResource(R.string.wp_xmlrpc_block))
             }
@@ -537,7 +538,7 @@ private fun WpRepositoriesTab(token: String, serverId: Long, siteId: Long, lock:
     }
 
     Column(verticalArrangement = Arrangement.spacedBy(10.dp)) {
-        Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+        FlowRow(horizontalArrangement = Arrangement.spacedBy(8.dp), verticalArrangement = Arrangement.spacedBy(4.dp)) {
             OutlinedButton(onClick = { refresh++ }, enabled = !loading && !busy) {
                 Text(stringResource(R.string.reload))
             }
@@ -559,7 +560,7 @@ private fun WpRepositoriesTab(token: String, serverId: Long, siteId: Long, lock:
                         Column(Modifier.padding(12.dp), verticalArrangement = Arrangement.spacedBy(6.dp)) {
                             Text("${repository.user}/${repository.name}", style = MaterialTheme.typography.titleMedium)
                             Text(stringResource(R.string.wp_repo_status, repository.branch, repository.status))
-                            Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                            FlowRow(horizontalArrangement = Arrangement.spacedBy(8.dp), verticalArrangement = Arrangement.spacedBy(4.dp)) {
                                 OutlinedButton(onClick = { confirmDeploy = repository }, enabled = !busy) {
                                     Text(stringResource(R.string.wp_repo_deploy))
                                 }

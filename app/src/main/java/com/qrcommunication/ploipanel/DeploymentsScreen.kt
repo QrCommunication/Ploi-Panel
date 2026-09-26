@@ -3,6 +3,7 @@ package com.qrcommunication.ploipanel
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.FlowRow
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.rememberScrollState
@@ -123,7 +124,7 @@ internal fun RepositoryDialog(
                     if (repo.lastDeployAt.isNotBlank()) {
                         Text(stringResource(R.string.site_last_deploy, repo.lastDeployAt))
                     }
-                    Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                    FlowRow(horizontalArrangement = Arrangement.spacedBy(8.dp), verticalArrangement = Arrangement.spacedBy(4.dp)) {
                         OutlinedButton(onClick = {
                             runAction("") { PloiApi.toggleQuickDeploy(token, serverId, siteId) }
                         }, enabled = !busy) { Text(stringResource(R.string.quick_deploy_toggle)) }

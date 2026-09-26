@@ -7,7 +7,16 @@ import androidx.compose.foundation.isSystemInDarkTheme
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.BoxWithConstraints
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.WindowInsets
+import androidx.compose.foundation.layout.ime
+import androidx.compose.foundation.layout.imePadding
+import androidx.compose.foundation.layout.safeDrawingPadding
+import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.verticalScroll
+import androidx.compose.foundation.lazy.LazyRow
+import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.FlowRow
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
@@ -20,6 +29,7 @@ import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material3.Button
 import androidx.compose.material3.Card
 import androidx.compose.material3.CircularProgressIndicator
+import androidx.compose.material3.FilterChip
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.OutlinedTextField
@@ -40,6 +50,7 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.KeyboardType
@@ -68,7 +79,9 @@ private fun PloiPanel() {
     val dark = isSystemInDarkTheme()
     val colors = if (dark) darkColorScheme(primary = Color(0xFF82DAC3)) else lightColorScheme(primary = accent)
     MaterialTheme(colorScheme = colors) {
-        Surface(modifier = Modifier.fillMaxSize()) {
+        // API 35+ draws edge-to-edge even without an explicit enableEdgeToEdge call.
+        // Consume system bars once at the root; the IME then reduces the usable viewport.
+        Surface(modifier = Modifier.fillMaxSize().safeDrawingPadding().imePadding()) {
             val context = LocalContext.current
             val activity = context as FragmentActivity
             val lock = remember { AppLock(SharedPreferencesProfilePrefs(context)) }
@@ -143,8 +156,11 @@ private fun PanelHome(lock: AppLock, activity: FragmentActivity, onLock: () -> U
     }
 
     if (token == null) {
-        Column(Modifier.fillMaxWidth().padding(24.dp), verticalArrangement = Arrangement.spacedBy(18.dp)) {
-            Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween, verticalAlignment = Alignment.CenterVertically) {
+        Column(
+            Modifier.fillMaxSize().verticalScroll(rememberScrollState()).padding(24.dp),
+            verticalArrangement = Arrangement.spacedBy(18.dp)
+        ) {
+            Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
                 Text(stringResource(R.string.app_name), style = MaterialTheme.typography.headlineLarge, fontWeight = FontWeight.Bold)
                 OutlinedButton(onClick = onLock) { Text(stringResource(R.string.lock_now)) }
             }
@@ -153,9 +169,9 @@ private fun PanelHome(lock: AppLock, activity: FragmentActivity, onLock: () -> U
                 Text(stringResource(R.string.profiles), style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold)
                 profiles.forEach { profile ->
                     Card(shape = RoundedCornerShape(16.dp), modifier = Modifier.fillMaxWidth()) {
-                        Row(Modifier.fillMaxWidth().padding(16.dp), horizontalArrangement = Arrangement.SpaceBetween) {
-                            Text(profile.label, style = MaterialTheme.typography.titleMedium, modifier = Modifier.padding(top = 12.dp))
-                            Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                        Column(Modifier.fillMaxWidth().padding(16.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                            Text(profile.label, style = MaterialTheme.typography.titleMedium)
+                            FlowRow(horizontalArrangement = Arrangement.spacedBy(8.dp), verticalArrangement = Arrangement.spacedBy(4.dp)) {
                                 OutlinedButton(onClick = {
                                     store.remove(profile.id)
                                     profilesVersion++
@@ -207,96 +223,113 @@ private fun PanelHome(lock: AppLock, activity: FragmentActivity, onLock: () -> U
             }, enabled = draftLabel.isNotBlank() && draftToken.isNotBlank()) { Text(stringResource(R.string.add_profile)) }
         }
     } else {
-        Column(Modifier.fillMaxSize().padding(16.dp)) {
-            Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
-                Column {
-                    Text(
-                        when (panelTab) {
-                            1 -> stringResource(R.string.providers)
-                            2 -> stringResource(R.string.account)
-                            3 -> stringResource(R.string.scripts_tab)
-                            4 -> stringResource(R.string.status_pages_tab)
-                            5 -> stringResource(R.string.webserver_templates_tab)
-                            6 -> stringResource(R.string.projects_tab)
-                            else -> stringResource(R.string.servers)
-                        },
-                        style = MaterialTheme.typography.headlineMedium, fontWeight = FontWeight.Bold
-                    )
-                    Text(stringResource(R.string.current_profile, activeProfile?.first?.label.orEmpty()), style = MaterialTheme.typography.bodySmall)
-                }
-                Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                    OutlinedButton(onClick = onLock) { Text(stringResource(R.string.lock_now)) }
-                    OutlinedButton(onClick = {
-                        store.deactivate()
-                        activeProfile = null
-                        draftLabel = ""
-                        draftToken = ""
-                        selected = null
-                        panelTab = 0
-                        servers = null
-                        error = null
-                        page = 1
-                    }) { Text(stringResource(R.string.disconnect)) }
-                }
-            }
-            Spacer(Modifier.height(12.dp))
-            BiometricToggle(lock, activity)
-            Spacer(Modifier.height(12.dp))
-            Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                OutlinedButton(onClick = { panelTab = 0 }, enabled = panelTab != 0) { Text(stringResource(R.string.servers)) }
-                OutlinedButton(onClick = { panelTab = 1 }, enabled = panelTab != 1) { Text(stringResource(R.string.providers)) }
-                OutlinedButton(onClick = { panelTab = 2 }, enabled = panelTab != 2) { Text(stringResource(R.string.account)) }
-                OutlinedButton(onClick = { panelTab = 3 }, enabled = panelTab != 3) { Text(stringResource(R.string.scripts_tab)) }
-                OutlinedButton(onClick = { panelTab = 4 }, enabled = panelTab != 4) { Text(stringResource(R.string.status_pages_tab)) }
-                OutlinedButton(onClick = { panelTab = 5 }, enabled = panelTab != 5) { Text(stringResource(R.string.webserver_templates_tab)) }
-                OutlinedButton(onClick = { panelTab = 6 }, enabled = panelTab != 6) { Text(stringResource(R.string.projects_tab)) }
-            }
-            Spacer(Modifier.height(12.dp))
-            when (panelTab) {
-                1 -> ProvidersScreen(token)
-                2 -> AccountScreen(token)
-                3 -> ScriptsScreen(token, lock, activity)
-                4 -> StatusPagesScreen(token, lock, activity)
-                5 -> WebserverTemplatesScreen(token)
-                6 -> ProjectsScreen(token, lock, activity)
-                else -> BoxWithConstraints(Modifier.fillMaxSize()) {
-                val expanded = maxWidth >= 720.dp
-                when {
-                    creating -> CreateServerScreen(
-                        token,
-                        onDone = { creating = false; selected = null; refresh++ },
-                        onCancel = { creating = false }
-                    )
-                    showMonitored -> Column {
-                        OutlinedButton(onClick = { showMonitored = false }) { Text(stringResource(R.string.back)) }
-                        MonitoredServersScreen(token)
+        val keyboardVisible = WindowInsets.ime.getBottom(LocalDensity.current) > 0
+        Column(Modifier.fillMaxSize().padding(horizontal = 16.dp, vertical = 8.dp)) {
+            // Give focused fields the whole available height in landscape and on small phones.
+            if (!keyboardVisible) {
+                Column(Modifier.fillMaxWidth(), verticalArrangement = Arrangement.spacedBy(4.dp)) {
+                    Column {
+                        Text(
+                            when (panelTab) {
+                                1 -> stringResource(R.string.providers)
+                                2 -> stringResource(R.string.account)
+                                3 -> stringResource(R.string.scripts_tab)
+                                4 -> stringResource(R.string.status_pages_tab)
+                                5 -> stringResource(R.string.webserver_templates_tab)
+                                6 -> stringResource(R.string.projects_tab)
+                                else -> stringResource(R.string.servers)
+                            },
+                            style = MaterialTheme.typography.titleLarge, fontWeight = FontWeight.Bold
+                        )
+                        Text(stringResource(R.string.current_profile, activeProfile?.first?.label.orEmpty()), style = MaterialTheme.typography.bodySmall)
                     }
-                    expanded -> Row(horizontalArrangement = Arrangement.spacedBy(16.dp)) {
-                        Column(Modifier.weight(1f)) {
-                            ServerList(servers, loading, error, page, onPage = { page = it }, onRefresh = { refresh++ },
-                                onSelect = { selected = it }, onCreate = { creating = true }, onMonitored = { showMonitored = true })
-                        }
-                        Column(Modifier.weight(1f)) {
-                            val server = selected
-                            if (server == null) Text(stringResource(R.string.select_server))
-                            else ServerDetailScreen(
-                                token, server, lock, activity, refresh,
-                                onChanged = { refresh++ },
-                                onDeleted = { selected = null; refresh++ }
-                            )
-                        }
+                    FlowRow(horizontalArrangement = Arrangement.spacedBy(8.dp), verticalArrangement = Arrangement.spacedBy(4.dp)) {
+                        OutlinedButton(onClick = onLock) { Text(stringResource(R.string.lock_now)) }
+                        OutlinedButton(onClick = {
+                            store.deactivate()
+                            activeProfile = null
+                            draftLabel = ""
+                            draftToken = ""
+                            selected = null
+                            panelTab = 0
+                            servers = null
+                            error = null
+                            page = 1
+                        }) { Text(stringResource(R.string.disconnect)) }
                     }
-                    selected != null -> Column {
-                        OutlinedButton(onClick = { selected = null }) { Text(stringResource(R.string.back)) }
-                        ServerDetailScreen(
-                            token, selected!!, lock, activity, refresh,
-                            onChanged = { refresh++ },
-                            onDeleted = { selected = null; refresh++ }
+                }
+                Spacer(Modifier.height(8.dp))
+                val sections = listOf(
+                    R.string.servers, R.string.providers, R.string.account, R.string.scripts_tab,
+                    R.string.status_pages_tab, R.string.webserver_templates_tab, R.string.projects_tab
+                )
+                val navigationState = rememberLazyListState()
+                LaunchedEffect(panelTab) { navigationState.animateScrollToItem(panelTab) }
+                LazyRow(
+                    modifier = Modifier.fillMaxWidth(),
+                    state = navigationState,
+                    horizontalArrangement = Arrangement.spacedBy(8.dp)
+                ) {
+                    items(sections.size) { index ->
+                        FilterChip(
+                            selected = panelTab == index,
+                            onClick = { panelTab = index },
+                            label = { Text(stringResource(sections[index])) }
                         )
                     }
-                    else -> ServerList(servers, loading, error, page, onPage = { page = it }, onRefresh = { refresh++ },
-                        onSelect = { selected = it }, onCreate = { creating = true }, onMonitored = { showMonitored = true })
                 }
+                Spacer(Modifier.height(8.dp))
+            }
+            BoxWithConstraints(Modifier.weight(1f).fillMaxWidth()) {
+                when (panelTab) {
+                    1 -> ProvidersScreen(token)
+                    2 -> Column(Modifier.fillMaxSize()) {
+                        BiometricToggle(lock, activity)
+                        AccountScreen(token)
+                    }
+                    3 -> ScriptsScreen(token, lock, activity)
+                    4 -> StatusPagesScreen(token, lock, activity)
+                    5 -> WebserverTemplatesScreen(token)
+                    6 -> ProjectsScreen(token, lock, activity)
+                    else -> {
+                        val expanded = maxWidth >= 720.dp
+                        when {
+                            creating -> CreateServerScreen(
+                                token,
+                                onDone = { creating = false; selected = null; refresh++ },
+                                onCancel = { creating = false }
+                            )
+                            showMonitored -> Column {
+                                OutlinedButton(onClick = { showMonitored = false }) { Text(stringResource(R.string.back)) }
+                                MonitoredServersScreen(token)
+                            }
+                            expanded -> Row(horizontalArrangement = Arrangement.spacedBy(16.dp)) {
+                                Column(Modifier.weight(1f)) {
+                                    ServerList(servers, loading, error, page, onPage = { page = it }, onRefresh = { refresh++ },
+                                        onSelect = { selected = it }, onCreate = { creating = true }, onMonitored = { showMonitored = true })
+                                }
+                                Column(Modifier.weight(1f)) {
+                                    val server = selected
+                                    if (server == null) Text(stringResource(R.string.select_server))
+                                    else ServerDetailScreen(
+                                        token, server, lock, activity, refresh,
+                                        onChanged = { refresh++ },
+                                        onDeleted = { selected = null; refresh++ }
+                                    )
+                                }
+                            }
+                            selected != null -> Column {
+                                OutlinedButton(onClick = { selected = null }) { Text(stringResource(R.string.back)) }
+                                ServerDetailScreen(
+                                    token, selected!!, lock, activity, refresh,
+                                    onChanged = { refresh++ },
+                                    onDeleted = { selected = null; refresh++ }
+                                )
+                            }
+                            else -> ServerList(servers, loading, error, page, onPage = { page = it }, onRefresh = { refresh++ },
+                                onSelect = { selected = it }, onCreate = { creating = true }, onMonitored = { showMonitored = true })
+                        }
+                    }
                 }
             }
         }
@@ -355,7 +388,7 @@ private fun ServerList(
     onCreate: () -> Unit, onMonitored: () -> Unit
 ) {
     Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
-        Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+        FlowRow(horizontalArrangement = Arrangement.spacedBy(8.dp), verticalArrangement = Arrangement.spacedBy(4.dp)) {
             OutlinedButton(onClick = onRefresh, enabled = !loading) { Text(stringResource(R.string.reload)) }
             OutlinedButton(onClick = onCreate) { Text(stringResource(R.string.new_server)) }
             OutlinedButton(onClick = onMonitored) { Text(stringResource(R.string.monitored_overview)) }

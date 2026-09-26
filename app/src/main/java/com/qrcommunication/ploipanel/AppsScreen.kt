@@ -3,6 +3,7 @@ package com.qrcommunication.ploipanel
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.FlowRow
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.rememberScrollState
@@ -73,7 +74,7 @@ internal fun AppsScreen(
         Card(modifier = Modifier.fillMaxWidth()) {
             Column(Modifier.padding(12.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
                 Text("WordPress", style = MaterialTheme.typography.titleSmall)
-                Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                FlowRow(horizontalArrangement = Arrangement.spacedBy(8.dp), verticalArrangement = Arrangement.spacedBy(4.dp)) {
                     OutlinedButton(onClick = { confirm = "install_wordpress" }, enabled = !busy) {
                         Text(stringResource(R.string.app_install))
                     }
@@ -86,7 +87,7 @@ internal fun AppsScreen(
         Card(modifier = Modifier.fillMaxWidth()) {
             Column(Modifier.padding(12.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
                 Text("Nextcloud", style = MaterialTheme.typography.titleSmall)
-                Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                FlowRow(horizontalArrangement = Arrangement.spacedBy(8.dp), verticalArrangement = Arrangement.spacedBy(4.dp)) {
                     OutlinedButton(onClick = { confirm = "install_nextcloud" }, enabled = !busy) {
                         Text(stringResource(R.string.app_install))
                     }
@@ -99,7 +100,7 @@ internal fun AppsScreen(
         Card(modifier = Modifier.fillMaxWidth()) {
             Column(Modifier.padding(12.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
                 Text("Statamic", style = MaterialTheme.typography.titleSmall)
-                Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                FlowRow(horizontalArrangement = Arrangement.spacedBy(8.dp), verticalArrangement = Arrangement.spacedBy(4.dp)) {
                     OutlinedButton(onClick = { confirm = "install_statamic" }, enabled = !busy) {
                         Text(stringResource(R.string.app_install))
                     }
@@ -112,7 +113,7 @@ internal fun AppsScreen(
 
         Text(stringResource(R.string.fastcgi_section), style = MaterialTheme.typography.titleMedium)
         Text(stringResource(R.string.site_fastcgi, if (site.fastcgiCache) "✓" else "—"))
-        Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+        FlowRow(horizontalArrangement = Arrangement.spacedBy(8.dp), verticalArrangement = Arrangement.spacedBy(4.dp)) {
             OutlinedButton(
                 onClick = { runAction(doneMessage) { PloiApi.enableFastcgiCache(token, serverId, siteId) } },
                 enabled = !busy && !site.fastcgiCache

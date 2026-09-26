@@ -3,6 +3,7 @@ package com.qrcommunication.ploipanel
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.FlowRow
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.lazy.LazyColumn
@@ -98,7 +99,7 @@ internal fun DatabasesScreen(token: String, serverId: Long, lock: AppLock, activ
     }
 
     Column(Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(10.dp)) {
-        Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+        FlowRow(horizontalArrangement = Arrangement.spacedBy(8.dp), verticalArrangement = Arrangement.spacedBy(4.dp)) {
             OutlinedButton(onClick = { refresh++ }, enabled = !loading && !busy) {
                 Text(stringResource(R.string.reload))
             }
@@ -114,7 +115,7 @@ internal fun DatabasesScreen(token: String, serverId: Long, lock: AppLock, activ
         if (feedback.isNotEmpty()) Text(feedback)
         result?.let { data ->
             if (data.databases.isEmpty()) Text(stringResource(R.string.empty_databases))
-            Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+            FlowRow(horizontalArrangement = Arrangement.spacedBy(8.dp), verticalArrangement = Arrangement.spacedBy(4.dp)) {
                 OutlinedButton(onClick = { page-- }, enabled = page > 1) {
                     Text(stringResource(R.string.previous))
                 }
@@ -143,7 +144,7 @@ internal fun DatabasesScreen(token: String, serverId: Long, lock: AppLock, activ
                             if (database.createdAt.isNotBlank()) {
                                 Text(stringResource(R.string.detail_created, database.createdAt))
                             }
-                            Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                            FlowRow(horizontalArrangement = Arrangement.spacedBy(8.dp), verticalArrangement = Arrangement.spacedBy(4.dp)) {
                                 OutlinedButton(onClick = { usersFor = database }, enabled = !busy) {
                                     Text(stringResource(R.string.database_users))
                                 }
@@ -151,7 +152,7 @@ internal fun DatabasesScreen(token: String, serverId: Long, lock: AppLock, activ
                                     Text(stringResource(R.string.duplicate_database))
                                 }
                             }
-                            Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                            FlowRow(horizontalArrangement = Arrangement.spacedBy(8.dp), verticalArrangement = Arrangement.spacedBy(4.dp)) {
                                 OutlinedButton(onClick = { confirmForget = database }, enabled = !busy) {
                                     Text(stringResource(R.string.forget_database))
                                 }
@@ -429,7 +430,7 @@ private fun DatabaseUsersDialog(
                 Modifier.verticalScroll(rememberScrollState()),
                 verticalArrangement = Arrangement.spacedBy(10.dp)
             ) {
-                Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                FlowRow(horizontalArrangement = Arrangement.spacedBy(8.dp), verticalArrangement = Arrangement.spacedBy(4.dp)) {
                     OutlinedButton(onClick = { creating = true }, enabled = !busy) {
                         Text(stringResource(R.string.new_database_user))
                     }
@@ -443,7 +444,7 @@ private fun DatabaseUsersDialog(
                 result?.let { data ->
                     if (data.users.isEmpty()) Text(stringResource(R.string.empty_database_users))
                     if (data.lastPage > 1) {
-                        Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                        FlowRow(horizontalArrangement = Arrangement.spacedBy(8.dp), verticalArrangement = Arrangement.spacedBy(4.dp)) {
                             OutlinedButton(onClick = { page-- }, enabled = page > 1) {
                                 Text(stringResource(R.string.previous))
                             }

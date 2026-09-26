@@ -3,6 +3,7 @@ package com.qrcommunication.ploipanel
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.FlowRow
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.lazy.LazyColumn
@@ -83,7 +84,7 @@ internal fun SshKeysScreen(token: String, serverId: Long, lock: AppLock, activit
     }
 
     Column(Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(10.dp)) {
-        Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+        FlowRow(horizontalArrangement = Arrangement.spacedBy(8.dp), verticalArrangement = Arrangement.spacedBy(4.dp)) {
             OutlinedButton(onClick = { refresh++ }, enabled = !loading && !busy) {
                 Text(stringResource(R.string.reload))
             }
@@ -96,7 +97,7 @@ internal fun SshKeysScreen(token: String, serverId: Long, lock: AppLock, activit
         if (feedback.isNotEmpty()) Text(feedback)
         result?.let { data ->
             if (data.keys.isEmpty()) Text(stringResource(R.string.empty_ssh_keys))
-            Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+            FlowRow(horizontalArrangement = Arrangement.spacedBy(8.dp), verticalArrangement = Arrangement.spacedBy(4.dp)) {
                 OutlinedButton(onClick = { page-- }, enabled = page > 1) {
                     Text(stringResource(R.string.previous))
                 }
@@ -116,7 +117,7 @@ internal fun SshKeysScreen(token: String, serverId: Long, lock: AppLock, activit
                             Text(stringResource(R.string.server_status, key.status))
                             Text(stringResource(R.string.ssh_key_user, key.systemUser))
                             Text(key.key.take(48) + "…", style = MaterialTheme.typography.bodySmall)
-                            Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                            FlowRow(horizontalArrangement = Arrangement.spacedBy(8.dp), verticalArrangement = Arrangement.spacedBy(4.dp)) {
                                 OutlinedButton(onClick = { confirmDelete = key }, enabled = !busy) {
                                     Text(
                                         stringResource(R.string.delete_ssh_key),

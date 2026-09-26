@@ -5,6 +5,9 @@ import androidx.biometric.BiometricManager
 import androidx.biometric.BiometricPrompt
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.verticalScroll
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.text.KeyboardOptions
@@ -67,7 +70,7 @@ internal fun PinSetupScreen(lock: AppLock, onDone: () -> Unit) {
     var pin by remember { mutableStateOf("") }
     var confirm by remember { mutableStateOf("") }
     var error by remember { mutableIntStateOf(0) }
-    Column(Modifier.fillMaxWidth().padding(24.dp), verticalArrangement = Arrangement.spacedBy(18.dp)) {
+    Column(Modifier.fillMaxSize().verticalScroll(rememberScrollState()).padding(24.dp), verticalArrangement = Arrangement.spacedBy(18.dp)) {
         Text(stringResource(R.string.pin_setup_title), style = MaterialTheme.typography.headlineLarge, fontWeight = FontWeight.Bold)
         Text(stringResource(R.string.pin_setup_intro), style = MaterialTheme.typography.bodyLarge)
         OutlinedTextField(
@@ -125,7 +128,7 @@ internal fun PinUnlockScreen(lock: AppLock, activity: FragmentActivity, onUnlock
         }
     }
 
-    Column(Modifier.fillMaxWidth().padding(24.dp), verticalArrangement = Arrangement.spacedBy(18.dp)) {
+    Column(Modifier.fillMaxSize().verticalScroll(rememberScrollState()).padding(24.dp), verticalArrangement = Arrangement.spacedBy(18.dp)) {
         Text(stringResource(R.string.unlock_title), style = MaterialTheme.typography.headlineLarge, fontWeight = FontWeight.Bold)
         OutlinedTextField(
             value = pin, onValueChange = { pin = it.filter(Char::isDigit) },

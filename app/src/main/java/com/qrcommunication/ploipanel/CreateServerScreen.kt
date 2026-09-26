@@ -3,6 +3,7 @@ package com.qrcommunication.ploipanel
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.FlowRow
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.padding
@@ -47,7 +48,7 @@ internal fun CreateServerScreen(token: String, onDone: () -> Unit, onCancel: () 
         Modifier.padding(16.dp).verticalScroll(rememberScrollState()),
         verticalArrangement = Arrangement.spacedBy(12.dp)
     ) {
-        Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+        FlowRow(horizontalArrangement = Arrangement.spacedBy(8.dp), verticalArrangement = Arrangement.spacedBy(4.dp)) {
             OutlinedButton(onClick = onCancel) { Text(stringResource(R.string.back)) }
             OutlinedButton(onClick = { mode = 0 }, enabled = mode != 0) {
                 Text(stringResource(R.string.create_via_provider))
@@ -274,7 +275,7 @@ private fun CustomCreateForm(token: String, onDone: () -> Unit) {
         Text(stringResource(R.string.custom_next_step))
         if (submitError != null) ApiErrorText(submitError!!)
         if (startMessage.isNotEmpty()) Text(startMessage)
-        Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+        FlowRow(horizontalArrangement = Arrangement.spacedBy(8.dp), verticalArrangement = Arrangement.spacedBy(4.dp)) {
             Button(
                 onClick = {
                     busy = true

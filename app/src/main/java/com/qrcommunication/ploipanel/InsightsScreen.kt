@@ -3,6 +3,7 @@ package com.qrcommunication.ploipanel
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.FlowRow
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.lazy.LazyColumn
@@ -86,7 +87,7 @@ internal fun InsightsScreen(token: String, serverId: Long, lock: AppLock, activi
     }
 
     Column(Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(10.dp)) {
-        Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+        FlowRow(horizontalArrangement = Arrangement.spacedBy(8.dp), verticalArrangement = Arrangement.spacedBy(4.dp)) {
             OutlinedButton(onClick = { refresh++ }, enabled = !loading && !busy) {
                 Text(stringResource(R.string.reload))
             }
@@ -96,7 +97,7 @@ internal fun InsightsScreen(token: String, serverId: Long, lock: AppLock, activi
         if (feedback.isNotEmpty()) Text(feedback)
         result?.let { data ->
             if (data.insights.isEmpty()) Text(stringResource(R.string.empty_insights))
-            Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+            FlowRow(horizontalArrangement = Arrangement.spacedBy(8.dp), verticalArrangement = Arrangement.spacedBy(4.dp)) {
                 OutlinedButton(onClick = { page-- }, enabled = page > 1) {
                     Text(stringResource(R.string.previous))
                 }
@@ -115,7 +116,7 @@ internal fun InsightsScreen(token: String, serverId: Long, lock: AppLock, activi
                             Text(insight.type, style = MaterialTheme.typography.titleMedium)
                             Text(stringResource(R.string.insight_status, insight.status, insight.priority))
                             if (insight.description.isNotBlank()) Text(insight.description)
-                            Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                            FlowRow(horizontalArrangement = Arrangement.spacedBy(8.dp), verticalArrangement = Arrangement.spacedBy(4.dp)) {
                                 OutlinedButton(
                                     onClick = {
                                         busy = true
@@ -142,7 +143,7 @@ internal fun InsightsScreen(token: String, serverId: Long, lock: AppLock, activi
                                     }
                                 }
                             }
-                            Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                            FlowRow(horizontalArrangement = Arrangement.spacedBy(8.dp), verticalArrangement = Arrangement.spacedBy(4.dp)) {
                                 OutlinedButton(
                                     onClick = {
                                         runAction(ignoredMessage) { PloiApi.ignoreInsight(token, serverId, insight.id) }

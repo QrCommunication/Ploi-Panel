@@ -3,6 +3,7 @@ package com.qrcommunication.ploipanel
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.FlowRow
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.rememberScrollState
@@ -74,7 +75,7 @@ internal fun LoadBalancerScreen(token: String, server: Server, lock: AppLock, ac
         if (busy) CircularProgressIndicator()
         if (error != null) ApiErrorText(error!!)
         if (feedback.isNotEmpty()) Text(feedback)
-        Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+        FlowRow(horizontalArrangement = Arrangement.spacedBy(8.dp), verticalArrangement = Arrangement.spacedBy(4.dp)) {
             OutlinedButton(onClick = { attachDialog = true }, enabled = !busy) {
                 Text(stringResource(R.string.lb_attach))
             }
@@ -82,7 +83,7 @@ internal fun LoadBalancerScreen(token: String, server: Server, lock: AppLock, ac
                 Text(stringResource(R.string.lb_detach))
             }
         }
-        Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+        FlowRow(horizontalArrangement = Arrangement.spacedBy(8.dp), verticalArrangement = Arrangement.spacedBy(4.dp)) {
             OutlinedButton(onClick = { certDialog = true }, enabled = !busy) {
                 Text(stringResource(R.string.lb_request_certificate))
             }

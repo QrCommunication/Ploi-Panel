@@ -4,6 +4,7 @@ import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.BoxWithConstraints
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.FlowRow
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
@@ -113,7 +114,7 @@ private fun SiteList(
     onPage: (Int) -> Unit, onRefresh: () -> Unit, onSelect: (Long) -> Unit, onCreate: () -> Unit
 ) {
     Column(verticalArrangement = Arrangement.spacedBy(10.dp)) {
-        Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+        FlowRow(horizontalArrangement = Arrangement.spacedBy(8.dp), verticalArrangement = Arrangement.spacedBy(4.dp)) {
             OutlinedButton(onClick = onRefresh, enabled = !loading) { Text(stringResource(R.string.reload)) }
             OutlinedButton(onClick = onCreate) { Text(stringResource(R.string.new_site)) }
         }
@@ -121,7 +122,7 @@ private fun SiteList(
         if (error != null) ApiErrorText(error)
         if (data != null) {
             if (data.sites.isEmpty()) Text(stringResource(R.string.empty_sites))
-            Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+            FlowRow(horizontalArrangement = Arrangement.spacedBy(8.dp), verticalArrangement = Arrangement.spacedBy(4.dp)) {
                 OutlinedButton(onClick = { onPage(page - 1) }, enabled = page > 1) { Text(stringResource(R.string.previous)) }
                 Text(stringResource(R.string.page, data.currentPage.toString(), data.lastPage.toString()), Modifier.padding(top = 12.dp))
                 OutlinedButton(onClick = { onPage(page + 1) }, enabled = data.hasNext) { Text(stringResource(R.string.next)) }
@@ -181,7 +182,7 @@ private fun CreateSiteForm(token: String, serverId: Long, onDone: (Long) -> Unit
             modifier = Modifier.fillMaxWidth())
         if (invalid) Text(stringResource(R.string.invalid_form), color = MaterialTheme.colorScheme.error)
         if (error != null) ApiErrorText(error!!)
-        Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+        FlowRow(horizontalArrangement = Arrangement.spacedBy(8.dp), verticalArrangement = Arrangement.spacedBy(4.dp)) {
             OutlinedButton(onClick = onCancel, enabled = !busy) { Text(stringResource(R.string.cancel)) }
             Button(onClick = {
                 val request = try {
@@ -340,7 +341,7 @@ private fun SiteDetail(
             Text(stringResource(R.string.site_robots, if (details.disableRobots) yes else no))
             Text(stringResource(R.string.site_fastcgi, if (details.fastcgiCache) yes else no))
 
-            Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+            FlowRow(horizontalArrangement = Arrangement.spacedBy(8.dp), verticalArrangement = Arrangement.spacedBy(4.dp)) {
                 OutlinedButton(onClick = { editing = true }, enabled = !busy) {
                     Text(stringResource(R.string.edit_site))
                 }
@@ -357,7 +358,7 @@ private fun SiteDetail(
                     Text(stringResource(R.string.delete_site), color = MaterialTheme.colorScheme.error)
                 }
             }
-            Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+            FlowRow(horizontalArrangement = Arrangement.spacedBy(8.dp), verticalArrangement = Arrangement.spacedBy(4.dp)) {
                 OutlinedButton(onClick = { phpDialog = true }, enabled = !busy) {
                     Text(stringResource(R.string.php_version_change))
                 }
@@ -368,7 +369,7 @@ private fun SiteDetail(
                     Text(stringResource(R.string.reset_permissions))
                 }
             }
-            Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+            FlowRow(horizontalArrangement = Arrangement.spacedBy(8.dp), verticalArrangement = Arrangement.spacedBy(4.dp)) {
                 OutlinedButton(onClick = { nginxDialog = true }, enabled = !busy) {
                     Text(stringResource(R.string.nginx_configuration))
                 }
@@ -379,7 +380,7 @@ private fun SiteDetail(
                     Text(stringResource(R.string.horizon_statistics))
                 }
             }
-            Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+            FlowRow(horizontalArrangement = Arrangement.spacedBy(8.dp), verticalArrangement = Arrangement.spacedBy(4.dp)) {
                 OutlinedButton(onClick = { repositoryDialog = true }, enabled = !busy) {
                     Text(stringResource(R.string.repository_title))
                 }
@@ -390,7 +391,7 @@ private fun SiteDetail(
                     Text(stringResource(R.string.deploy_production))
                 }
             }
-            Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+            FlowRow(horizontalArrangement = Arrangement.spacedBy(8.dp), verticalArrangement = Arrangement.spacedBy(4.dp)) {
                 OutlinedButton(onClick = { deployScriptDialog = true }, enabled = !busy) {
                     Text(stringResource(R.string.deploy_script))
                 }
@@ -398,7 +399,7 @@ private fun SiteDetail(
                     Text(stringResource(R.string.env_file))
                 }
             }
-            Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+            FlowRow(horizontalArrangement = Arrangement.spacedBy(8.dp), verticalArrangement = Arrangement.spacedBy(4.dp)) {
                 OutlinedButton(onClick = { siteSection = 1 }, enabled = !busy) {
                     Text(stringResource(R.string.queues_tab))
                 }
@@ -409,7 +410,7 @@ private fun SiteDetail(
                     Text(stringResource(R.string.certificates_tab))
                 }
             }
-            Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+            FlowRow(horizontalArrangement = Arrangement.spacedBy(8.dp), verticalArrangement = Arrangement.spacedBy(4.dp)) {
                 OutlinedButton(onClick = { siteSection = 4 }, enabled = !busy) {
                     Text(stringResource(R.string.auth_users_tab))
                 }
@@ -420,7 +421,7 @@ private fun SiteDetail(
                     Text(stringResource(R.string.tenants_tab))
                 }
             }
-            Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+            FlowRow(horizontalArrangement = Arrangement.spacedBy(8.dp), verticalArrangement = Arrangement.spacedBy(4.dp)) {
                 OutlinedButton(onClick = { siteSection = 7 }, enabled = !busy) {
                     Text(stringResource(R.string.site_monitors_tab))
                 }
@@ -839,7 +840,7 @@ private fun SiteLogsDialog(token: String, serverId: Long, siteId: Long, onDismis
                 if (error != null) ApiErrorText(error!!)
                 result?.let { data ->
                     if (data.logs.isEmpty()) Text(stringResource(R.string.empty_site_logs))
-                    Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                    FlowRow(horizontalArrangement = Arrangement.spacedBy(8.dp), verticalArrangement = Arrangement.spacedBy(4.dp)) {
                         OutlinedButton(onClick = { page-- }, enabled = page > 1) {
                             Text(stringResource(R.string.previous))
                         }
@@ -918,7 +919,7 @@ private fun HorizonDialog(token: String, serverId: Long, onDismiss: () -> Unit) 
         title = { Text(stringResource(R.string.horizon_statistics)) },
         text = {
             Column(Modifier.verticalScroll(rememberScrollState()), verticalArrangement = Arrangement.spacedBy(8.dp)) {
-                Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                FlowRow(horizontalArrangement = Arrangement.spacedBy(8.dp), verticalArrangement = Arrangement.spacedBy(4.dp)) {
                     val labels = listOf(
                         "stats" to R.string.horizon_type_stats, "workload" to R.string.horizon_type_workload,
                         "masters" to R.string.horizon_type_masters, "failed" to R.string.horizon_type_failed

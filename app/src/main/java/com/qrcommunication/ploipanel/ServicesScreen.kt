@@ -3,6 +3,7 @@ package com.qrcommunication.ploipanel
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.FlowRow
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.rememberScrollState
@@ -97,7 +98,7 @@ internal fun ServicesScreen(token: String, server: Server, lock: AppLock, activi
         Modifier.padding(16.dp).verticalScroll(rememberScrollState()),
         verticalArrangement = Arrangement.spacedBy(10.dp)
     ) {
-        Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+        FlowRow(horizontalArrangement = Arrangement.spacedBy(8.dp), verticalArrangement = Arrangement.spacedBy(4.dp)) {
             OutlinedButton(onClick = { refresh++ }, enabled = !loading && !busy) {
                 Text(stringResource(R.string.reload))
             }
@@ -114,7 +115,7 @@ internal fun ServicesScreen(token: String, server: Server, lock: AppLock, activi
                     horizontalArrangement = Arrangement.SpaceBetween
                 ) {
                     Text(service, style = MaterialTheme.typography.titleSmall, modifier = Modifier.padding(top = 12.dp))
-                    Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                    FlowRow(horizontalArrangement = Arrangement.spacedBy(8.dp), verticalArrangement = Arrangement.spacedBy(4.dp)) {
                         OutlinedButton(onClick = { serviceAction = service to true }, enabled = !busy) {
                             Text(stringResource(R.string.restart_service))
                         }
@@ -135,7 +136,7 @@ internal fun ServicesScreen(token: String, server: Server, lock: AppLock, activi
         }
 
         Text(stringResource(R.string.opcache_section), style = MaterialTheme.typography.titleMedium)
-        Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+        FlowRow(horizontalArrangement = Arrangement.spacedBy(8.dp), verticalArrangement = Arrangement.spacedBy(4.dp)) {
             OutlinedButton(onClick = { confirmOpcache = "refresh" }, enabled = !busy) {
                 Text(stringResource(R.string.opcache_refresh))
             }
@@ -152,7 +153,7 @@ internal fun ServicesScreen(token: String, server: Server, lock: AppLock, activi
             if (installed.isEmpty()) Text(stringResource(R.string.empty_php_versions))
             Text(installed.joinToString(", "))
         }
-        Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+        FlowRow(horizontalArrangement = Arrangement.spacedBy(8.dp), verticalArrangement = Arrangement.spacedBy(4.dp)) {
             OutlinedButton(onClick = { phpDialog = true }, enabled = !busy) {
                 Text(stringResource(R.string.php_install_version))
             }
@@ -162,7 +163,7 @@ internal fun ServicesScreen(token: String, server: Server, lock: AppLock, activi
         }
 
         Text(stringResource(R.string.wpcli_section), style = MaterialTheme.typography.titleMedium)
-        Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+        FlowRow(horizontalArrangement = Arrangement.spacedBy(8.dp), verticalArrangement = Arrangement.spacedBy(4.dp)) {
             OutlinedButton(onClick = { confirmWpCli = "install" }, enabled = !busy) {
                 Text(stringResource(R.string.wpcli_install))
             }

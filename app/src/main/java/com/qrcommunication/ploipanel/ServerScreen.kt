@@ -3,10 +3,13 @@ package com.qrcommunication.ploipanel
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.FlowRow
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.foundation.lazy.LazyRow
+import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.text.KeyboardOptions
@@ -15,6 +18,7 @@ import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Button
 import androidx.compose.material3.Card
 import androidx.compose.material3.CircularProgressIndicator
+import androidx.compose.material3.FilterChip
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.OutlinedTextField
@@ -46,24 +50,32 @@ internal fun ServerDetailScreen(
     onChanged: () -> Unit, onDeleted: () -> Unit
 ) {
     var tab by remember(server.id, token) { mutableIntStateOf(0) }
+    val tabs = listOf(
+        0 to R.string.monitoring, 1 to R.string.sites, 2 to R.string.databases_tab,
+        5 to R.string.backups_tab, 6 to R.string.crontabs_tab, 7 to R.string.daemons_tab,
+        8 to R.string.network_rules_tab, 9 to R.string.system_users_tab,
+        10 to R.string.one_off_script_tab, 11 to R.string.services_tab,
+        12 to R.string.ssh_keys_tab, 13 to R.string.load_balancer_tab,
+        14 to R.string.insights_tab, 15 to R.string.containers_tab,
+        3 to R.string.infos, 4 to R.string.logs
+    )
+    val tabState = rememberLazyListState()
+    LaunchedEffect(tab) {
+        tabState.animateScrollToItem(tabs.indexOfFirst { it.first == tab }.coerceAtLeast(0))
+    }
     Column(Modifier.fillMaxSize()) {
-        Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-            OutlinedButton(onClick = { tab = 0 }, enabled = tab != 0) { Text(stringResource(R.string.monitoring)) }
-            OutlinedButton(onClick = { tab = 1 }, enabled = tab != 1) { Text(stringResource(R.string.sites)) }
-            OutlinedButton(onClick = { tab = 2 }, enabled = tab != 2) { Text(stringResource(R.string.databases_tab)) }
-            OutlinedButton(onClick = { tab = 5 }, enabled = tab != 5) { Text(stringResource(R.string.backups_tab)) }
-            OutlinedButton(onClick = { tab = 6 }, enabled = tab != 6) { Text(stringResource(R.string.crontabs_tab)) }
-            OutlinedButton(onClick = { tab = 7 }, enabled = tab != 7) { Text(stringResource(R.string.daemons_tab)) }
-            OutlinedButton(onClick = { tab = 8 }, enabled = tab != 8) { Text(stringResource(R.string.network_rules_tab)) }
-            OutlinedButton(onClick = { tab = 9 }, enabled = tab != 9) { Text(stringResource(R.string.system_users_tab)) }
-            OutlinedButton(onClick = { tab = 10 }, enabled = tab != 10) { Text(stringResource(R.string.one_off_script_tab)) }
-            OutlinedButton(onClick = { tab = 11 }, enabled = tab != 11) { Text(stringResource(R.string.services_tab)) }
-            OutlinedButton(onClick = { tab = 12 }, enabled = tab != 12) { Text(stringResource(R.string.ssh_keys_tab)) }
-            OutlinedButton(onClick = { tab = 13 }, enabled = tab != 13) { Text(stringResource(R.string.load_balancer_tab)) }
-            OutlinedButton(onClick = { tab = 14 }, enabled = tab != 14) { Text(stringResource(R.string.insights_tab)) }
-            OutlinedButton(onClick = { tab = 15 }, enabled = tab != 15) { Text(stringResource(R.string.containers_tab)) }
-            OutlinedButton(onClick = { tab = 3 }, enabled = tab != 3) { Text(stringResource(R.string.infos)) }
-            OutlinedButton(onClick = { tab = 4 }, enabled = tab != 4) { Text(stringResource(R.string.logs)) }
+        LazyRow(
+            modifier = Modifier.fillMaxWidth(),
+            state = tabState,
+            horizontalArrangement = Arrangement.spacedBy(8.dp)
+        ) {
+            items(tabs, key = { it.first }) { (index, title) ->
+                FilterChip(
+                    selected = tab == index,
+                    onClick = { tab = index },
+                    label = { Text(stringResource(title)) }
+                )
+            }
         }
         when (tab) {
             0 -> MonitoringView(token, server, refresh)
@@ -192,7 +204,7 @@ private fun ServerInfoTab(
             if (current.description.isNotBlank()) Text(stringResource(R.string.detail_description, current.description))
             if (current.createdAt.isNotBlank()) Text(stringResource(R.string.detail_created, current.createdAt))
         }
-        Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+        FlowRow(horizontalArrangement = Arrangement.spacedBy(8.dp), verticalArrangement = Arrangement.spacedBy(4.dp)) {
             OutlinedButton(onClick = { editing = true }, enabled = !busy && detail != null) {
                 Text(stringResource(R.string.edit_server))
             }
@@ -370,7 +382,7 @@ private fun ServerLogsTab(token: String, serverId: Long) {
         if (error != null) ApiErrorText(error!!)
         result?.let { data ->
             if (data.logs.isEmpty()) Text(stringResource(R.string.empty_logs))
-            Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+            FlowRow(horizontalArrangement = Arrangement.spacedBy(8.dp), verticalArrangement = Arrangement.spacedBy(4.dp)) {
                 OutlinedButton(onClick = { page-- }, enabled = page > 1) { Text(stringResource(R.string.previous)) }
                 Text(
                     stringResource(R.string.page, data.currentPage.toString(), data.lastPage.toString()),

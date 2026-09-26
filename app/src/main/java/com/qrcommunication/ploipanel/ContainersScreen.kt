@@ -3,6 +3,7 @@ package com.qrcommunication.ploipanel
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.FlowRow
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.lazy.LazyColumn
@@ -89,7 +90,7 @@ internal fun ContainersScreen(token: String, serverId: Long, lock: AppLock, acti
     }
 
     Column(Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(10.dp)) {
-        Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+        FlowRow(horizontalArrangement = Arrangement.spacedBy(8.dp), verticalArrangement = Arrangement.spacedBy(4.dp)) {
             OutlinedButton(onClick = { refresh++ }, enabled = !loading && !busy) {
                 Text(stringResource(R.string.reload))
             }
@@ -102,7 +103,7 @@ internal fun ContainersScreen(token: String, serverId: Long, lock: AppLock, acti
         if (feedback.isNotEmpty()) Text(feedback)
         result?.let { data ->
             if (data.containers.isEmpty()) Text(stringResource(R.string.empty_containers))
-            Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+            FlowRow(horizontalArrangement = Arrangement.spacedBy(8.dp), verticalArrangement = Arrangement.spacedBy(4.dp)) {
                 OutlinedButton(onClick = { page-- }, enabled = page > 1) {
                     Text(stringResource(R.string.previous))
                 }
@@ -120,7 +121,7 @@ internal fun ContainersScreen(token: String, serverId: Long, lock: AppLock, acti
                         Column(Modifier.padding(12.dp), verticalArrangement = Arrangement.spacedBy(6.dp)) {
                             Text(container.name, style = MaterialTheme.typography.titleMedium)
                             Text(stringResource(R.string.container_state, container.status, container.state))
-                            Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                            FlowRow(horizontalArrangement = Arrangement.spacedBy(8.dp), verticalArrangement = Arrangement.spacedBy(4.dp)) {
                                 OutlinedButton(
                                     onClick = { runAction(doneMessage) { PloiApi.startContainer(token, serverId, container.id) } },
                                     enabled = !busy && container.state != "running"
@@ -151,7 +152,7 @@ internal fun ContainersScreen(token: String, serverId: Long, lock: AppLock, acti
                                     enabled = !busy
                                 ) { Text(stringResource(R.string.container_logs)) }
                             }
-                            Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                            FlowRow(horizontalArrangement = Arrangement.spacedBy(8.dp), verticalArrangement = Arrangement.spacedBy(4.dp)) {
                                 OutlinedButton(
                                     onClick = {
                                         editingId = container.id
@@ -333,7 +334,7 @@ private fun LinkContainerDialog(
             ) { Text(stringResource(R.string.container_link)) }
         },
         dismissButton = {
-            Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+            FlowRow(horizontalArrangement = Arrangement.spacedBy(8.dp), verticalArrangement = Arrangement.spacedBy(4.dp)) {
                 OutlinedButton(onClick = onUnlink, enabled = !busy) {
                     Text(stringResource(R.string.container_unlink), color = MaterialTheme.colorScheme.error)
                 }

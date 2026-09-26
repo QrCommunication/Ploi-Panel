@@ -3,6 +3,7 @@ package com.qrcommunication.ploipanel
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.FlowRow
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.lazy.LazyColumn
@@ -83,7 +84,7 @@ internal fun ProjectsScreen(token: String, lock: AppLock, activity: FragmentActi
     }
 
     Column(Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(10.dp)) {
-        Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+        FlowRow(horizontalArrangement = Arrangement.spacedBy(8.dp), verticalArrangement = Arrangement.spacedBy(4.dp)) {
             OutlinedButton(onClick = { refresh++ }, enabled = !loading && !busy) {
                 Text(stringResource(R.string.reload))
             }
@@ -96,7 +97,7 @@ internal fun ProjectsScreen(token: String, lock: AppLock, activity: FragmentActi
         if (feedback.isNotEmpty()) Text(feedback)
         result?.let { data ->
             if (data.projects.isEmpty()) Text(stringResource(R.string.empty_projects))
-            Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+            FlowRow(horizontalArrangement = Arrangement.spacedBy(8.dp), verticalArrangement = Arrangement.spacedBy(4.dp)) {
                 OutlinedButton(onClick = { page-- }, enabled = page > 1) {
                     Text(stringResource(R.string.previous))
                 }
@@ -123,7 +124,7 @@ internal fun ProjectsScreen(token: String, lock: AppLock, activity: FragmentActi
                             if (project.createdAt.isNotBlank()) {
                                 Text(stringResource(R.string.detail_created, project.createdAt))
                             }
-                            Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                            FlowRow(horizontalArrangement = Arrangement.spacedBy(8.dp), verticalArrangement = Arrangement.spacedBy(4.dp)) {
                                 OutlinedButton(onClick = { editing = project }, enabled = !busy) {
                                     Text(stringResource(R.string.project_edit))
                                 }

@@ -3,6 +3,7 @@ package com.qrcommunication.ploipanel
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.FlowRow
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.padding
@@ -61,7 +62,7 @@ internal fun WebserverTemplatesScreen(token: String) {
     }
 
     Column(Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(10.dp)) {
-        Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+        FlowRow(horizontalArrangement = Arrangement.spacedBy(8.dp), verticalArrangement = Arrangement.spacedBy(4.dp)) {
             OutlinedButton(onClick = { refresh++ }, enabled = !loading) {
                 Text(stringResource(R.string.reload))
             }
@@ -70,7 +71,7 @@ internal fun WebserverTemplatesScreen(token: String) {
         if (error != null) ApiErrorText(error!!)
         result?.let { data ->
             if (data.templates.isEmpty()) Text(stringResource(R.string.empty_webserver_templates))
-            Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+            FlowRow(horizontalArrangement = Arrangement.spacedBy(8.dp), verticalArrangement = Arrangement.spacedBy(4.dp)) {
                 OutlinedButton(onClick = { page-- }, enabled = page > 1) {
                     Text(stringResource(R.string.previous))
                 }
@@ -90,7 +91,7 @@ internal fun WebserverTemplatesScreen(token: String) {
                             if (template.createdAt.isNotBlank()) {
                                 Text(stringResource(R.string.webserver_template_created_at, template.createdAt))
                             }
-                            Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                            FlowRow(horizontalArrangement = Arrangement.spacedBy(8.dp), verticalArrangement = Arrangement.spacedBy(4.dp)) {
                                 OutlinedButton(onClick = { viewing = template }) {
                                     Text(stringResource(R.string.webserver_template_content))
                                 }

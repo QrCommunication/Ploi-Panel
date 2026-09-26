@@ -21,7 +21,7 @@
     <string name="monitoring_unavailable">Monitoring is unavailable for this server or subscription.</string>
     <string name="server_status">Status: %1$s</string>
     <string name="updated">Sample: %1$s</string>
-    <string name="back">Back to servers</string>
+    <string name="back">Back</string>
     <string name="error_auth">Invalid or expired token (401).</string>
     <string name="error_permission">Insufficient scope or unavailable feature (403).</string>
     <string name="error_rate">Ploi rate limit reached. Retry in %1$s seconds.</string>

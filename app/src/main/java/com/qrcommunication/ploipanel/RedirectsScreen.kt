@@ -3,6 +3,7 @@ package com.qrcommunication.ploipanel
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.FlowRow
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.lazy.LazyColumn
@@ -82,7 +83,7 @@ internal fun RedirectsScreen(token: String, serverId: Long, siteId: Long, lock: 
     }
 
     Column(Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(10.dp)) {
-        Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+        FlowRow(horizontalArrangement = Arrangement.spacedBy(8.dp), verticalArrangement = Arrangement.spacedBy(4.dp)) {
             OutlinedButton(onClick = { refresh++ }, enabled = !loading && !busy) {
                 Text(stringResource(R.string.reload))
             }
@@ -95,7 +96,7 @@ internal fun RedirectsScreen(token: String, serverId: Long, siteId: Long, lock: 
         if (feedback.isNotEmpty()) Text(feedback)
         result?.let { data ->
             if (data.redirects.isEmpty()) Text(stringResource(R.string.empty_redirects))
-            Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+            FlowRow(horizontalArrangement = Arrangement.spacedBy(8.dp), verticalArrangement = Arrangement.spacedBy(4.dp)) {
                 OutlinedButton(onClick = { page-- }, enabled = page > 1) {
                     Text(stringResource(R.string.previous))
                 }
@@ -113,7 +114,7 @@ internal fun RedirectsScreen(token: String, serverId: Long, siteId: Long, lock: 
                         Column(Modifier.padding(12.dp), verticalArrangement = Arrangement.spacedBy(6.dp)) {
                             Text("${redirect.redirectFrom} → ${redirect.redirectTo}", style = MaterialTheme.typography.titleMedium)
                             Text(stringResource(R.string.redirect_type, redirect.type, redirect.status))
-                            Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                            FlowRow(horizontalArrangement = Arrangement.spacedBy(8.dp), verticalArrangement = Arrangement.spacedBy(4.dp)) {
                                 OutlinedButton(onClick = { confirmDelete = redirect }, enabled = !busy) {
                                     Text(
                                         stringResource(R.string.delete_redirect),
@@ -148,7 +149,7 @@ internal fun RedirectsScreen(token: String, serverId: Long, siteId: Long, lock: 
                         label = { Text(stringResource(R.string.redirect_to_label)) },
                         singleLine = true, modifier = Modifier.fillMaxWidth()
                     )
-                    Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                    FlowRow(horizontalArrangement = Arrangement.spacedBy(8.dp), verticalArrangement = Arrangement.spacedBy(4.dp)) {
                         OutlinedButton(onClick = { permanent = true }, enabled = !permanent) {
                             Text(stringResource(R.string.redirect_permanent))
                         }

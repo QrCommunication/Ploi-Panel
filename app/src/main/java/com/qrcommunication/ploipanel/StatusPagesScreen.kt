@@ -3,6 +3,7 @@ package com.qrcommunication.ploipanel
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.FlowRow
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.padding
@@ -66,7 +67,7 @@ internal fun StatusPagesScreen(token: String, lock: AppLock, activity: FragmentA
     }
 
     Column(Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(10.dp)) {
-        Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+        FlowRow(horizontalArrangement = Arrangement.spacedBy(8.dp), verticalArrangement = Arrangement.spacedBy(4.dp)) {
             OutlinedButton(onClick = { refresh++ }, enabled = !loading) {
                 Text(stringResource(R.string.reload))
             }
@@ -75,7 +76,7 @@ internal fun StatusPagesScreen(token: String, lock: AppLock, activity: FragmentA
         if (error != null) ApiErrorText(error!!)
         result?.let { data ->
             if (data.statusPages.isEmpty()) Text(stringResource(R.string.empty_status_pages))
-            Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+            FlowRow(horizontalArrangement = Arrangement.spacedBy(8.dp), verticalArrangement = Arrangement.spacedBy(4.dp)) {
                 OutlinedButton(onClick = { page-- }, enabled = page > 1) {
                     Text(stringResource(R.string.previous))
                 }
@@ -96,7 +97,7 @@ internal fun StatusPagesScreen(token: String, lock: AppLock, activity: FragmentA
                                 Text(stringResource(R.string.status_page_slug, statusPage.slug))
                             }
                             if (statusPage.description.isNotBlank()) Text(statusPage.description)
-                            Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                            FlowRow(horizontalArrangement = Arrangement.spacedBy(8.dp), verticalArrangement = Arrangement.spacedBy(4.dp)) {
                                 OutlinedButton(onClick = { viewing = statusPage }) {
                                     Text(stringResource(R.string.status_page_incidents))
                                 }
@@ -195,7 +196,7 @@ private fun StatusPageIncidentsDialog(
                 Modifier.heightIn(max = 480.dp),
                 verticalArrangement = Arrangement.spacedBy(8.dp)
             ) {
-                Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                FlowRow(horizontalArrangement = Arrangement.spacedBy(8.dp), verticalArrangement = Arrangement.spacedBy(4.dp)) {
                     OutlinedButton(onClick = { refresh++ }, enabled = !loading && !busy) {
                         Text(stringResource(R.string.reload))
                     }
@@ -208,7 +209,7 @@ private fun StatusPageIncidentsDialog(
                 if (feedback.isNotEmpty()) Text(feedback)
                 result?.let { data ->
                     if (data.incidents.isEmpty()) Text(stringResource(R.string.empty_incidents))
-                    Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                    FlowRow(horizontalArrangement = Arrangement.spacedBy(8.dp), verticalArrangement = Arrangement.spacedBy(4.dp)) {
                         OutlinedButton(onClick = { page-- }, enabled = page > 1 && !busy) {
                             Text(stringResource(R.string.previous))
                         }
@@ -232,7 +233,7 @@ private fun StatusPageIncidentsDialog(
                                         )
                                     )
                                     if (incident.description.isNotBlank()) Text(incident.description)
-                                    Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                                    FlowRow(horizontalArrangement = Arrangement.spacedBy(8.dp), verticalArrangement = Arrangement.spacedBy(4.dp)) {
                                         OutlinedButton(onClick = { confirmDelete = incident }, enabled = !busy) {
                                             Text(
                                                 stringResource(R.string.delete_incident),

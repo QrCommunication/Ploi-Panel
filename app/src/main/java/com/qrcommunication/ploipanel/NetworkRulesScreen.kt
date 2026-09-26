@@ -3,6 +3,7 @@ package com.qrcommunication.ploipanel
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.FlowRow
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.lazy.LazyColumn
@@ -86,7 +87,7 @@ internal fun NetworkRulesScreen(token: String, serverId: Long, lock: AppLock, ac
     }
 
     Column(Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(10.dp)) {
-        Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+        FlowRow(horizontalArrangement = Arrangement.spacedBy(8.dp), verticalArrangement = Arrangement.spacedBy(4.dp)) {
             OutlinedButton(onClick = { refresh++ }, enabled = !loading && !busy) {
                 Text(stringResource(R.string.reload))
             }
@@ -99,7 +100,7 @@ internal fun NetworkRulesScreen(token: String, serverId: Long, lock: AppLock, ac
         if (feedback.isNotEmpty()) Text(feedback)
         result?.let { data ->
             if (data.rules.isEmpty()) Text(stringResource(R.string.empty_network_rules))
-            Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+            FlowRow(horizontalArrangement = Arrangement.spacedBy(8.dp), verticalArrangement = Arrangement.spacedBy(4.dp)) {
                 OutlinedButton(onClick = { page-- }, enabled = page > 1) {
                     Text(stringResource(R.string.previous))
                 }
@@ -197,7 +198,7 @@ private fun CreateNetworkRuleDialog(
                     singleLine = true, modifier = Modifier.fillMaxWidth()
                 )
                 Text(stringResource(R.string.network_rule_protocol_label))
-                Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                FlowRow(horizontalArrangement = Arrangement.spacedBy(8.dp), verticalArrangement = Arrangement.spacedBy(4.dp)) {
                     NETWORK_RULE_PROTOCOLS.forEach { option ->
                         OutlinedButton(onClick = { protocol = option }, enabled = protocol != option) {
                             Text(option.uppercase())
@@ -205,7 +206,7 @@ private fun CreateNetworkRuleDialog(
                     }
                 }
                 Text(stringResource(R.string.network_rule_type_label))
-                Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                FlowRow(horizontalArrangement = Arrangement.spacedBy(8.dp), verticalArrangement = Arrangement.spacedBy(4.dp)) {
                     NETWORK_RULE_TYPES.forEach { option ->
                         OutlinedButton(onClick = { ruleType = option }, enabled = ruleType != option) {
                             Text(option.uppercase())
