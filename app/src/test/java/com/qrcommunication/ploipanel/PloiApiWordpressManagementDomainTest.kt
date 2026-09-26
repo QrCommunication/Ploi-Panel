@@ -119,7 +119,7 @@ class PloiApiWordpressManagementDomainTest {
         installFakeClient()
         scriptedBody = extensionsJson()
         PloiApi.wpPlugins(token, 1, 1, ondemand = true)
-        assertEquals("https://ploi.io/api/servers/1/sites/1/wordpress/plugins?ondemand=1", lastRequest().url)
+        assertEquals("https://ploi.io/api/servers/1/sites/1/wordpress/plugins?ondemand=true", lastRequest().url)
     }
 
     @Test fun wpThemesHitsDocumentedRoute() {
@@ -140,10 +140,11 @@ class PloiApiWordpressManagementDomainTest {
         assertEquals("Plugin activated.", ack.message)
         val request = lastRequest()
         assertEquals("POST", request.method)
-        assertEquals("https://ploi.io/api/servers/1/sites/1/wordpress/plugins/activate", request.url)
+        // The docs place ondemand in the query string, not the JSON body.
+        assertEquals("https://ploi.io/api/servers/1/sites/1/wordpress/plugins/activate?ondemand=true", request.url)
         val body = JSONObject(request.body.orEmpty())
         assertEquals("akismet", body.getString("plugin"))
-        assertTrue(body.getBoolean("ondemand"))
+        assertEquals(1, body.length())
     }
 
     @Test fun deactivatePluginHitsDocumentedRoute() {

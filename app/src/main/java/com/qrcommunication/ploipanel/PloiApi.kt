@@ -3954,14 +3954,14 @@ internal object PloiApi {
     fun wpPlugins(token: String, serverId: Long, siteId: Long, ondemand: Boolean = false): List<WpExtension> =
         parseOrThrow {
             parseWpExtensions(
-                get("${wpManagePath(serverId, siteId)}/plugins${if (ondemand) "?ondemand=1" else ""}", token)
+                get("${wpManagePath(serverId, siteId)}/plugins${if (ondemand) "?ondemand=true" else ""}", token)
             )
         }
 
     fun wpThemes(token: String, serverId: Long, siteId: Long, ondemand: Boolean = false): List<WpExtension> =
         parseOrThrow {
             parseWpExtensions(
-                get("${wpManagePath(serverId, siteId)}/themes${if (ondemand) "?ondemand=1" else ""}", token)
+                get("${wpManagePath(serverId, siteId)}/themes${if (ondemand) "?ondemand=true" else ""}", token)
             )
         }
 
@@ -3972,10 +3972,10 @@ internal object PloiApi {
         val body = JSONObject().apply {
             put(field, validateWpSlug(name))
             if (activate) put("activate", true)
-            if (ondemand) put("ondemand", true)
         }.toString()
+        val query = if (ondemand) "?ondemand=true" else ""
         return parseOrThrow {
-            parseOperationAck(write(method, "${wpManagePath(serverId, siteId)}/$route", token, body))
+            parseOperationAck(write(method, "${wpManagePath(serverId, siteId)}/$route$query", token, body))
         }
     }
 
@@ -4018,11 +4018,9 @@ internal object PloiApi {
 
     fun runWpCli(token: String, serverId: Long, siteId: Long, command: String, ondemand: Boolean = false): String {
         require(command.isNotBlank()) { "WP-CLI command required" }
-        val body = JSONObject().apply {
-            put("command", command)
-            if (ondemand) put("ondemand", true)
-        }.toString()
-        return parseOrThrow { parseWpOutput(write("POST", "${wpManagePath(serverId, siteId)}/wp-cli/run", token, body)) }
+        val query = if (ondemand) "?ondemand=true" else ""
+        val body = JSONObject().put("command", command).toString()
+        return parseOrThrow { parseWpOutput(write("POST", "${wpManagePath(serverId, siteId)}/wp-cli/run$query", token, body)) }
     }
 
     fun searchReplaceWp(
@@ -4030,14 +4028,14 @@ internal object PloiApi {
         search: String, replace: String, dryRun: Boolean = true, ondemand: Boolean = false
     ): String {
         require(search.isNotBlank()) { "Search term required" }
+        val query = if (ondemand) "?ondemand=true" else ""
         val body = JSONObject().apply {
             put("search", search)
             put("replace", replace)
             put("dry_run", dryRun)
-            if (ondemand) put("ondemand", true)
         }.toString()
         return parseOrThrow {
-            parseWpOutput(write("POST", "${wpManagePath(serverId, siteId)}/search-replace", token, body))
+            parseWpOutput(write("POST", "${wpManagePath(serverId, siteId)}/search-replace$query", token, body))
         }
     }
 
