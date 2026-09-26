@@ -2,6 +2,7 @@ package com.qrcommunication.ploipanel
 
 import org.json.JSONArray
 import org.json.JSONObject
+import java.net.URLEncoder
 
 internal data class Server(val id: Long, val name: String, val status: String, val ipAddress: String)
 internal data class ServerPage(val servers: List<Server>, val currentPage: Int, val lastPage: Int) {
@@ -1141,6 +1142,266 @@ internal data class WebserverTemplatePage(
     val templates: List<WebserverTemplate>, val currentPage: Int, val lastPage: Int
 ) {
     val hasNext: Boolean get() = currentPage < lastPage
+}
+
+/** Status/message acknowledgement shared by services, PHP, tenants and WordPress-management routes. */
+internal data class OperationAck(val status: String, val message: String, val fallback: Boolean = false)
+
+/** Encodes a dynamic path segment (domain, tenant, service) without touching the path slashes. */
+private fun pathSegment(value: String): String =
+    URLEncoder.encode(value, "UTF-8").replace("+", "%20")
+
+internal fun validateServiceName(service: String): String {
+    require(service.matches(Regex("[A-Za-z0-9._-]{1,64}"))) { "Invalid service name" }
+    return service
+}
+
+internal fun validatePhpVersionString(version: String): String {
+    require(version.matches(Regex("[0-9]+\\.[0-9]+"))) { "Invalid PHP version" }
+    return version
+}
+
+internal fun validateDomainList(domains: List<String>): List<String> {
+    require(domains.isNotEmpty()) { "At least one domain required" }
+    domains.forEach { validateRootDomain(it) }
+    return domains
+}
+
+internal fun validateWpSlug(slug: String): String {
+    require(slug.matches(Regex("[A-Za-z0-9._-]{1,128}"))) { "Invalid WordPress slug" }
+    return slug
+}
+
+/** Site attached to a project (GET /api/projects entries). */
+internal data class ProjectSite(val id: Long, val rootDomain: String)
+
+/** Project entry of GET/POST/PATCH /api/projects responses. */
+internal data class PloiProject(
+    val id: Long, val title: String, val serverIds: List<Long>,
+    val sites: List<ProjectSite>, val createdAt: String
+)
+internal data class ProjectPage(val projects: List<PloiProject>, val currentPage: Int, val lastPage: Int) {
+    val hasNext: Boolean get() = currentPage < lastPage
+}
+
+/** Create/update body of /api/projects: title plus attached server and site ids. */
+internal data class ProjectRequest(
+    val title: String, val serverIds: List<Long> = emptyList(), val siteIds: List<Long> = emptyList()
+) {
+    init {
+        require(title.isNotBlank() && title.length <= 255) { "Invalid project title" }
+        require(serverIds.all { it > 0 } && siteIds.all { it > 0 }) { "Invalid project attachment" }
+    }
+
+    fun toJson(): String = JSONObject().apply {
+        put("title", title.trim())
+        put("servers", JSONArray().apply { serverIds.forEach { put(it) } })
+        put("sites", JSONArray().apply { siteIds.forEach { put(it) } })
+    }.toString()
+}
+
+/** SSH key entry of GET/POST /api/servers/{server}/ssh-keys responses. */
+internal data class SshKey(
+    val id: Long, val status: String, val name: String, val key: String, val systemUser: String
+)
+internal data class SshKeyPage(val keys: List<SshKey>, val currentPage: Int, val lastPage: Int) {
+    val hasNext: Boolean get() = currentPage < lastPage
+}
+
+internal data class CreateSshKeyRequest(val name: String, val key: String, val systemUser: String) {
+    init {
+        require(name.isNotBlank()) { "Invalid key name" }
+        require(
+            key.startsWith("ssh-") || key.startsWith("ecdsa-") || key.startsWith("sk-")
+        ) { "Invalid SSH public key" }
+        require(systemUser.isNotBlank()) { "Invalid system user" }
+    }
+
+    fun toJson(): String = JSONObject().apply {
+        put("name", name.trim())
+        put("key", key.trim())
+        put("system_user", systemUser.trim())
+    }.toString()
+}
+
+/** Insight entry of GET /api/servers/{server}/insights responses. */
+internal data class Insight(
+    val id: Long, val type: String, val status: String, val description: String,
+    val logFile: String, val priority: String, val meta: String, val fixable: Boolean,
+    val processedAt: String, val createdAt: String
+)
+internal data class InsightPage(val insights: List<Insight>, val currentPage: Int, val lastPage: Int) {
+    val hasNext: Boolean get() = currentPage < lastPage
+}
+
+/** Detail view of GET /api/servers/{server}/insights/{id}/detail. */
+internal data class InsightDetail(
+    val id: Long, val description: String, val descriptionHtml: String, val html: String
+)
+
+/**
+ * Queue worker of /servers/{server}/sites/{id}/queues. The documented payload carries
+ * the `enviroment` typo, and the toggle-pause response only a subset of fields.
+ */
+internal data class QueueWorker(
+    val id: Long, val connection: String, val queue: String, val maximumSeconds: Int,
+    val maximumTries: Int?, val environment: String, val sleep: Int, val processes: Int,
+    val backoff: Int, val status: String, val siteId: Long, val serverId: Long
+)
+
+/** Create body of POST /servers/{server}/sites/{id}/queues with documented bounds. */
+internal data class CreateQueueWorkerRequest(
+    val connection: String, val queue: String, val maximumSeconds: Int,
+    val sleep: Int, val processes: Int, val backoff: Int, val maximumTries: Int? = null
+) {
+    init {
+        require(connection.isNotBlank() && queue.isNotBlank()) { "Invalid queue connection" }
+        require(maximumSeconds in 0..60000 && sleep in 0..60000) { "Invalid queue timing" }
+        require(processes in 1..120) { "Invalid process count" }
+        require(backoff >= 0) { "Invalid backoff" }
+        require(maximumTries == null || maximumTries in 1..60000) { "Invalid maximum tries" }
+    }
+
+    fun toJson(): String = JSONObject().apply {
+        put("connection", connection.trim())
+        put("queue", queue.trim())
+        put("maximum_seconds", maximumSeconds)
+        put("sleep", sleep)
+        put("processes", processes)
+        put("backoff", backoff)
+        maximumTries?.let { put("maximum_tries", it) }
+    }.toString()
+}
+
+/** Redirect entry of /servers/{server}/sites/{site}/redirects responses. */
+internal data class SiteRedirect(
+    val id: Long, val status: String, val redirectFrom: String, val redirectTo: String, val type: String
+)
+internal data class RedirectPage(val redirects: List<SiteRedirect>, val currentPage: Int, val lastPage: Int) {
+    val hasNext: Boolean get() = currentPage < lastPage
+}
+
+internal data class CreateRedirectRequest(val redirectFrom: String, val redirectTo: String, val type: String) {
+    init {
+        require(redirectFrom.startsWith("/")) { "Redirect source must be a path" }
+        require(redirectTo.isNotBlank()) { "Redirect target required" }
+        require(type == "permanent" || type == "temporary") { "Invalid redirect type" }
+    }
+
+    fun toJson(): String = JSONObject().apply {
+        put("redirect_from", redirectFrom.trim())
+        put("redirect_to", redirectTo.trim())
+        put("type", type)
+    }.toString()
+}
+
+/** Certificate entry of /servers/{server}/sites/{site}/certificates responses. */
+internal data class SiteCertificate(
+    val id: Long, val status: String, val domain: String, val type: String, val active: Boolean,
+    val tenant: Boolean, val siteId: Long, val serverId: Long, val expiresAt: String, val createdAt: String
+)
+internal data class CertificatePage(
+    val certificates: List<SiteCertificate>, val currentPage: Int, val lastPage: Int
+) {
+    val hasNext: Boolean get() = currentPage < lastPage
+}
+
+/** Payload of GET …/certificates/{certificate}/download (documented at the root). */
+internal data class CertificateDownload(
+    val certificate: String, val certificatePath: String, val expiresAt: String
+)
+
+/**
+ * Create body of POST …/certificates: `certificate` is the domain for Let's Encrypt or the
+ * certificate contents for custom; `additional` carries DNS-validation data for wildcards.
+ */
+internal data class CreateCertificateRequest(
+    val type: String, val certificate: String, val privateKey: String = "",
+    val force: Boolean = false, val additional: JSONObject? = null
+) {
+    init {
+        require(type == "letsencrypt" || type == "custom") { "Invalid certificate type" }
+        require(certificate.isNotBlank()) { "Certificate domain or content required" }
+        require(type != "custom" || privateKey.isNotBlank()) { "Private key required for custom certificates" }
+    }
+
+    fun toJson(): String = JSONObject().apply {
+        put("type", type)
+        put("certificate", certificate)
+        if (privateKey.isNotBlank()) put("private", privateKey)
+        if (force) put("force", true)
+        additional?.let { put("additional", it) }
+    }.toString()
+}
+
+/** Basic-auth user of /servers/{server}/sites/{id}/auth-users responses. */
+internal data class AuthUser(val id: Long, val name: String, val path: String, val createdAt: String)
+
+internal data class CreateAuthUserRequest(val name: String, val password: String, val path: String = "") {
+    init {
+        require(name.isNotBlank()) { "Invalid auth user name" }
+        require(password.isNotBlank()) { "Password required" }
+    }
+
+    fun toJson(): String = JSONObject().apply {
+        put("name", name.trim())
+        put("password", password)
+        if (path.isNotBlank()) put("path", path.trim())
+    }.toString()
+}
+
+/** Aliases payload of /servers/{server}/sites/{site}/aliases (list, create and delete share it). */
+internal data class SiteAliases(val aliases: List<String>, val count: Int, val main: String)
+
+/** Tenants payload of /servers/{server}/sites/{site}/tenants (list and create share it). */
+internal data class SiteTenants(val tenants: List<String>, val count: Int, val main: String)
+
+/** Uptime monitor of /servers/{server}/sites/{site}/monitors responses. */
+internal data class SiteMonitor(
+    val id: Long, val label: String, val location: String, val averageUptime: String,
+    val active: Boolean, val createdAt: String
+)
+internal data class SiteMonitorPage(val monitors: List<SiteMonitor>, val currentPage: Int, val lastPage: Int) {
+    val hasNext: Boolean get() = currentPage < lastPage
+}
+
+/** Single uptime response sample of …/monitors/{monitor}/uptime-responses. */
+internal data class UptimeResponse(val responseTime: Double, val createdAt: String)
+
+/** Plugin or theme entry of WordPress list endpoints. */
+internal data class WpExtension(
+    val name: String, val title: String, val status: String,
+    val version: String, val updateVersion: String, val autoUpdate: String
+)
+
+/** WordPress repository entry of …/wordpress/repositories. */
+internal data class WpRepository(
+    val id: Long, val user: String, val name: String, val branch: String, val type: String,
+    val targetDirectory: String, val deployScript: String, val status: String
+)
+
+/** Docker container of /servers/{server}/docker/containers responses. */
+internal data class DockerContainer(
+    val id: Long, val status: String, val name: String, val deployScript: String,
+    val path: String, val lastDeployAt: String, val createdAt: String, val type: String, val state: String
+)
+internal data class ContainerPage(
+    val containers: List<DockerContainer>, val currentPage: Int, val lastPage: Int
+) {
+    val hasNext: Boolean get() = currentPage < lastPage
+}
+
+/** Create/update body of /servers/{server}/docker/containers. */
+internal data class ContainerRequest(val name: String, val deployScript: String) {
+    init {
+        require(name.matches(Regex("[A-Za-z0-9._-]{1,64}"))) { "Invalid container name" }
+        require(deployScript.isNotBlank()) { "Deploy script required" }
+    }
+
+    fun toJson(): String = JSONObject().apply {
+        put("name", name.trim())
+        put("deploy_script", deployScript)
+    }.toString()
 }
 
 internal class PloiHttpException(val status: Int, val retryAfterSeconds: String? = null) : Exception("Ploi HTTP $status")
@@ -2938,6 +3199,1060 @@ internal object PloiApi {
 
     fun sourceControlRepositories(token: String, providerId: Long): List<SourceControlRepository> = parseOrThrow {
         parseSourceControlRepositories(get("/user/source-control/${validateResourceId(providerId)}/repositories", token))
+    }
+
+    // ---- Projects domain: account-level grouping of servers and sites ----
+
+    private fun parseProjectEntry(item: JSONObject): PloiProject {
+        val servers = item.optJSONArray("servers")
+        val sites = item.optJSONArray("sites")
+        return PloiProject(
+            id = item.getLong("id"),
+            title = item.getString("title"),
+            serverIds = servers?.let { array -> (0 until array.length()).map { array.getLong(it) } }.orEmpty(),
+            sites = sites?.let { array ->
+                (0 until array.length()).map { index ->
+                    val site = array.getJSONObject(index)
+                    ProjectSite(site.getLong("id"), site.optString("root_domain"))
+                }
+            }.orEmpty(),
+            createdAt = item.optString("created_at")
+        )
+    }
+
+    fun parseProjects(json: String): ProjectPage {
+        val root = JSONObject(json)
+        val data = root.getJSONArray("data")
+        val (page, lastPage) = pageMeta(root)
+        return ProjectPage((0 until data.length()).map { parseProjectEntry(data.getJSONObject(it)) }, page, lastPage)
+    }
+
+    fun parseProject(json: String): PloiProject = parseProjectEntry(JSONObject(json).getJSONObject("data"))
+
+    fun projects(token: String, page: Int = 1, perPage: Int = 15): ProjectPage {
+        require(page >= 1) { "Page must be positive" }
+        return parseOrThrow {
+            parseProjects(get("/projects?page=$page&per_page=${validatePageSize(perPage)}", token))
+        }
+    }
+
+    fun project(token: String, projectId: Long): PloiProject = parseOrThrow {
+        parseProject(get("/projects/${validateResourceId(projectId)}", token))
+    }
+
+    fun createProject(token: String, request: ProjectRequest): PloiProject = parseOrThrow {
+        parseProject(write("POST", "/projects", token, request.toJson()))
+    }
+
+    fun updateProject(token: String, projectId: Long, request: ProjectRequest): PloiProject = parseOrThrow {
+        parseProject(write("PATCH", "/projects/${validateResourceId(projectId)}", token, request.toJson()))
+    }
+
+    fun deleteProject(token: String, projectId: Long): String = parseOrThrow {
+        parseMessage(write("DELETE", "/projects/${validateResourceId(projectId)}", token, null))
+    }
+
+    // ---- Services domain: restart/reload services and WordPress CLI on a server ----
+
+    /** Tolerant status/message parse: reload also carries `fallback`, some routes only a message. */
+    fun parseOperationAck(json: String): OperationAck {
+        val root = JSONObject(json)
+        return OperationAck(
+            status = if (root.isNull("status")) "" else root.optString("status"),
+            message = if (root.isNull("message")) "" else root.optString("message"),
+            fallback = root.optBoolean("fallback", false)
+        )
+    }
+
+    private fun serverServicePath(serverId: Long, service: String): String =
+        "/servers/${validateResourceId(serverId)}/services/${pathSegment(validateServiceName(service))}"
+
+    fun restartService(token: String, serverId: Long, service: String): OperationAck = parseOrThrow {
+        parseOperationAck(write("POST", "${serverServicePath(serverId, service)}/restart", token, null))
+    }
+
+    fun reloadService(token: String, serverId: Long, service: String): OperationAck = parseOrThrow {
+        parseOperationAck(write("POST", "${serverServicePath(serverId, service)}/reload", token, null))
+    }
+
+    fun installWpCli(token: String, serverId: Long): OperationAck = parseOrThrow {
+        parseOperationAck(write("POST", "/servers/${validateResourceId(serverId)}/install/wp-cli", token, null))
+    }
+
+    fun uninstallWpCli(token: String, serverId: Long): OperationAck = parseOrThrow {
+        parseOperationAck(write("DELETE", "/servers/${validateResourceId(serverId)}/uninstall/wp-cli", token, null))
+    }
+
+    fun runServerWpCli(token: String, serverId: Long, command: String): OperationAck {
+        require(command.isNotBlank()) { "WP-CLI command required" }
+        val body = JSONObject().put("command", command).toString()
+        return parseOrThrow {
+            parseOperationAck(write("POST", "/servers/${validateResourceId(serverId)}/wp-cli/run", token, body))
+        }
+    }
+
+    // ---- PHP domain: OPcache and version management on a server ----
+
+    fun refreshOpcache(token: String, serverId: Long): ServerDetail = parseOrThrow {
+        parseServerDetail(write("POST", "/servers/${validateResourceId(serverId)}/refresh-opcache", token, null))
+    }
+
+    fun enableOpcache(token: String, serverId: Long): ServerDetail = parseOrThrow {
+        parseServerDetail(write("POST", "/servers/${validateResourceId(serverId)}/enable-opcache", token, null))
+    }
+
+    fun disableOpcache(token: String, serverId: Long): ServerDetail = parseOrThrow {
+        parseServerDetail(write("DELETE", "/servers/${validateResourceId(serverId)}/disable-opcache", token, null))
+    }
+
+    fun parsePhpVersions(json: String): List<String> {
+        val versions = JSONObject(json).getJSONObject("data").getJSONArray("versions")
+        return (0 until versions.length()).map { versions.getString(it) }
+    }
+
+    fun phpVersions(token: String, serverId: Long): List<String> = parseOrThrow {
+        parsePhpVersions(get("/servers/${validateResourceId(serverId)}/php/versions", token))
+    }
+
+    fun installPhpVersion(token: String, serverId: Long, version: String): OperationAck {
+        val body = JSONObject().put("version", validatePhpVersionString(version)).toString()
+        return parseOrThrow {
+            parseOperationAck(write("POST", "/servers/${validateResourceId(serverId)}/php/install", token, body))
+        }
+    }
+
+    fun switchPhpCliVersion(token: String, serverId: Long, version: String): OperationAck {
+        val body = JSONObject().put("version", validatePhpVersionString(version)).toString()
+        return parseOrThrow {
+            parseOperationAck(write("POST", "/servers/${validateResourceId(serverId)}/php/cli-version", token, body))
+        }
+    }
+
+    // ---- SSH keys domain: public keys deployed on a server ----
+
+    private fun parseSshKeyEntry(item: JSONObject) = SshKey(
+        id = item.getLong("id"),
+        status = item.optString("status"),
+        name = item.getString("name"),
+        key = item.getString("key"),
+        systemUser = item.optString("system_user")
+    )
+
+    fun parseSshKeys(json: String): SshKeyPage {
+        val root = JSONObject(json)
+        val data = root.getJSONArray("data")
+        val (page, lastPage) = pageMeta(root)
+        return SshKeyPage((0 until data.length()).map { parseSshKeyEntry(data.getJSONObject(it)) }, page, lastPage)
+    }
+
+    fun parseSshKey(json: String): SshKey = parseSshKeyEntry(JSONObject(json).getJSONObject("data"))
+
+    private fun sshKeysPath(serverId: Long): String = "/servers/${validateResourceId(serverId)}/ssh-keys"
+
+    fun sshKeys(token: String, serverId: Long, page: Int = 1, perPage: Int = 15): SshKeyPage {
+        require(page >= 1) { "Page must be positive" }
+        return parseOrThrow {
+            parseSshKeys(get("${sshKeysPath(serverId)}?page=$page&per_page=${validatePageSize(perPage)}", token))
+        }
+    }
+
+    fun sshKey(token: String, serverId: Long, keyId: Long): SshKey = parseOrThrow {
+        parseSshKey(get("${sshKeysPath(serverId)}/${validateResourceId(keyId)}", token))
+    }
+
+    fun createSshKey(token: String, serverId: Long, request: CreateSshKeyRequest): SshKey = parseOrThrow {
+        parseSshKey(write("POST", sshKeysPath(serverId), token, request.toJson()))
+    }
+
+    fun deleteSshKey(token: String, serverId: Long, keyId: Long): String = parseOrThrow {
+        parseMessage(write("DELETE", "${sshKeysPath(serverId)}/${validateResourceId(keyId)}", token, null))
+    }
+
+    // ---- Load balancers domain: attach/detach backends and per-domain certificates ----
+
+    private fun loadBalancerPath(serverId: Long): String = "/servers/${validateResourceId(serverId)}/load-balancer"
+
+    /** Attach/detach answers an empty object, so the body is intentionally not parsed. */
+    fun attachLoadBalancerServer(token: String, serverId: Long, targetServerId: Long) {
+        val body = JSONObject().put("server_id", validateResourceId(targetServerId)).toString()
+        write("PATCH", "${loadBalancerPath(serverId)}/attach", token, body)
+    }
+
+    fun detachLoadBalancerServer(token: String, serverId: Long, targetServerId: Long) {
+        val body = JSONObject().put("server_id", validateResourceId(targetServerId)).toString()
+        write("PATCH", "${loadBalancerPath(serverId)}/detach", token, body)
+    }
+
+    fun requestLoadBalancerCertificate(token: String, serverId: Long, domain: String): String = parseOrThrow {
+        parseMessage(
+            write(
+                "POST",
+                "${loadBalancerPath(serverId)}/${pathSegment(validateRootDomain(domain))}/request-certificate",
+                token, null
+            )
+        )
+    }
+
+    fun revokeLoadBalancerCertificate(token: String, serverId: Long, domain: String): String = parseOrThrow {
+        parseMessage(
+            write(
+                "DELETE",
+                "${loadBalancerPath(serverId)}/${pathSegment(validateRootDomain(domain))}/revoke-certificate",
+                token, null
+            )
+        )
+    }
+
+    // ---- Insights domain: server optimization suggestions ----
+
+    private fun parseInsightEntry(item: JSONObject) = Insight(
+        id = item.getLong("id"),
+        type = item.optString("type"),
+        status = item.optString("status"),
+        description = item.optString("description"),
+        logFile = nullableString(item, "log_file"),
+        priority = item.optString("priority"),
+        meta = if (item.isNull("meta")) "" else item.opt("meta")?.toString().orEmpty(),
+        fixable = item.optBoolean("is_fixable", false),
+        processedAt = nullableString(item, "processed_at"),
+        createdAt = item.optString("created_at")
+    )
+
+    fun parseInsights(json: String): InsightPage {
+        val root = JSONObject(json)
+        val data = root.getJSONArray("data")
+        val (page, lastPage) = pageMeta(root)
+        return InsightPage((0 until data.length()).map { parseInsightEntry(data.getJSONObject(it)) }, page, lastPage)
+    }
+
+    fun parseInsight(json: String): Insight = parseInsightEntry(JSONObject(json).getJSONObject("data"))
+
+    fun parseInsightDetail(json: String): InsightDetail {
+        val data = JSONObject(json).getJSONObject("data")
+        return InsightDetail(
+            id = data.getLong("id"),
+            description = data.optString("description"),
+            descriptionHtml = data.optString("description_html"),
+            html = data.optString("html")
+        )
+    }
+
+    private fun insightsPath(serverId: Long): String = "/servers/${validateResourceId(serverId)}/insights"
+
+    fun insights(token: String, serverId: Long, page: Int = 1, perPage: Int = 15): InsightPage {
+        require(page >= 1) { "Page must be positive" }
+        return parseOrThrow {
+            parseInsights(get("${insightsPath(serverId)}?page=$page&per_page=${validatePageSize(perPage)}", token))
+        }
+    }
+
+    fun insight(token: String, serverId: Long, insightId: Long): Insight = parseOrThrow {
+        parseInsight(get("${insightsPath(serverId)}/${validateResourceId(insightId)}", token))
+    }
+
+    fun insightDetail(token: String, serverId: Long, insightId: Long): InsightDetail = parseOrThrow {
+        parseInsightDetail(get("${insightsPath(serverId)}/${validateResourceId(insightId)}/detail", token))
+    }
+
+    fun automaticallyFixInsight(token: String, serverId: Long, insightId: Long): String = parseOrThrow {
+        parseOptionalMessage(
+            write("POST", "${insightsPath(serverId)}/${validateResourceId(insightId)}/automatically-fix", token, null)
+        )
+    }
+
+    fun ignoreInsight(token: String, serverId: Long, insightId: Long): Insight = parseOrThrow {
+        parseInsight(write("POST", "${insightsPath(serverId)}/${validateResourceId(insightId)}/ignore", token, null))
+    }
+
+    /** Documented response is a paginated collection with empty data, not a message: body left unparsed. */
+    fun deleteInsight(token: String, serverId: Long, insightId: Long) {
+        write("DELETE", "${insightsPath(serverId)}/${validateResourceId(insightId)}", token, null)
+    }
+
+    // ---- Queue workers domain (site-level) ----
+
+    private fun parseQueueWorkerEntry(item: JSONObject) = QueueWorker(
+        id = item.getLong("id"),
+        connection = item.optString("connection"),
+        queue = item.optString("queue"),
+        maximumSeconds = item.optInt("maximum_seconds", 0),
+        maximumTries = if (!item.has("maximum_tries") || item.isNull("maximum_tries")) null else item.getInt("maximum_tries"),
+        environment = nullableString(item, "enviroment").ifBlank { nullableString(item, "environment") },
+        sleep = item.optInt("sleep", 0),
+        processes = item.optInt("processes", 1),
+        backoff = item.optInt("backoff", 0),
+        status = item.optString("status"),
+        siteId = item.optLong("site_id", 0),
+        serverId = item.optLong("server_id", 0)
+    )
+
+    /** Documented list shape is a plain data array without pagination metadata. */
+    fun parseQueueWorkers(json: String): List<QueueWorker> {
+        val data = JSONObject(json).getJSONArray("data")
+        return (0 until data.length()).map { parseQueueWorkerEntry(data.getJSONObject(it)) }
+    }
+
+    fun parseQueueWorker(json: String): QueueWorker = parseQueueWorkerEntry(JSONObject(json).getJSONObject("data"))
+
+    private fun queuesPath(serverId: Long, siteId: Long): String = "${sitePath(serverId, siteId)}/queues"
+
+    fun queueWorkers(token: String, serverId: Long, siteId: Long): List<QueueWorker> = parseOrThrow {
+        parseQueueWorkers(get(queuesPath(serverId, siteId), token))
+    }
+
+    fun queueWorker(token: String, serverId: Long, siteId: Long, workerId: Long): QueueWorker = parseOrThrow {
+        parseQueueWorker(get("${queuesPath(serverId, siteId)}/${validateResourceId(workerId)}", token))
+    }
+
+    fun createQueueWorker(
+        token: String, serverId: Long, siteId: Long, request: CreateQueueWorkerRequest
+    ): QueueWorker = parseOrThrow {
+        parseQueueWorker(write("POST", queuesPath(serverId, siteId), token, request.toJson()))
+    }
+
+    fun restartQueueWorker(token: String, serverId: Long, siteId: Long, workerId: Long): String = parseOrThrow {
+        parseMessage(
+            write("POST", "${queuesPath(serverId, siteId)}/${validateResourceId(workerId)}/restart", token, null)
+        )
+    }
+
+    fun togglePauseQueueWorker(token: String, serverId: Long, siteId: Long, workerId: Long): QueueWorker =
+        parseOrThrow {
+            parseQueueWorker(
+                write("POST", "${queuesPath(serverId, siteId)}/${validateResourceId(workerId)}/toggle-pause", token, null)
+            )
+        }
+
+    fun deleteQueueWorker(token: String, serverId: Long, siteId: Long, workerId: Long): String = parseOrThrow {
+        parseMessage(write("DELETE", "${queuesPath(serverId, siteId)}/${validateResourceId(workerId)}", token, null))
+    }
+
+    // ---- Redirects domain (site-level) ----
+
+    private fun parseRedirectEntry(item: JSONObject) = SiteRedirect(
+        id = item.getLong("id"),
+        status = item.optString("status"),
+        redirectFrom = item.optString("redirect_from"),
+        redirectTo = item.optString("redirect_to"),
+        type = item.optString("type")
+    )
+
+    fun parseRedirects(json: String): RedirectPage {
+        val root = JSONObject(json)
+        val data = root.getJSONArray("data")
+        val (page, lastPage) = pageMeta(root)
+        return RedirectPage((0 until data.length()).map { parseRedirectEntry(data.getJSONObject(it)) }, page, lastPage)
+    }
+
+    fun parseRedirect(json: String): SiteRedirect = parseRedirectEntry(JSONObject(json).getJSONObject("data"))
+
+    private fun redirectsPath(serverId: Long, siteId: Long): String = "${sitePath(serverId, siteId)}/redirects"
+
+    fun redirects(token: String, serverId: Long, siteId: Long, page: Int = 1, perPage: Int = 15): RedirectPage {
+        require(page >= 1) { "Page must be positive" }
+        return parseOrThrow {
+            parseRedirects(get("${redirectsPath(serverId, siteId)}?page=$page&per_page=${validatePageSize(perPage)}", token))
+        }
+    }
+
+    fun redirect(token: String, serverId: Long, siteId: Long, redirectId: Long): SiteRedirect = parseOrThrow {
+        parseRedirect(get("${redirectsPath(serverId, siteId)}/${validateResourceId(redirectId)}", token))
+    }
+
+    fun createRedirect(token: String, serverId: Long, siteId: Long, request: CreateRedirectRequest): SiteRedirect =
+        parseOrThrow {
+            parseRedirect(write("POST", redirectsPath(serverId, siteId), token, request.toJson()))
+        }
+
+    fun deleteRedirect(token: String, serverId: Long, siteId: Long, redirectId: Long): String = parseOrThrow {
+        parseMessage(write("DELETE", "${redirectsPath(serverId, siteId)}/${validateResourceId(redirectId)}", token, null))
+    }
+
+    // ---- Certificates domain (site-level) ----
+
+    private fun parseCertificateEntry(item: JSONObject) = SiteCertificate(
+        id = item.getLong("id"),
+        status = item.optString("status"),
+        domain = item.optString("domain"),
+        type = item.optString("type"),
+        active = item.optBoolean("active", false),
+        tenant = item.optBoolean("tenant", false),
+        siteId = item.optLong("site_id", 0),
+        serverId = item.optLong("server_id", 0),
+        expiresAt = nullableString(item, "expires_at"),
+        createdAt = item.optString("created_at")
+    )
+
+    fun parseCertificates(json: String): CertificatePage {
+        val root = JSONObject(json)
+        val data = root.getJSONArray("data")
+        val (page, lastPage) = pageMeta(root)
+        return CertificatePage(
+            (0 until data.length()).map { parseCertificateEntry(data.getJSONObject(it)) }, page, lastPage
+        )
+    }
+
+    fun parseCertificate(json: String): SiteCertificate =
+        parseCertificateEntry(JSONObject(json).getJSONObject("data"))
+
+    fun parseCertificateDownload(json: String): CertificateDownload {
+        val root = JSONObject(json)
+        return CertificateDownload(
+            certificate = root.getString("certificate"),
+            certificatePath = root.optString("certificate_path"),
+            expiresAt = nullableString(root, "expires_at")
+        )
+    }
+
+    private fun certificatesPath(serverId: Long, siteId: Long): String = "${sitePath(serverId, siteId)}/certificates"
+
+    fun certificates(token: String, serverId: Long, siteId: Long, page: Int = 1, perPage: Int = 15): CertificatePage {
+        require(page >= 1) { "Page must be positive" }
+        return parseOrThrow {
+            parseCertificates(
+                get("${certificatesPath(serverId, siteId)}?page=$page&per_page=${validatePageSize(perPage)}", token)
+            )
+        }
+    }
+
+    fun certificate(token: String, serverId: Long, siteId: Long, certificateId: Long): SiteCertificate = parseOrThrow {
+        parseCertificate(get("${certificatesPath(serverId, siteId)}/${validateResourceId(certificateId)}", token))
+    }
+
+    fun createCertificate(
+        token: String, serverId: Long, siteId: Long, request: CreateCertificateRequest
+    ): SiteCertificate = parseOrThrow {
+        parseCertificate(write("POST", certificatesPath(serverId, siteId), token, request.toJson()))
+    }
+
+    fun downloadCertificate(token: String, serverId: Long, siteId: Long, certificateId: Long): CertificateDownload =
+        parseOrThrow {
+            parseCertificateDownload(
+                get("${certificatesPath(serverId, siteId)}/${validateResourceId(certificateId)}/download", token)
+            )
+        }
+
+    fun activateCertificate(token: String, serverId: Long, siteId: Long, certificateId: Long): SiteCertificate =
+        parseOrThrow {
+            parseCertificate(
+                write(
+                    "POST",
+                    "${certificatesPath(serverId, siteId)}/${validateResourceId(certificateId)}/activate",
+                    token, null
+                )
+            )
+        }
+
+    fun deleteCertificate(token: String, serverId: Long, siteId: Long, certificateId: Long): String = parseOrThrow {
+        parseMessage(
+            write("DELETE", "${certificatesPath(serverId, siteId)}/${validateResourceId(certificateId)}", token, null)
+        )
+    }
+
+    // ---- Auth users domain (site-level basic authentication) ----
+
+    private fun parseAuthUserEntry(item: JSONObject) = AuthUser(
+        id = item.getLong("id"),
+        name = item.getString("name"),
+        path = nullableString(item, "path"),
+        createdAt = item.optString("created_at")
+    )
+
+    /** Documented list shape is a plain data array without pagination metadata. */
+    fun parseAuthUsers(json: String): List<AuthUser> {
+        val data = JSONObject(json).getJSONArray("data")
+        return (0 until data.length()).map { parseAuthUserEntry(data.getJSONObject(it)) }
+    }
+
+    fun parseAuthUser(json: String): AuthUser = parseAuthUserEntry(JSONObject(json).getJSONObject("data"))
+
+    private fun authUsersPath(serverId: Long, siteId: Long): String = "${sitePath(serverId, siteId)}/auth-users"
+
+    fun authUsers(token: String, serverId: Long, siteId: Long): List<AuthUser> = parseOrThrow {
+        parseAuthUsers(get(authUsersPath(serverId, siteId), token))
+    }
+
+    fun authUser(token: String, serverId: Long, siteId: Long, authUserId: Long): AuthUser = parseOrThrow {
+        parseAuthUser(get("${authUsersPath(serverId, siteId)}/${validateResourceId(authUserId)}", token))
+    }
+
+    fun createAuthUser(token: String, serverId: Long, siteId: Long, request: CreateAuthUserRequest): AuthUser =
+        parseOrThrow {
+            parseAuthUser(write("POST", authUsersPath(serverId, siteId), token, request.toJson()))
+        }
+
+    /** Documented delete response still carries the removed user in `data`. */
+    fun deleteAuthUser(token: String, serverId: Long, siteId: Long, authUserId: Long): AuthUser = parseOrThrow {
+        parseAuthUser(write("DELETE", "${authUsersPath(serverId, siteId)}/${validateResourceId(authUserId)}", token, null))
+    }
+
+    // ---- Aliases domain (site-level) ----
+
+    fun parseAliases(json: String): SiteAliases {
+        val data = JSONObject(json).getJSONObject("data")
+        val aliases = data.optJSONArray("aliases")
+        return SiteAliases(
+            aliases = aliases?.let { array -> (0 until array.length()).map { array.getString(it) } }.orEmpty(),
+            count = data.optInt("count", 0),
+            main = data.optString("main")
+        )
+    }
+
+    private fun aliasesPath(serverId: Long, siteId: Long): String = "${sitePath(serverId, siteId)}/aliases"
+
+    fun aliases(token: String, serverId: Long, siteId: Long): SiteAliases = parseOrThrow {
+        parseAliases(get(aliasesPath(serverId, siteId), token))
+    }
+
+    fun createAliases(token: String, serverId: Long, siteId: Long, domains: List<String>): SiteAliases {
+        val body = JSONObject()
+            .put("aliases", JSONArray().apply { validateDomainList(domains).forEach { put(it) } })
+            .toString()
+        return parseOrThrow { parseAliases(write("POST", aliasesPath(serverId, siteId), token, body)) }
+    }
+
+    fun deleteAlias(token: String, serverId: Long, siteId: Long, alias: String): SiteAliases = parseOrThrow {
+        parseAliases(
+            write("DELETE", "${aliasesPath(serverId, siteId)}/${pathSegment(validateRootDomain(alias))}", token, null)
+        )
+    }
+
+    // ---- Tenants domain (site-level multi-tenancy) ----
+
+    fun parseTenants(json: String): SiteTenants {
+        val data = JSONObject(json).getJSONObject("data")
+        val tenants = data.optJSONArray("tenants")
+        return SiteTenants(
+            tenants = tenants?.let { array -> (0 until array.length()).map { array.getString(it) } }.orEmpty(),
+            count = data.optInt("count", 0),
+            main = data.optString("main")
+        )
+    }
+
+    private fun tenantsPath(serverId: Long, siteId: Long): String = "${sitePath(serverId, siteId)}/tenants"
+
+    fun tenants(token: String, serverId: Long, siteId: Long): SiteTenants = parseOrThrow {
+        parseTenants(get(tenantsPath(serverId, siteId), token))
+    }
+
+    fun createTenants(token: String, serverId: Long, siteId: Long, domains: List<String>): SiteTenants {
+        val body = JSONObject()
+            .put("tenants", JSONArray().apply { validateDomainList(domains).forEach { put(it) } })
+            .toString()
+        return parseOrThrow { parseTenants(write("POST", tenantsPath(serverId, siteId), token, body)) }
+    }
+
+    /** Tenant deletion answers an empty 200 body, so the payload is intentionally not parsed. */
+    fun deleteTenant(token: String, serverId: Long, siteId: Long, tenant: String) {
+        write("DELETE", "${tenantsPath(serverId, siteId)}/${pathSegment(validateRootDomain(tenant))}", token, null)
+    }
+
+    /** Certificate lifecycle answers 200/201 with an empty body, so it is intentionally not parsed. */
+    fun requestTenantCertificate(
+        token: String, serverId: Long, siteId: Long, tenant: String, webhook: String = "", force: Boolean = false
+    ) {
+        val body = JSONObject().apply {
+            if (webhook.isNotBlank()) put("webhook", validateWebhookUrl(webhook))
+            if (force) put("force", true)
+        }.toString()
+        write(
+            "POST",
+            "${tenantsPath(serverId, siteId)}/${pathSegment(validateRootDomain(tenant))}/request-certificate",
+            token, body
+        )
+    }
+
+    fun revokeTenantCertificate(token: String, serverId: Long, siteId: Long, tenant: String, webhook: String = "") {
+        val body = JSONObject().apply {
+            if (webhook.isNotBlank()) put("webhook", validateWebhookUrl(webhook))
+        }.toString()
+        write(
+            "POST",
+            "${tenantsPath(serverId, siteId)}/${pathSegment(validateRootDomain(tenant))}/revoke-certificate",
+            token, body
+        )
+    }
+
+    fun tenantNginxConfiguration(token: String, serverId: Long, siteId: Long, tenant: String): String = parseOrThrow {
+        parseConfigurationContent(
+            get(
+                "${tenantsPath(serverId, siteId)}/${pathSegment(validateRootDomain(tenant))}/nginx-configuration",
+                token
+            )
+        )
+    }
+
+    fun updateTenantNginxConfiguration(
+        token: String, serverId: Long, siteId: Long, tenant: String, content: String
+    ): OperationAck {
+        require(content.isNotBlank()) { "NGINX configuration required" }
+        val body = JSONObject().put("content", content).toString()
+        return parseOrThrow {
+            parseOperationAck(
+                write(
+                    "PATCH",
+                    "${tenantsPath(serverId, siteId)}/${pathSegment(validateRootDomain(tenant))}/nginx-configuration",
+                    token, body
+                )
+            )
+        }
+    }
+
+    // ---- Monitoring domain: site uptime monitors (distinct from server metrics) ----
+
+    private fun parseSiteMonitorEntry(item: JSONObject) = SiteMonitor(
+        id = item.getLong("id"),
+        label = nullableString(item, "label"),
+        location = item.optString("location"),
+        averageUptime = flexibleString(item, "average_uptime"),
+        active = item.optBoolean("active", false),
+        createdAt = item.optString("created_at")
+    )
+
+    fun parseSiteMonitors(json: String): SiteMonitorPage {
+        val root = JSONObject(json)
+        val data = root.getJSONArray("data")
+        val (page, lastPage) = pageMeta(root)
+        return SiteMonitorPage(
+            (0 until data.length()).map { parseSiteMonitorEntry(data.getJSONObject(it)) }, page, lastPage
+        )
+    }
+
+    fun parseSiteMonitor(json: String): SiteMonitor = parseSiteMonitorEntry(JSONObject(json).getJSONObject("data"))
+
+    /** Documented list shape is a plain data array without pagination metadata. */
+    fun parseUptimeResponses(json: String): List<UptimeResponse> {
+        val data = JSONObject(json).getJSONArray("data")
+        return (0 until data.length()).map { index ->
+            val item = data.getJSONObject(index)
+            UptimeResponse(item.optDouble("response_time", 0.0), item.optString("created_at"))
+        }
+    }
+
+    private fun monitorsPath(serverId: Long, siteId: Long): String = "${sitePath(serverId, siteId)}/monitors"
+
+    fun siteMonitors(token: String, serverId: Long, siteId: Long, page: Int = 1, perPage: Int = 15): SiteMonitorPage {
+        require(page >= 1) { "Page must be positive" }
+        return parseOrThrow {
+            parseSiteMonitors(
+                get("${monitorsPath(serverId, siteId)}?page=$page&per_page=${validatePageSize(perPage)}", token)
+            )
+        }
+    }
+
+    fun siteMonitor(token: String, serverId: Long, siteId: Long, monitorId: Long): SiteMonitor = parseOrThrow {
+        parseSiteMonitor(get("${monitorsPath(serverId, siteId)}/${validateResourceId(monitorId)}", token))
+    }
+
+    fun uptimeResponses(token: String, serverId: Long, siteId: Long, monitorId: Long): List<UptimeResponse> =
+        parseOrThrow {
+            parseUptimeResponses(
+                get("${monitorsPath(serverId, siteId)}/${validateResourceId(monitorId)}/uptime-responses", token)
+            )
+        }
+
+    /** Documented delete response carries `status` plus a nullable `message`. */
+    fun deleteSiteMonitor(token: String, serverId: Long, siteId: Long, monitorId: Long): String = parseOrThrow {
+        parseOptionalMessage(
+            write("DELETE", "${monitorsPath(serverId, siteId)}/${validateResourceId(monitorId)}", token, null)
+        )
+    }
+
+    // ---- Apps domain: one-click installers on a site ----
+
+    /** App install/uninstall responses document `data` without `server_id`: injected before site parsing. */
+    private fun parseAppSite(json: String, serverId: Long): Site {
+        val data = JSONObject(json).getJSONObject("data")
+        if (!data.has("server_id")) data.put("server_id", serverId)
+        return parseSiteEntry(data)
+    }
+
+    private fun wordpressAppPath(serverId: Long, siteId: Long): String = "${sitePath(serverId, siteId)}/wordpress"
+
+    fun installWordpress(token: String, serverId: Long, siteId: Long, createDatabase: Boolean = false): Site {
+        val body = if (createDatabase) JSONObject().put("create_database", true).toString() else null
+        return parseOrThrow { parseAppSite(write("POST", wordpressAppPath(serverId, siteId), token, body), serverId) }
+    }
+
+    fun uninstallWordpress(token: String, serverId: Long, siteId: Long): Site = parseOrThrow {
+        parseAppSite(write("DELETE", wordpressAppPath(serverId, siteId), token, null), serverId)
+    }
+
+    fun installNextcloud(token: String, serverId: Long, siteId: Long): Site = parseOrThrow {
+        parseAppSite(write("POST", "${sitePath(serverId, siteId)}/nextcloud", token, null), serverId)
+    }
+
+    fun uninstallNextcloud(token: String, serverId: Long, siteId: Long): Site = parseOrThrow {
+        parseAppSite(write("DELETE", "${sitePath(serverId, siteId)}/nextcloud", token, null), serverId)
+    }
+
+    fun installStatamic(token: String, serverId: Long, siteId: Long): Site = parseOrThrow {
+        parseAppSite(write("POST", "${sitePath(serverId, siteId)}/statamic", token, null), serverId)
+    }
+
+    fun uninstallStatamic(token: String, serverId: Long, siteId: Long): Site = parseOrThrow {
+        parseAppSite(write("DELETE", "${sitePath(serverId, siteId)}/statamic", token, null), serverId)
+    }
+
+    // ---- FastCGI cache domain (site-level) ----
+
+    private fun fastcgiPath(serverId: Long, siteId: Long): String = "${sitePath(serverId, siteId)}/fastcgi-cache"
+
+    fun enableFastcgiCache(token: String, serverId: Long, siteId: Long): Site = parseOrThrow {
+        parseSite(write("POST", "${fastcgiPath(serverId, siteId)}/enable", token, null))
+    }
+
+    fun disableFastcgiCache(token: String, serverId: Long, siteId: Long): Site = parseOrThrow {
+        parseSite(write("DELETE", "${fastcgiPath(serverId, siteId)}/disable", token, null))
+    }
+
+    fun flushFastcgiCache(token: String, serverId: Long, siteId: Long): Site = parseOrThrow {
+        parseSite(write("POST", "${fastcgiPath(serverId, siteId)}/flush", token, null))
+    }
+
+    // ---- WordPress management domain ----
+
+    private fun parseWpExtensionEntry(item: JSONObject) = WpExtension(
+        name = item.getString("name"),
+        title = item.optString("title"),
+        status = item.optString("status"),
+        version = item.optString("version"),
+        updateVersion = item.optString("update_version"),
+        autoUpdate = item.optString("auto_update")
+    )
+
+    /** Documented list shape is a plain data array without pagination metadata. */
+    fun parseWpExtensions(json: String): List<WpExtension> {
+        val data = JSONObject(json).getJSONArray("data")
+        return (0 until data.length()).map { parseWpExtensionEntry(data.getJSONObject(it)) }
+    }
+
+    /** WP-CLI run and search-replace responses carry their text in `output`. */
+    fun parseWpOutput(json: String): String = JSONObject(json).optString("output")
+
+    private fun wpManagePath(serverId: Long, siteId: Long): String = "${sitePath(serverId, siteId)}/wordpress"
+
+    fun completeWordpressInstall(
+        token: String, serverId: Long, siteId: Long,
+        siteTitle: String, adminUsername: String, adminEmail: String, adminPassword: String
+    ): OperationAck {
+        require(siteTitle.isNotBlank() && adminUsername.isNotBlank() && adminPassword.isNotBlank()) {
+            "Incomplete WordPress admin data"
+        }
+        require(adminEmail.contains("@")) { "Invalid admin email" }
+        val body = JSONObject().apply {
+            put("site_title", siteTitle.trim())
+            put("admin_username", adminUsername.trim())
+            put("admin_email", adminEmail.trim())
+            put("admin_password", adminPassword)
+        }.toString()
+        return parseOrThrow {
+            parseOperationAck(write("POST", "${wpManagePath(serverId, siteId)}/complete-install", token, body))
+        }
+    }
+
+    fun wpPlugins(token: String, serverId: Long, siteId: Long, ondemand: Boolean = false): List<WpExtension> =
+        parseOrThrow {
+            parseWpExtensions(
+                get("${wpManagePath(serverId, siteId)}/plugins${if (ondemand) "?ondemand=1" else ""}", token)
+            )
+        }
+
+    fun wpThemes(token: String, serverId: Long, siteId: Long, ondemand: Boolean = false): List<WpExtension> =
+        parseOrThrow {
+            parseWpExtensions(
+                get("${wpManagePath(serverId, siteId)}/themes${if (ondemand) "?ondemand=1" else ""}", token)
+            )
+        }
+
+    private fun wpExtensionAction(
+        token: String, serverId: Long, siteId: Long, method: String, route: String,
+        field: String, name: String, ondemand: Boolean, activate: Boolean = false
+    ): OperationAck {
+        val body = JSONObject().apply {
+            put(field, validateWpSlug(name))
+            if (activate) put("activate", true)
+            if (ondemand) put("ondemand", true)
+        }.toString()
+        return parseOrThrow {
+            parseOperationAck(write(method, "${wpManagePath(serverId, siteId)}/$route", token, body))
+        }
+    }
+
+    fun activateWpPlugin(token: String, serverId: Long, siteId: Long, plugin: String, ondemand: Boolean = false) =
+        wpExtensionAction(token, serverId, siteId, "POST", "plugins/activate", "plugin", plugin, ondemand)
+
+    fun deactivateWpPlugin(token: String, serverId: Long, siteId: Long, plugin: String, ondemand: Boolean = false) =
+        wpExtensionAction(token, serverId, siteId, "POST", "plugins/deactivate", "plugin", plugin, ondemand)
+
+    fun updateWpPlugin(token: String, serverId: Long, siteId: Long, plugin: String, ondemand: Boolean = false) =
+        wpExtensionAction(token, serverId, siteId, "POST", "plugins/update", "plugin", plugin, ondemand)
+
+    fun installWpPlugin(
+        token: String, serverId: Long, siteId: Long, plugin: String, activate: Boolean = false, ondemand: Boolean = false
+    ) = wpExtensionAction(token, serverId, siteId, "POST", "plugins/install", "plugin", plugin, ondemand, activate)
+
+    /** Documented route uses DELETE with a JSON body naming the plugin. */
+    fun deleteWpPlugin(token: String, serverId: Long, siteId: Long, plugin: String, ondemand: Boolean = false) =
+        wpExtensionAction(token, serverId, siteId, "DELETE", "plugins/delete", "plugin", plugin, ondemand)
+
+    fun activateWpTheme(token: String, serverId: Long, siteId: Long, theme: String, ondemand: Boolean = false) =
+        wpExtensionAction(token, serverId, siteId, "POST", "themes/activate", "theme", theme, ondemand)
+
+    fun updateWpTheme(token: String, serverId: Long, siteId: Long, theme: String, ondemand: Boolean = false) =
+        wpExtensionAction(token, serverId, siteId, "POST", "themes/update", "theme", theme, ondemand)
+
+    fun installWpTheme(
+        token: String, serverId: Long, siteId: Long, theme: String, activate: Boolean = false, ondemand: Boolean = false
+    ) = wpExtensionAction(token, serverId, siteId, "POST", "themes/install", "theme", theme, ondemand, activate)
+
+    fun deleteWpTheme(token: String, serverId: Long, siteId: Long, theme: String, ondemand: Boolean = false) =
+        wpExtensionAction(token, serverId, siteId, "DELETE", "themes/delete", "theme", theme, ondemand)
+
+    fun toggleWpXmlrpc(token: String, serverId: Long, siteId: Long, block: Boolean): OperationAck {
+        val body = JSONObject().put("block", block).toString()
+        return parseOrThrow {
+            parseOperationAck(write("POST", "${wpManagePath(serverId, siteId)}/toggle-xmlrpc", token, body))
+        }
+    }
+
+    fun runWpCli(token: String, serverId: Long, siteId: Long, command: String, ondemand: Boolean = false): String {
+        require(command.isNotBlank()) { "WP-CLI command required" }
+        val body = JSONObject().apply {
+            put("command", command)
+            if (ondemand) put("ondemand", true)
+        }.toString()
+        return parseOrThrow { parseWpOutput(write("POST", "${wpManagePath(serverId, siteId)}/wp-cli/run", token, body)) }
+    }
+
+    fun searchReplaceWp(
+        token: String, serverId: Long, siteId: Long,
+        search: String, replace: String, dryRun: Boolean = true, ondemand: Boolean = false
+    ): String {
+        require(search.isNotBlank()) { "Search term required" }
+        val body = JSONObject().apply {
+            put("search", search)
+            put("replace", replace)
+            put("dry_run", dryRun)
+            if (ondemand) put("ondemand", true)
+        }.toString()
+        return parseOrThrow {
+            parseWpOutput(write("POST", "${wpManagePath(serverId, siteId)}/search-replace", token, body))
+        }
+    }
+
+    private fun parseWpRepositoryEntry(item: JSONObject) = WpRepository(
+        id = item.getLong("id"),
+        user = item.optString("user"),
+        name = item.getString("name"),
+        branch = item.optString("branch"),
+        type = item.optString("type"),
+        targetDirectory = item.optString("target_directory"),
+        deployScript = item.optString("deploy_script"),
+        status = item.optString("status")
+    )
+
+    /** Documented list shape is a plain data array without pagination metadata. */
+    fun parseWpRepositories(json: String): List<WpRepository> {
+        val data = JSONObject(json).getJSONArray("data")
+        return (0 until data.length()).map { parseWpRepositoryEntry(data.getJSONObject(it)) }
+    }
+
+    private fun wpRepositoriesPath(serverId: Long, siteId: Long): String =
+        "${wpManagePath(serverId, siteId)}/repositories"
+
+    fun wpRepositories(token: String, serverId: Long, siteId: Long): List<WpRepository> = parseOrThrow {
+        parseWpRepositories(get(wpRepositoriesPath(serverId, siteId), token))
+    }
+
+    fun installWpRepository(
+        token: String, serverId: Long, siteId: Long,
+        provider: String, name: String, branch: String, targetDirectory: String, sourceProviderId: Long? = null
+    ): OperationAck {
+        require(provider.isNotBlank() && branch.isNotBlank() && targetDirectory.isNotBlank()) {
+            "Incomplete repository data"
+        }
+        require(name.matches(Regex("[A-Za-z0-9._-]+/[A-Za-z0-9._-]+"))) { "Repository must be user/name" }
+        val body = JSONObject().apply {
+            put("provider", provider.trim())
+            put("name", name.trim())
+            put("branch", branch.trim())
+            put("target_directory", targetDirectory.trim())
+            sourceProviderId?.let { put("source_provider_id", validateResourceId(it)) }
+        }.toString()
+        return parseOrThrow {
+            parseOperationAck(write("POST", wpRepositoriesPath(serverId, siteId), token, body))
+        }
+    }
+
+    fun updateWpRepository(
+        token: String, serverId: Long, siteId: Long, repositoryId: Long, user: String, name: String, branch: String
+    ): OperationAck {
+        require(user.isNotBlank() && name.isNotBlank() && branch.isNotBlank()) { "Incomplete repository data" }
+        val body = JSONObject().apply {
+            put("user", user.trim())
+            put("name", name.trim())
+            put("branch", branch.trim())
+        }.toString()
+        return parseOrThrow {
+            parseOperationAck(
+                write("PATCH", "${wpRepositoriesPath(serverId, siteId)}/${validateResourceId(repositoryId)}", token, body)
+            )
+        }
+    }
+
+    fun updateWpRepositoryDeployScript(
+        token: String, serverId: Long, siteId: Long, repositoryId: Long, deployScript: String
+    ): OperationAck {
+        require(deployScript.isNotBlank()) { "Deploy script required" }
+        val body = JSONObject().put("deploy_script", deployScript).toString()
+        return parseOrThrow {
+            parseOperationAck(
+                write(
+                    "PATCH",
+                    "${wpRepositoriesPath(serverId, siteId)}/${validateResourceId(repositoryId)}/deploy-script",
+                    token, body
+                )
+            )
+        }
+    }
+
+    fun deployWpRepository(token: String, serverId: Long, siteId: Long, repositoryId: Long): OperationAck =
+        parseOrThrow {
+            parseOperationAck(
+                write(
+                    "POST",
+                    "${wpRepositoriesPath(serverId, siteId)}/${validateResourceId(repositoryId)}/deploy",
+                    token, null
+                )
+            )
+        }
+
+    fun deployAllWpRepositories(token: String, serverId: Long, siteId: Long): OperationAck = parseOrThrow {
+        parseOperationAck(write("POST", "${wpRepositoriesPath(serverId, siteId)}/deploy-all", token, null))
+    }
+
+    fun deleteWpRepository(token: String, serverId: Long, siteId: Long, repositoryId: Long): OperationAck =
+        parseOrThrow {
+            parseOperationAck(
+                write("DELETE", "${wpRepositoriesPath(serverId, siteId)}/${validateResourceId(repositoryId)}", token, null)
+            )
+        }
+
+    // ---- Containers domain: Docker containers on a server ----
+
+    private fun parseContainerEntry(item: JSONObject) = DockerContainer(
+        id = item.getLong("id"),
+        status = item.optString("status"),
+        name = item.getString("name"),
+        deployScript = item.optString("deploy_script"),
+        path = item.optString("path"),
+        lastDeployAt = nullableString(item, "last_deploy_at"),
+        createdAt = item.optString("created_at"),
+        type = item.optString("type"),
+        state = item.optString("state")
+    )
+
+    fun parseContainers(json: String): ContainerPage {
+        val root = JSONObject(json)
+        val data = root.getJSONArray("data")
+        val (page, lastPage) = pageMeta(root)
+        return ContainerPage(
+            (0 until data.length()).map { parseContainerEntry(data.getJSONObject(it)) }, page, lastPage
+        )
+    }
+
+    /** Single-container responses are documented at the root without a data wrapper; tolerate both. */
+    fun parseContainer(json: String): DockerContainer {
+        val root = JSONObject(json)
+        return parseContainerEntry(if (root.has("data")) root.getJSONObject("data") else root)
+    }
+
+    private fun containersPath(serverId: Long): String = "/servers/${validateResourceId(serverId)}/docker/containers"
+
+    fun containers(token: String, serverId: Long, page: Int = 1, perPage: Int = 15): ContainerPage {
+        require(page >= 1) { "Page must be positive" }
+        return parseOrThrow {
+            parseContainers(get("${containersPath(serverId)}?page=$page&per_page=${validatePageSize(perPage)}", token))
+        }
+    }
+
+    fun container(token: String, serverId: Long, containerId: Long): DockerContainer = parseOrThrow {
+        parseContainer(get("${containersPath(serverId)}/${validateResourceId(containerId)}", token))
+    }
+
+    fun createContainer(token: String, serverId: Long, request: ContainerRequest): DockerContainer = parseOrThrow {
+        parseContainer(write("POST", containersPath(serverId), token, request.toJson()))
+    }
+
+    fun updateContainer(token: String, serverId: Long, containerId: Long, request: ContainerRequest): DockerContainer =
+        parseOrThrow {
+            parseContainer(
+                write("PATCH", "${containersPath(serverId)}/${validateResourceId(containerId)}", token, request.toJson())
+            )
+        }
+
+    fun deleteContainer(token: String, serverId: Long, containerId: Long): String = parseOrThrow {
+        parseMessage(write("DELETE", "${containersPath(serverId)}/${validateResourceId(containerId)}", token, null))
+    }
+
+    private fun dockerFlagsBody(flags: List<String>): String? {
+        if (flags.isEmpty()) return null
+        require(flags.all { it.isNotBlank() && it == it.trim() && !it.contains(' ') }) { "Invalid docker flag" }
+        return JSONObject().put("flags", JSONArray().apply { flags.forEach { put(it) } }).toString()
+    }
+
+    fun startContainer(token: String, serverId: Long, containerId: Long, flags: List<String> = emptyList()): String =
+        parseOrThrow {
+            parseMessage(
+                write(
+                    "POST",
+                    "${containersPath(serverId)}/${validateResourceId(containerId)}/up",
+                    token, dockerFlagsBody(flags)
+                )
+            )
+        }
+
+    fun stopContainer(token: String, serverId: Long, containerId: Long, flags: List<String> = emptyList()): String =
+        parseOrThrow {
+            parseMessage(
+                write(
+                    "POST",
+                    "${containersPath(serverId)}/${validateResourceId(containerId)}/down",
+                    token, dockerFlagsBody(flags)
+                )
+            )
+        }
+
+    fun containerLogs(token: String, serverId: Long, containerId: Long, lines: Int = 100): String {
+        require(lines in 1..10000) { "Invalid log line count" }
+        return parseOrThrow {
+            parseConfigurationContent(
+                get("${containersPath(serverId)}/${validateResourceId(containerId)}/logs?lines=$lines", token)
+            )
+        }
+    }
+
+    fun linkContainerSite(
+        token: String, serverId: Long, containerId: Long, siteId: Long, port: Int, host: String = ""
+    ): String {
+        require(port in 1..65535) { "Invalid container port" }
+        val body = JSONObject().apply {
+            put("site_id", validateResourceId(siteId))
+            put("port", port)
+            if (host.isNotBlank()) put("host", host.trim())
+        }.toString()
+        return parseOrThrow {
+            parseMessage(
+                write("POST", "${containersPath(serverId)}/${validateResourceId(containerId)}/site/link", token, body)
+            )
+        }
+    }
+
+    fun unlinkContainerSite(token: String, serverId: Long, containerId: Long): String = parseOrThrow {
+        parseMessage(
+            write("DELETE", "${containersPath(serverId)}/${validateResourceId(containerId)}/site/unlink", token, null)
+        )
     }
 
     /** Wraps JSON decoding failures so 2xx garbage surfaces as a typed error, not a raw crash. */

@@ -57,6 +57,11 @@ internal fun ServerDetailScreen(
             OutlinedButton(onClick = { tab = 8 }, enabled = tab != 8) { Text(stringResource(R.string.network_rules_tab)) }
             OutlinedButton(onClick = { tab = 9 }, enabled = tab != 9) { Text(stringResource(R.string.system_users_tab)) }
             OutlinedButton(onClick = { tab = 10 }, enabled = tab != 10) { Text(stringResource(R.string.one_off_script_tab)) }
+            OutlinedButton(onClick = { tab = 11 }, enabled = tab != 11) { Text(stringResource(R.string.services_tab)) }
+            OutlinedButton(onClick = { tab = 12 }, enabled = tab != 12) { Text(stringResource(R.string.ssh_keys_tab)) }
+            OutlinedButton(onClick = { tab = 13 }, enabled = tab != 13) { Text(stringResource(R.string.load_balancer_tab)) }
+            OutlinedButton(onClick = { tab = 14 }, enabled = tab != 14) { Text(stringResource(R.string.insights_tab)) }
+            OutlinedButton(onClick = { tab = 15 }, enabled = tab != 15) { Text(stringResource(R.string.containers_tab)) }
             OutlinedButton(onClick = { tab = 3 }, enabled = tab != 3) { Text(stringResource(R.string.infos)) }
             OutlinedButton(onClick = { tab = 4 }, enabled = tab != 4) { Text(stringResource(R.string.logs)) }
         }
@@ -70,6 +75,11 @@ internal fun ServerDetailScreen(
             8 -> NetworkRulesScreen(token, server.id, lock, activity)
             9 -> SystemUsersScreen(token, server.id, lock, activity)
             10 -> OneOffScriptScreen(token, server.id)
+            11 -> ServicesScreen(token, server, lock, activity)
+            12 -> SshKeysScreen(token, server.id, lock, activity)
+            13 -> LoadBalancerScreen(token, server, lock, activity)
+            14 -> InsightsScreen(token, server.id, lock, activity)
+            15 -> ContainersScreen(token, server.id, lock, activity)
             3 -> ServerInfoTab(token, server, lock, activity, onChanged, onDeleted)
             else -> ServerLogsTab(token, server.id)
         }

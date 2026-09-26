@@ -248,6 +248,7 @@ private fun SiteDetail(
     var confirmDelete by remember { mutableStateOf(false) }
     var confirmResetPermissions by remember { mutableStateOf(false) }
     var pendingNginxContent by remember { mutableStateOf<String?>(null) }
+    var siteSection by remember(token, serverId, siteId) { mutableIntStateOf(0) }
 
     val updatedMessage = stringResource(R.string.site_updated)
     val suspendedMessage = stringResource(R.string.site_suspended)
@@ -292,6 +293,26 @@ private fun SiteDetail(
                 busy = false
             }
         }
+    }
+
+    if (siteSection != 0) {
+        Column(Modifier.fillMaxSize().padding(16.dp)) {
+            OutlinedButton(onClick = { siteSection = 0 }) { Text(stringResource(R.string.back)) }
+            when (siteSection) {
+                1 -> QueueWorkersScreen(token, serverId, siteId, lock, activity)
+                2 -> RedirectsScreen(token, serverId, siteId, lock, activity)
+                3 -> CertificatesScreen(token, serverId, siteId, lock, activity)
+                4 -> AuthUsersScreen(token, serverId, siteId, lock, activity)
+                5 -> AliasesScreen(token, serverId, siteId, lock, activity)
+                6 -> TenantsScreen(token, serverId, siteId, lock, activity)
+                7 -> SiteMonitorsScreen(token, serverId, siteId, lock, activity)
+                8 -> site?.let { details ->
+                    AppsScreen(token, serverId, siteId, details, lock, activity, onChanged = { refresh++; onChanged() })
+                }
+                else -> WordPressScreen(token, serverId, siteId, lock, activity)
+            }
+        }
+        return
     }
 
     Column(
@@ -375,6 +396,39 @@ private fun SiteDetail(
                 }
                 OutlinedButton(onClick = { envDialog = true }, enabled = !busy) {
                     Text(stringResource(R.string.env_file))
+                }
+            }
+            Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                OutlinedButton(onClick = { siteSection = 1 }, enabled = !busy) {
+                    Text(stringResource(R.string.queues_tab))
+                }
+                OutlinedButton(onClick = { siteSection = 2 }, enabled = !busy) {
+                    Text(stringResource(R.string.redirects_tab))
+                }
+                OutlinedButton(onClick = { siteSection = 3 }, enabled = !busy) {
+                    Text(stringResource(R.string.certificates_tab))
+                }
+            }
+            Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                OutlinedButton(onClick = { siteSection = 4 }, enabled = !busy) {
+                    Text(stringResource(R.string.auth_users_tab))
+                }
+                OutlinedButton(onClick = { siteSection = 5 }, enabled = !busy) {
+                    Text(stringResource(R.string.aliases_tab))
+                }
+                OutlinedButton(onClick = { siteSection = 6 }, enabled = !busy) {
+                    Text(stringResource(R.string.tenants_tab))
+                }
+            }
+            Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                OutlinedButton(onClick = { siteSection = 7 }, enabled = !busy) {
+                    Text(stringResource(R.string.site_monitors_tab))
+                }
+                OutlinedButton(onClick = { siteSection = 8 }, enabled = !busy) {
+                    Text(stringResource(R.string.apps_tab))
+                }
+                OutlinedButton(onClick = { siteSection = 9 }, enabled = !busy) {
+                    Text(stringResource(R.string.wordpress_tab))
                 }
             }
             TestDomainSection(token, serverId, siteId, busy,

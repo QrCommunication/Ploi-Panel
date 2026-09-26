@@ -1731,7 +1731,7 @@
       "domain": "projects",
       "title": "List projects",
       "operation": "List all projects",
-      "status": "not_implemented"
+      "status": "implemented_locally_unverified_live"
     },
     {
       "method": "POST",
@@ -1740,7 +1740,7 @@
       "domain": "projects",
       "title": "Create project",
       "operation": "Create a project",
-      "status": "not_implemented"
+      "status": "implemented_locally_unverified_live"
     },
     {
       "method": "GET",
@@ -1749,7 +1749,7 @@
       "domain": "projects",
       "title": "Get project",
       "operation": "Get a project",
-      "status": "not_implemented"
+      "status": "implemented_locally_unverified_live"
     },
     {
       "method": "PATCH",
@@ -1758,7 +1758,7 @@
       "domain": "projects",
       "title": "Update project",
       "operation": "Update a project",
-      "status": "not_implemented"
+      "status": "implemented_locally_unverified_live"
     },
     {
       "method": "DELETE",
@@ -1767,7 +1767,7 @@
       "domain": "projects",
       "title": "Delete project",
       "operation": "Delete a project",
-      "status": "not_implemented"
+      "status": "implemented_locally_unverified_live"
     },
     {
       "method": "GET",
@@ -2145,7 +2145,7 @@
       "domain": "services",
       "title": "Restart service",
       "operation": "Restart a service",
-      "status": "not_implemented"
+      "status": "implemented_locally_unverified_live"
     },
     {
       "method": "POST",
@@ -2154,7 +2154,7 @@
       "domain": "services",
       "title": "Reload service",
       "operation": "Reload a service",
-      "status": "not_implemented"
+      "status": "implemented_locally_unverified_live"
     },
     {
       "method": "POST",
@@ -2163,7 +2163,7 @@
       "domain": "services",
       "title": "Install WordPress CLI",
       "operation": "Install WordPress CLI",
-      "status": "not_implemented"
+      "status": "implemented_locally_unverified_live"
     },
     {
       "method": "POST",
@@ -2172,7 +2172,7 @@
       "domain": "services",
       "title": "Run WP CLI command",
       "operation": "Run a WP CLI command",
-      "status": "not_implemented"
+      "status": "implemented_locally_unverified_live"
     },
     {
       "method": "DELETE",
@@ -2181,7 +2181,7 @@
       "domain": "services",
       "title": "Uninstall WordPress CLI",
       "operation": "Uninstall WordPress CLI",
-      "status": "not_implemented"
+      "status": "implemented_locally_unverified_live"
     },
     {
       "method": "POST",
@@ -2190,7 +2190,7 @@
       "domain": "php",
       "title": "Refresh OPcache",
       "operation": "Refresh OPcache",
-      "status": "not_implemented"
+      "status": "implemented_locally_unverified_live"
     },
     {
       "method": "POST",
@@ -2199,7 +2199,7 @@
       "domain": "php",
       "title": "Enable OPcache",
       "operation": "Enable OPcache",
-      "status": "not_implemented"
+      "status": "implemented_locally_unverified_live"
     },
     {
       "method": "DELETE",
@@ -2208,7 +2208,7 @@
       "domain": "php",
       "title": "Disable OPcache",
       "operation": "Disable OPcache",
-      "status": "not_implemented"
+      "status": "implemented_locally_unverified_live"
     },
     {
       "method": "GET",
@@ -2217,7 +2217,7 @@
       "domain": "php",
       "title": "Installed PHP versions",
       "operation": "Get installed PHP versions",
-      "status": "not_implemented"
+      "status": "implemented_locally_unverified_live"
     },
     {
       "method": "POST",
@@ -2226,7 +2226,7 @@
       "domain": "php",
       "title": "Install PHP version",
       "operation": "Install PHP version",
-      "status": "not_implemented"
+      "status": "implemented_locally_unverified_live"
     },
     {
       "method": "POST",
@@ -2235,7 +2235,7 @@
       "domain": "php",
       "title": "Switch PHP CLI version",
       "operation": "Switch PHP CLI version",
-      "status": "not_implemented"
+      "status": "implemented_locally_unverified_live"
     },
     {
       "method": "GET",
@@ -2244,7 +2244,7 @@
       "domain": "ssh-keys",
       "title": "List SSH keys",
       "operation": "List all SSH keys",
-      "status": "not_implemented"
+      "status": "implemented_locally_unverified_live"
     },
     {
       "method": "POST",
@@ -2253,7 +2253,7 @@
       "domain": "ssh-keys",
       "title": "Create SSH key",
       "operation": "Create a new SSH key",
-      "status": "not_implemented"
+      "status": "implemented_locally_unverified_live"
     },
     {
       "method": "GET",
@@ -2262,7 +2262,7 @@
       "domain": "ssh-keys",
       "title": "Get SSH key",
       "operation": "Get an SSH key",
-      "status": "not_implemented"
+      "status": "implemented_locally_unverified_live"
     },
     {
       "method": "DELETE",
@@ -2271,7 +2271,7 @@
       "domain": "ssh-keys",
       "title": "Delete SSH key",
       "operation": "Delete an SSH key",
-      "status": "not_implemented"
+      "status": "implemented_locally_unverified_live"
     },
     {
       "method": "PATCH",
@@ -2280,7 +2280,7 @@
       "domain": "load-balancers",
       "title": "Attach server",
       "operation": "Attach server",
-      "status": "not_implemented"
+      "status": "implemented_locally_unverified_live"
     },
     {
       "method": "PATCH",
@@ -2289,7 +2289,7 @@
       "domain": "load-balancers",
       "title": "Detach server",
       "operation": "Detach server",
-      "status": "not_implemented"
+      "status": "implemented_locally_unverified_live"
     },
     {
       "method": "POST",
@@ -2298,7 +2298,7 @@
       "domain": "load-balancers",
       "title": "Request certificate for domain",
       "operation": "Request certificate",
-      "status": "not_implemented"
+      "status": "implemented_locally_unverified_live"
     },
     {
       "method": "DELETE",
@@ -2307,7 +2307,7 @@
       "domain": "load-balancers",
       "title": "Revoke certificate for domain",
       "operation": "Revoke certificate",
-      "status": "not_implemented"
+      "status": "implemented_locally_unverified_live"
     },
     {
       "method": "GET",
@@ -2316,7 +2316,7 @@
       "domain": "insights",
       "title": "List insights",
       "operation": "List all insights",
-      "status": "not_implemented"
+      "status": "implemented_locally_unverified_live"
     },
     {
       "method": "GET",
@@ -2325,7 +2325,7 @@
       "domain": "insights",
       "title": "Get insight",
       "operation": "Get an insight",
-      "status": "not_implemented"
+      "status": "implemented_locally_unverified_live"
     },
     {
       "method": "GET",
@@ -2334,7 +2334,7 @@
       "domain": "insights",
       "title": "Detail insight",
       "operation": "Get insight details",
-      "status": "not_implemented"
+      "status": "implemented_locally_unverified_live"
     },
     {
       "method": "POST",
@@ -2343,7 +2343,7 @@
       "domain": "insights",
       "title": "Automatically fix insight",
       "operation": "Automatically fix insight",
-      "status": "not_implemented"
+      "status": "implemented_locally_unverified_live"
     },
     {
       "method": "POST",
@@ -2352,7 +2352,7 @@
       "domain": "insights",
       "title": "Ignore insight",
       "operation": "Ignore insight",
-      "status": "not_implemented"
+      "status": "implemented_locally_unverified_live"
     },
     {
       "method": "DELETE",
@@ -2361,7 +2361,7 @@
       "domain": "insights",
       "title": "Delete insight",
       "operation": "Delete insight",
-      "status": "not_implemented"
+      "status": "implemented_locally_unverified_live"
     },
     {
       "method": "GET",
@@ -2640,7 +2640,7 @@
       "domain": "queue-workers",
       "title": "List queue workers",
       "operation": "Get all queue workers",
-      "status": "not_implemented"
+      "status": "implemented_locally_unverified_live"
     },
     {
       "method": "POST",
@@ -2649,7 +2649,7 @@
       "domain": "queue-workers",
       "title": "Create queue worker",
       "operation": "Create queue worker",
-      "status": "not_implemented"
+      "status": "implemented_locally_unverified_live"
     },
     {
       "method": "GET",
@@ -2658,7 +2658,7 @@
       "domain": "queue-workers",
       "title": "Get queue worker",
       "operation": "Get queue worker",
-      "status": "not_implemented"
+      "status": "implemented_locally_unverified_live"
     },
     {
       "method": "POST",
@@ -2667,7 +2667,7 @@
       "domain": "queue-workers",
       "title": "Restart queue worker",
       "operation": "Restart queue worker",
-      "status": "not_implemented"
+      "status": "implemented_locally_unverified_live"
     },
     {
       "method": "POST",
@@ -2676,7 +2676,7 @@
       "domain": "queue-workers",
       "title": "Pause queue worker",
       "operation": "Toggle pause",
-      "status": "not_implemented"
+      "status": "implemented_locally_unverified_live"
     },
     {
       "method": "DELETE",
@@ -2685,7 +2685,7 @@
       "domain": "queue-workers",
       "title": "Delete queue worker",
       "operation": "Delete queue worker",
-      "status": "not_implemented"
+      "status": "implemented_locally_unverified_live"
     },
     {
       "method": "GET",
@@ -2694,7 +2694,7 @@
       "domain": "redirects",
       "title": "List redirects",
       "operation": "Get all redirects",
-      "status": "not_implemented"
+      "status": "implemented_locally_unverified_live"
     },
     {
       "method": "POST",
@@ -2703,7 +2703,7 @@
       "domain": "redirects",
       "title": "Create redirect",
       "operation": "Create redirect",
-      "status": "not_implemented"
+      "status": "implemented_locally_unverified_live"
     },
     {
       "method": "GET",
@@ -2712,7 +2712,7 @@
       "domain": "redirects",
       "title": "Get redirect",
       "operation": "Get redirect",
-      "status": "not_implemented"
+      "status": "implemented_locally_unverified_live"
     },
     {
       "method": "DELETE",
@@ -2721,7 +2721,7 @@
       "domain": "redirects",
       "title": "Delete redirect",
       "operation": "Delete redirect",
-      "status": "not_implemented"
+      "status": "implemented_locally_unverified_live"
     },
     {
       "method": "GET",
@@ -2730,7 +2730,7 @@
       "domain": "certificates",
       "title": "List certificates",
       "operation": "Get all certificates",
-      "status": "not_implemented"
+      "status": "implemented_locally_unverified_live"
     },
     {
       "method": "POST",
@@ -2739,7 +2739,7 @@
       "domain": "certificates",
       "title": "Create certificate",
       "operation": "Create certificate",
-      "status": "not_implemented"
+      "status": "implemented_locally_unverified_live"
     },
     {
       "method": "GET",
@@ -2748,7 +2748,7 @@
       "domain": "certificates",
       "title": "Get certificate",
       "operation": "Get certificate",
-      "status": "not_implemented"
+      "status": "implemented_locally_unverified_live"
     },
     {
       "method": "GET",
@@ -2757,7 +2757,7 @@
       "domain": "certificates",
       "title": "Download certificate",
       "operation": "Download certificate",
-      "status": "not_implemented"
+      "status": "implemented_locally_unverified_live"
     },
     {
       "method": "POST",
@@ -2766,7 +2766,7 @@
       "domain": "certificates",
       "title": "Activate certificate",
       "operation": "Activate certificate",
-      "status": "not_implemented"
+      "status": "implemented_locally_unverified_live"
     },
     {
       "method": "DELETE",
@@ -2775,7 +2775,7 @@
       "domain": "certificates",
       "title": "Delete certificate",
       "operation": "Delete certificate",
-      "status": "not_implemented"
+      "status": "implemented_locally_unverified_live"
     },
     {
       "method": "GET",
@@ -2784,7 +2784,7 @@
       "domain": "auth-users",
       "title": "List auth users",
       "operation": "List all auth users",
-      "status": "not_implemented"
+      "status": "implemented_locally_unverified_live"
     },
     {
       "method": "POST",
@@ -2793,7 +2793,7 @@
       "domain": "auth-users",
       "title": "Create auth user",
       "operation": "Create an auth user",
-      "status": "not_implemented"
+      "status": "implemented_locally_unverified_live"
     },
     {
       "method": "GET",
@@ -2802,7 +2802,7 @@
       "domain": "auth-users",
       "title": "Get auth user",
       "operation": "Get an auth user",
-      "status": "not_implemented"
+      "status": "implemented_locally_unverified_live"
     },
     {
       "method": "DELETE",
@@ -2811,7 +2811,7 @@
       "domain": "auth-users",
       "title": "Delete auth user",
       "operation": "Delete an auth user",
-      "status": "not_implemented"
+      "status": "implemented_locally_unverified_live"
     },
     {
       "method": "GET",
@@ -2820,7 +2820,7 @@
       "domain": "aliases",
       "title": "List aliases",
       "operation": "List all aliases",
-      "status": "not_implemented"
+      "status": "implemented_locally_unverified_live"
     },
     {
       "method": "POST",
@@ -2829,7 +2829,7 @@
       "domain": "aliases",
       "title": "Create alias",
       "operation": "Create aliases",
-      "status": "not_implemented"
+      "status": "implemented_locally_unverified_live"
     },
     {
       "method": "DELETE",
@@ -2838,7 +2838,7 @@
       "domain": "aliases",
       "title": "Delete alias",
       "operation": "Delete an alias",
-      "status": "not_implemented"
+      "status": "implemented_locally_unverified_live"
     },
     {
       "method": "GET",
@@ -2847,7 +2847,7 @@
       "domain": "tenants",
       "title": "List tenants",
       "operation": "List all tenants",
-      "status": "not_implemented"
+      "status": "implemented_locally_unverified_live"
     },
     {
       "method": "POST",
@@ -2856,7 +2856,7 @@
       "domain": "tenants",
       "title": "Create tenant",
       "operation": "Create a tenant",
-      "status": "not_implemented"
+      "status": "implemented_locally_unverified_live"
     },
     {
       "method": "DELETE",
@@ -2865,7 +2865,7 @@
       "domain": "tenants",
       "title": "Delete tenant",
       "operation": "Delete a tenant",
-      "status": "not_implemented"
+      "status": "implemented_locally_unverified_live"
     },
     {
       "method": "POST",
@@ -2874,7 +2874,7 @@
       "domain": "tenants",
       "title": "Request certificate",
       "operation": "Request a certificate",
-      "status": "not_implemented"
+      "status": "implemented_locally_unverified_live"
     },
     {
       "method": "POST",
@@ -2883,7 +2883,7 @@
       "domain": "tenants",
       "title": "Delete certificate",
       "operation": "Revoke a certificate",
-      "status": "not_implemented"
+      "status": "implemented_locally_unverified_live"
     },
     {
       "method": "GET",
@@ -2892,7 +2892,7 @@
       "domain": "tenants",
       "title": "Get NGINX configuration",
       "operation": "Get NGINX configuration",
-      "status": "not_implemented"
+      "status": "implemented_locally_unverified_live"
     },
     {
       "method": "PATCH",
@@ -2901,7 +2901,7 @@
       "domain": "tenants",
       "title": "Update NGINX configuration",
       "operation": "Update NGINX configuration",
-      "status": "not_implemented"
+      "status": "implemented_locally_unverified_live"
     },
     {
       "method": "GET",
@@ -2910,7 +2910,7 @@
       "domain": "monitoring",
       "title": "List monitors",
       "operation": "List all monitors",
-      "status": "not_implemented"
+      "status": "implemented_locally_unverified_live"
     },
     {
       "method": "GET",
@@ -2919,7 +2919,7 @@
       "domain": "monitoring",
       "title": "Get monitor",
       "operation": "Get a monitor",
-      "status": "not_implemented"
+      "status": "implemented_locally_unverified_live"
     },
     {
       "method": "GET",
@@ -2928,7 +2928,7 @@
       "domain": "monitoring",
       "title": "Get uptime responses",
       "operation": "Get uptime responses",
-      "status": "not_implemented"
+      "status": "implemented_locally_unverified_live"
     },
     {
       "method": "DELETE",
@@ -2937,7 +2937,7 @@
       "domain": "monitoring",
       "title": "Delete monitor",
       "operation": "Delete a monitor",
-      "status": "not_implemented"
+      "status": "implemented_locally_unverified_live"
     },
     {
       "method": "POST",
@@ -2946,7 +2946,7 @@
       "domain": "apps",
       "title": "Install WordPress",
       "operation": "Install WordPress",
-      "status": "not_implemented"
+      "status": "implemented_locally_unverified_live"
     },
     {
       "method": "DELETE",
@@ -2955,7 +2955,7 @@
       "domain": "apps",
       "title": "Uninstall WordPress",
       "operation": "Uninstall WordPress",
-      "status": "not_implemented"
+      "status": "implemented_locally_unverified_live"
     },
     {
       "method": "POST",
@@ -2964,7 +2964,7 @@
       "domain": "apps",
       "title": "Install Nextcloud",
       "operation": "Install Nextcloud",
-      "status": "not_implemented"
+      "status": "implemented_locally_unverified_live"
     },
     {
       "method": "DELETE",
@@ -2973,7 +2973,7 @@
       "domain": "apps",
       "title": "Uninstall Nextcloud",
       "operation": "Uninstall Nextcloud",
-      "status": "not_implemented"
+      "status": "implemented_locally_unverified_live"
     },
     {
       "method": "POST",
@@ -2982,7 +2982,7 @@
       "domain": "apps",
       "title": "Install Statamic",
       "operation": "Install Statamic",
-      "status": "not_implemented"
+      "status": "implemented_locally_unverified_live"
     },
     {
       "method": "DELETE",
@@ -2991,7 +2991,7 @@
       "domain": "apps",
       "title": "Uninstall Statamic",
       "operation": "Uninstall Statamic",
-      "status": "not_implemented"
+      "status": "implemented_locally_unverified_live"
     },
     {
       "method": "POST",
@@ -3000,7 +3000,7 @@
       "domain": "wordpress-management",
       "title": "Complete install",
       "operation": "Complete install",
-      "status": "not_implemented"
+      "status": "implemented_locally_unverified_live"
     },
     {
       "method": "GET",
@@ -3009,7 +3009,7 @@
       "domain": "wordpress-management",
       "title": "List plugins",
       "operation": "List plugins",
-      "status": "not_implemented"
+      "status": "implemented_locally_unverified_live"
     },
     {
       "method": "POST",
@@ -3018,7 +3018,7 @@
       "domain": "wordpress-management",
       "title": "Activate plugin",
       "operation": "Activate plugin",
-      "status": "not_implemented"
+      "status": "implemented_locally_unverified_live"
     },
     {
       "method": "POST",
@@ -3027,7 +3027,7 @@
       "domain": "wordpress-management",
       "title": "Deactivate plugin",
       "operation": "Deactivate plugin",
-      "status": "not_implemented"
+      "status": "implemented_locally_unverified_live"
     },
     {
       "method": "POST",
@@ -3036,7 +3036,7 @@
       "domain": "wordpress-management",
       "title": "Update plugin",
       "operation": "Update plugin",
-      "status": "not_implemented"
+      "status": "implemented_locally_unverified_live"
     },
     {
       "method": "POST",
@@ -3045,7 +3045,7 @@
       "domain": "wordpress-management",
       "title": "Install plugin",
       "operation": "Install plugin",
-      "status": "not_implemented"
+      "status": "implemented_locally_unverified_live"
     },
     {
       "method": "DELETE",
@@ -3054,7 +3054,7 @@
       "domain": "wordpress-management",
       "title": "Delete plugin",
       "operation": "Delete plugin",
-      "status": "not_implemented"
+      "status": "implemented_locally_unverified_live"
     },
     {
       "method": "GET",
@@ -3063,7 +3063,7 @@
       "domain": "wordpress-management",
       "title": "List themes",
       "operation": "List themes",
-      "status": "not_implemented"
+      "status": "implemented_locally_unverified_live"
     },
     {
       "method": "POST",
@@ -3072,7 +3072,7 @@
       "domain": "wordpress-management",
       "title": "Activate theme",
       "operation": "Activate theme",
-      "status": "not_implemented"
+      "status": "implemented_locally_unverified_live"
     },
     {
       "method": "POST",
@@ -3081,7 +3081,7 @@
       "domain": "wordpress-management",
       "title": "Update theme",
       "operation": "Update theme",
-      "status": "not_implemented"
+      "status": "implemented_locally_unverified_live"
     },
     {
       "method": "POST",
@@ -3090,7 +3090,7 @@
       "domain": "wordpress-management",
       "title": "Install theme",
       "operation": "Install theme",
-      "status": "not_implemented"
+      "status": "implemented_locally_unverified_live"
     },
     {
       "method": "DELETE",
@@ -3099,7 +3099,7 @@
       "domain": "wordpress-management",
       "title": "Delete theme",
       "operation": "Delete theme",
-      "status": "not_implemented"
+      "status": "implemented_locally_unverified_live"
     },
     {
       "method": "POST",
@@ -3108,7 +3108,7 @@
       "domain": "wordpress-management",
       "title": "Toggle XML-RPC",
       "operation": "Toggle XML-RPC",
-      "status": "not_implemented"
+      "status": "implemented_locally_unverified_live"
     },
     {
       "method": "POST",
@@ -3117,7 +3117,7 @@
       "domain": "wordpress-management",
       "title": "Run WP-CLI command",
       "operation": "Run WP-CLI command",
-      "status": "not_implemented"
+      "status": "implemented_locally_unverified_live"
     },
     {
       "method": "POST",
@@ -3126,7 +3126,7 @@
       "domain": "wordpress-management",
       "title": "Search & replace",
       "operation": "Search & replace",
-      "status": "not_implemented"
+      "status": "implemented_locally_unverified_live"
     },
     {
       "method": "GET",
@@ -3135,7 +3135,7 @@
       "domain": "wordpress-management",
       "title": "List repositories",
       "operation": "List repositories",
-      "status": "not_implemented"
+      "status": "implemented_locally_unverified_live"
     },
     {
       "method": "POST",
@@ -3144,7 +3144,7 @@
       "domain": "wordpress-management",
       "title": "Install repository",
       "operation": "Install repository",
-      "status": "not_implemented"
+      "status": "implemented_locally_unverified_live"
     },
     {
       "method": "PATCH",
@@ -3153,7 +3153,7 @@
       "domain": "wordpress-management",
       "title": "Update repository",
       "operation": "Update repository",
-      "status": "not_implemented"
+      "status": "implemented_locally_unverified_live"
     },
     {
       "method": "PATCH",
@@ -3162,7 +3162,7 @@
       "domain": "wordpress-management",
       "title": "Update deploy script",
       "operation": "Update deploy script",
-      "status": "not_implemented"
+      "status": "implemented_locally_unverified_live"
     },
     {
       "method": "POST",
@@ -3171,7 +3171,7 @@
       "domain": "wordpress-management",
       "title": "Deploy repository",
       "operation": "Deploy repository",
-      "status": "not_implemented"
+      "status": "implemented_locally_unverified_live"
     },
     {
       "method": "POST",
@@ -3180,7 +3180,7 @@
       "domain": "wordpress-management",
       "title": "Deploy all repositories",
       "operation": "Deploy all repositories",
-      "status": "not_implemented"
+      "status": "implemented_locally_unverified_live"
     },
     {
       "method": "DELETE",
@@ -3189,7 +3189,7 @@
       "domain": "wordpress-management",
       "title": "Delete repository",
       "operation": "Delete repository",
-      "status": "not_implemented"
+      "status": "implemented_locally_unverified_live"
     },
     {
       "method": "POST",
@@ -3198,7 +3198,7 @@
       "domain": "fastcgi-cache",
       "title": "Enable FastCGI cache",
       "operation": "Enable FastCGI cache",
-      "status": "not_implemented"
+      "status": "implemented_locally_unverified_live"
     },
     {
       "method": "DELETE",
@@ -3207,7 +3207,7 @@
       "domain": "fastcgi-cache",
       "title": "Disable FastCGI cache",
       "operation": "Disable FastCGI cache",
-      "status": "not_implemented"
+      "status": "implemented_locally_unverified_live"
     },
     {
       "method": "POST",
@@ -3216,7 +3216,7 @@
       "domain": "fastcgi-cache",
       "title": "Flush FastCGI cache",
       "operation": "Flush FastCGI cache",
-      "status": "not_implemented"
+      "status": "implemented_locally_unverified_live"
     },
     {
       "method": "GET",
@@ -3225,7 +3225,7 @@
       "domain": "containers",
       "title": "List containers",
       "operation": "List all containers",
-      "status": "not_implemented"
+      "status": "implemented_locally_unverified_live"
     },
     {
       "method": "GET",
@@ -3234,7 +3234,7 @@
       "domain": "containers",
       "title": "Get container",
       "operation": "Retrieve a container",
-      "status": "not_implemented"
+      "status": "implemented_locally_unverified_live"
     },
     {
       "method": "POST",
@@ -3243,7 +3243,7 @@
       "domain": "containers",
       "title": "Create container",
       "operation": "Create a new container",
-      "status": "not_implemented"
+      "status": "implemented_locally_unverified_live"
     },
     {
       "method": "PATCH",
@@ -3252,7 +3252,7 @@
       "domain": "containers",
       "title": "Update container",
       "operation": "Update a container",
-      "status": "not_implemented"
+      "status": "implemented_locally_unverified_live"
     },
     {
       "method": "DELETE",
@@ -3261,7 +3261,7 @@
       "domain": "containers",
       "title": "Delete container",
       "operation": "Delete a container",
-      "status": "not_implemented"
+      "status": "implemented_locally_unverified_live"
     },
     {
       "method": "POST",
@@ -3270,7 +3270,7 @@
       "domain": "containers",
       "title": "Start container",
       "operation": "Start a container",
-      "status": "not_implemented"
+      "status": "implemented_locally_unverified_live"
     },
     {
       "method": "POST",
@@ -3279,7 +3279,7 @@
       "domain": "containers",
       "title": "Stop container",
       "operation": "Stop a container",
-      "status": "not_implemented"
+      "status": "implemented_locally_unverified_live"
     },
     {
       "method": "GET",
@@ -3288,7 +3288,7 @@
       "domain": "containers",
       "title": "Container logs",
       "operation": "Get container logs",
-      "status": "not_implemented"
+      "status": "implemented_locally_unverified_live"
     },
     {
       "method": "POST",
@@ -3297,7 +3297,7 @@
       "domain": "containers",
       "title": "Link site",
       "operation": "Link site to container",
-      "status": "not_implemented"
+      "status": "implemented_locally_unverified_live"
     },
     {
       "method": "DELETE",
@@ -3306,7 +3306,7 @@
       "domain": "containers",
       "title": "Unlink site",
       "operation": "Unlink site from container",
-      "status": "not_implemented"
+      "status": "implemented_locally_unverified_live"
     },
     {
       "method": "GET",
