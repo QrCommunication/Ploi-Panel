@@ -1,5 +1,6 @@
 package com.qrcommunication.ploipanel
 
+import android.content.Intent
 import android.content.res.Configuration
 import android.os.Bundle
 import android.view.WindowManager
@@ -7,6 +8,7 @@ import androidx.activity.compose.LocalActivity
 import androidx.activity.compose.setContent
 import androidx.compose.foundation.isSystemInDarkTheme
 import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.BoxWithConstraints
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.WindowInsets
@@ -38,8 +40,6 @@ import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Switch
 import androidx.compose.material3.Text
-import androidx.compose.material3.darkColorScheme
-import androidx.compose.material3.lightColorScheme
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.runtime.DisposableEffect
@@ -52,7 +52,6 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.toArgb
 import androidx.compose.ui.platform.LocalConfiguration
 import androidx.compose.ui.platform.LocalContext
@@ -67,23 +66,40 @@ import androidx.core.view.WindowCompat
 import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.LifecycleEventObserver
 import androidx.lifecycle.compose.LocalLifecycleOwner
+import com.qrcommunication.ploipanel.widget.WidgetRefresh
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 import java.util.Locale
 
+internal data class WidgetRoute(val profileId: String, val serverId: Long?)
+
+internal fun widgetRouteFor(profileId: String?, serverId: Long): WidgetRoute? =
+    profileId?.takeIf { it.isNotBlank() }?.let { WidgetRoute(it, serverId.takeIf { id -> id > 0L }) }
+
+internal fun widgetRouteFrom(intent: Intent?): WidgetRoute? = widgetRouteFor(
+    intent?.getStringExtra("widget_profile_id"), intent?.getLongExtra("widget_server_id", -1L) ?: -1L
+)
+
 class MainActivity : FragmentActivity() {
+    private var widgetRoute by mutableStateOf<WidgetRoute?>(null)
+
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
+        widgetRoute = widgetRouteFrom(intent)
         window.setFlags(WindowManager.LayoutParams.FLAG_SECURE, WindowManager.LayoutParams.FLAG_SECURE)
-        setContent { PloiPanel() }
+        setContent { PloiPanel(widgetRoute) { widgetRoute = null } }
+    }
+
+    override fun onNewIntent(intent: Intent) {
+        super.onNewIntent(intent)
+        setIntent(intent)
+        widgetRoute = widgetRouteFrom(intent)
     }
 }
 
-private val accent = Color(0xFF137A69)
-
 @Composable
-private fun PloiPanel() {
+private fun PloiPanel(widgetRoute: WidgetRoute?, onWidgetRouteConsumed: () -> Unit) {
     val activity = LocalActivity.current as FragmentActivity
     val systemConfiguration = LocalConfiguration.current
     val preferences = remember(activity) { UiPreferences(SharedPreferencesProfilePrefs(activity)) }
@@ -104,7 +120,7 @@ private fun PloiPanel() {
         AppTheme.DARK -> true
         AppTheme.SYSTEM -> isSystemInDarkTheme()
     }
-    val colors = if (dark) darkColorScheme(primary = Color(0xFF82DAC3)) else lightColorScheme(primary = accent)
+    val colors = if (dark) panelDarkColors else panelLightColors
     SideEffect {
         activity.window.decorView.setBackgroundColor(colors.background.toArgb())
         val controller = WindowCompat.getInsetsController(activity.window, activity.window.decorView)
@@ -112,7 +128,7 @@ private fun PloiPanel() {
         controller.isAppearanceLightNavigationBars = !dark
     }
     CompositionLocalProvider(LocalContext provides localizedContext, LocalConfiguration provides configuration) {
-    MaterialTheme(colorScheme = colors) {
+    MaterialTheme(colorScheme = colors, typography = panelTypography, shapes = panelShapes) {
         // API 35+ draws edge-to-edge even without an explicit enableEdgeToEdge call.
         // Consume system bars once at the root; the IME then reduces the usable viewport.
         Surface(modifier = Modifier.fillMaxSize().safeDrawingPadding().imePadding()) {
@@ -141,8 +157,14 @@ private fun PloiPanel() {
                 !unlocked -> PinUnlockScreen(lock, activity) { unlocked = true }
                 else -> PanelHome(
                     lock, activity, theme, language,
+                    widgetRoute = widgetRoute,
+                    onWidgetRouteConsumed = onWidgetRouteConsumed,
                     onThemeChanged = { preferences.setTheme(it); theme = it },
-                    onLanguageChanged = { preferences.setLanguage(it); language = it },
+                    onLanguageChanged = {
+                        preferences.setLanguage(it)
+                        language = it
+                        WidgetRefresh.widgetIds(activity).forEach { id -> WidgetRefresh.render(activity, id) }
+                    },
                     onLock = { unlocked = false }
                 )
             }
@@ -155,6 +177,7 @@ private fun PloiPanel() {
 @Composable
 private fun PanelHome(
     lock: AppLock, activity: FragmentActivity, theme: AppTheme, language: AppLanguage,
+    widgetRoute: WidgetRoute?, onWidgetRouteConsumed: () -> Unit,
     onThemeChanged: (AppTheme) -> Unit, onLanguageChanged: (AppLanguage) -> Unit,
     onLock: () -> Unit
 ) {
@@ -181,11 +204,45 @@ private fun PanelHome(
     var servers by remember { mutableStateOf<ServerPage?>(null) }
     var error by remember { mutableStateOf<Throwable?>(null) }
     var loading by remember { mutableStateOf(false) }
+    var deepLinkError by remember { mutableStateOf(false) }
+
+    // Route only after the application lock has been passed. Opaque widget IDs are never
+    // trusted as credentials; resolve the saved profile and server with the normal API client.
+    LaunchedEffect(widgetRoute) {
+        val route = widgetRoute ?: return@LaunchedEffect
+        deepLinkError = false
+        try {
+            val profile = store.profiles().firstOrNull { it.id == route.profileId }
+            val routeToken = profile?.let { store.tokenFor(it.id) }
+            if (profile == null || routeToken == null) {
+                deepLinkError = true
+            } else {
+                store.activate(profile.id)
+                activeProfile = profile to routeToken
+                selected = null
+                page = 1
+                panelTab = 0
+                creating = false
+                showMonitored = false
+                servers = null
+                if (route.serverId != null) {
+                    val detail = withContext(Dispatchers.IO) { PloiApi.server(routeToken, route.serverId) }
+                    selected = Server(detail.id, detail.name, detail.status, detail.ipAddress)
+                }
+            }
+        } catch (cancelled: CancellationException) {
+            throw cancelled
+        } catch (_: Exception) {
+            deepLinkError = true
+        }
+        onWidgetRouteConsumed()
+    }
 
     LaunchedEffect(token, page, refresh, panelTab) {
         val active = token ?: return@LaunchedEffect
         if (panelTab != 0) return@LaunchedEffect
         loading = true
+        servers = null
         error = null
         try {
             servers = withContext(Dispatchers.IO) { PloiApi.servers(active, page) }
@@ -209,6 +266,7 @@ private fun PanelHome(
                 OutlinedButton(onClick = onLock) { Text(stringResource(R.string.lock_now)) }
             }
             Text(stringResource(R.string.intro), style = MaterialTheme.typography.bodyLarge)
+            if (deepLinkError) Text(stringResource(R.string.widget_route_unavailable), color = MaterialTheme.colorScheme.error)
             if (profiles.isNotEmpty()) {
                 Text(stringResource(R.string.profiles), style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold)
                 profiles.forEach { profile ->
@@ -282,39 +340,49 @@ private fun PanelHome(
         Column(Modifier.fillMaxSize().padding(horizontal = 16.dp, vertical = 8.dp)) {
             // Give focused fields the whole available height in landscape and on small phones.
             if (!keyboardVisible) {
-                Column(Modifier.fillMaxWidth(), verticalArrangement = Arrangement.spacedBy(4.dp)) {
-                    Column {
-                        Text(
-                            when (panelTab) {
-                                1 -> stringResource(R.string.providers)
-                                2 -> stringResource(R.string.account)
-                                3 -> stringResource(R.string.scripts_tab)
-                                4 -> stringResource(R.string.status_pages_tab)
-                                5 -> stringResource(R.string.webserver_templates_tab)
-                                6 -> stringResource(R.string.projects_tab)
-                                7 -> stringResource(R.string.settings_tab)
-                                else -> stringResource(R.string.servers)
-                            },
-                            style = MaterialTheme.typography.titleLarge, fontWeight = FontWeight.Bold
-                        )
-                        Text(stringResource(R.string.current_profile, activeProfile?.first?.label.orEmpty()), style = MaterialTheme.typography.bodySmall)
-                    }
-                    FlowRow(horizontalArrangement = Arrangement.spacedBy(8.dp), verticalArrangement = Arrangement.spacedBy(4.dp)) {
-                        OutlinedButton(onClick = onLock) { Text(stringResource(R.string.lock_now)) }
-                        OutlinedButton(onClick = {
-                            store.deactivate()
-                            activeProfile = null
-                            draftLabel = ""
-                            draftToken = ""
-                            selected = null
-                            panelTab = 0
-                            servers = null
-                            error = null
-                            page = 1
-                        }) { Text(stringResource(R.string.disconnect)) }
+                Surface(
+                    modifier = Modifier.fillMaxWidth(),
+                    color = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.55f),
+                    shape = MaterialTheme.shapes.medium
+                ) {
+                    Column(Modifier.padding(12.dp), verticalArrangement = Arrangement.spacedBy(6.dp)) {
+                        Column {
+                            Text(
+                                when (panelTab) {
+                                    1 -> stringResource(R.string.providers)
+                                    2 -> stringResource(R.string.account)
+                                    3 -> stringResource(R.string.scripts_tab)
+                                    4 -> stringResource(R.string.status_pages_tab)
+                                    5 -> stringResource(R.string.webserver_templates_tab)
+                                    6 -> stringResource(R.string.projects_tab)
+                                    7 -> stringResource(R.string.settings_tab)
+                                    else -> stringResource(R.string.servers)
+                                },
+                                style = MaterialTheme.typography.titleLarge, fontWeight = FontWeight.Bold
+                            )
+                            Text(stringResource(R.string.current_profile, activeProfile?.first?.label.orEmpty()),
+                                style = MaterialTheme.typography.bodySmall)
+                        }
+                        FlowRow(horizontalArrangement = Arrangement.spacedBy(8.dp), verticalArrangement = Arrangement.spacedBy(4.dp)) {
+                            OutlinedButton(onClick = onLock) { Text(stringResource(R.string.lock_now)) }
+                            OutlinedButton(onClick = {
+                                store.deactivate()
+                                activeProfile = null
+                                draftLabel = ""
+                                draftToken = ""
+                                selected = null
+                                panelTab = 0
+                                servers = null
+                                error = null
+                                page = 1
+                            }) { Text(stringResource(R.string.disconnect)) }
+                        }
                     }
                 }
                 Spacer(Modifier.height(8.dp))
+                if (deepLinkError) {
+                    Text(stringResource(R.string.widget_route_unavailable), color = MaterialTheme.colorScheme.error)
+                }
                 val sections = listOf(
                     R.string.servers, R.string.providers, R.string.account, R.string.scripts_tab,
                     R.string.status_pages_tab, R.string.webserver_templates_tab, R.string.projects_tab,
@@ -369,7 +437,7 @@ private fun PanelHome(
                             )
                             showMonitored -> Column {
                                 OutlinedButton(onClick = { showMonitored = false }) { Text(stringResource(R.string.back)) }
-                                MonitoredServersScreen(token)
+                                Box(Modifier.weight(1f).fillMaxWidth()) { MonitoredServersScreen(token) }
                             }
                             expanded -> Row(horizontalArrangement = Arrangement.spacedBy(16.dp)) {
                                 Column(Modifier.weight(1f)) {
@@ -388,11 +456,13 @@ private fun PanelHome(
                             }
                             selected != null -> Column {
                                 OutlinedButton(onClick = { selected = null }) { Text(stringResource(R.string.back)) }
-                                ServerDetailScreen(
-                                    token, selected!!, lock, activity, refresh,
-                                    onChanged = { refresh++ },
-                                    onDeleted = { selected = null; refresh++ }
-                                )
+                                Box(Modifier.weight(1f).fillMaxWidth()) {
+                                    ServerDetailScreen(
+                                        token, selected!!, lock, activity, refresh,
+                                        onChanged = { refresh++ },
+                                        onDeleted = { selected = null; refresh++ }
+                                    )
+                                }
                             }
                             else -> ServerList(servers, loading, error, page, onPage = { page = it }, onRefresh = { refresh++ },
                                 onSelect = { selected = it }, onCreate = { creating = true }, onMonitored = { showMonitored = true })
@@ -455,28 +525,43 @@ private fun ServerList(
     onPage: (Int) -> Unit, onRefresh: () -> Unit, onSelect: (Server) -> Unit,
     onCreate: () -> Unit, onMonitored: () -> Unit
 ) {
-    Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
-        FlowRow(horizontalArrangement = Arrangement.spacedBy(8.dp), verticalArrangement = Arrangement.spacedBy(4.dp)) {
-            OutlinedButton(onClick = onRefresh, enabled = !loading) { Text(stringResource(R.string.reload)) }
-            OutlinedButton(onClick = onCreate) { Text(stringResource(R.string.new_server)) }
-            OutlinedButton(onClick = onMonitored) { Text(stringResource(R.string.monitored_overview)) }
-        }
-        if (loading) CircularProgressIndicator()
-        if (error != null) ApiErrorText(error)
-        if (pageData != null) {
-            Row(horizontalArrangement = Arrangement.spacedBy(12.dp)) {
-                OutlinedButton(onClick = { onPage(page - 1) }, enabled = page > 1) { Text(stringResource(R.string.previous)) }
-                Text(stringResource(R.string.page, pageData.currentPage.toString(), pageData.lastPage.toString()), Modifier.padding(top = 12.dp))
-                OutlinedButton(onClick = { onPage(page + 1) }, enabled = pageData.hasNext) { Text(stringResource(R.string.next)) }
+    LazyColumn(
+        modifier = Modifier.fillMaxSize(),
+        verticalArrangement = Arrangement.spacedBy(12.dp),
+        contentPadding = androidx.compose.foundation.layout.PaddingValues(bottom = 24.dp)
+    ) {
+        item {
+            FlowRow(horizontalArrangement = Arrangement.spacedBy(8.dp), verticalArrangement = Arrangement.spacedBy(4.dp)) {
+                Button(onClick = onCreate) { Text(stringResource(R.string.new_server)) }
+                OutlinedButton(onClick = onMonitored) { Text(stringResource(R.string.monitored_overview)) }
+                OutlinedButton(onClick = onRefresh, enabled = !loading) { Text(stringResource(R.string.reload)) }
             }
-            LazyColumn(verticalArrangement = Arrangement.spacedBy(8.dp)) {
-                items(pageData.servers, key = { it.id }) { server ->
-                    Card(onClick = { onSelect(server) }, shape = RoundedCornerShape(16.dp), modifier = Modifier.fillMaxWidth()) {
-                        Column(Modifier.padding(16.dp)) {
-                            Text(server.name, style = MaterialTheme.typography.titleMedium)
-                            Text(stringResource(R.string.server_status, server.status))
-                            Text(server.ipAddress)
-                        }
+        }
+        if (loading) item { CircularProgressIndicator(Modifier.padding(24.dp)) }
+        if (error != null) item { ApiErrorText(error) }
+        if (pageData != null) {
+            item { ServerPageHero(pageData) }
+            if (pageData.servers.isEmpty()) item {
+                Text(stringResource(R.string.dashboard_empty), style = MaterialTheme.typography.bodyLarge)
+            }
+            items(pageData.servers, key = { it.id }) { server ->
+                ServerItemCard(server) { onSelect(server) }
+            }
+            item {
+                FlowRow(
+                    horizontalArrangement = Arrangement.spacedBy(12.dp),
+                    verticalArrangement = Arrangement.spacedBy(4.dp),
+                    modifier = Modifier.fillMaxWidth()
+                ) {
+                    OutlinedButton(onClick = { onPage(page - 1) }, enabled = page > 1) {
+                        Text(stringResource(R.string.previous))
+                    }
+                    Text(
+                        stringResource(R.string.page, pageData.currentPage.toString(), pageData.lastPage.toString()),
+                        Modifier.padding(top = 12.dp), style = MaterialTheme.typography.bodySmall
+                    )
+                    OutlinedButton(onClick = { onPage(page + 1) }, enabled = pageData.hasNext) {
+                        Text(stringResource(R.string.next))
                     }
                 }
             }

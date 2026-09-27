@@ -1,6 +1,7 @@
 package com.qrcommunication.ploipanel
 
 import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.FlowRow
@@ -64,6 +65,12 @@ internal fun ServerDetailScreen(
         tabState.animateScrollToItem(tabs.indexOfFirst { it.first == tab }.coerceAtLeast(0))
     }
     Column(Modifier.fillMaxSize()) {
+        Column(Modifier.fillMaxWidth().padding(bottom = 4.dp)) {
+            Text(server.name, style = MaterialTheme.typography.titleMedium,
+                maxLines = 1, color = MaterialTheme.colorScheme.onSurface)
+            Text(server.ipAddress, style = MaterialTheme.typography.bodySmall,
+                color = MaterialTheme.colorScheme.onSurfaceVariant)
+        }
         LazyRow(
             modifier = Modifier.fillMaxWidth(),
             state = tabState,
@@ -77,23 +84,25 @@ internal fun ServerDetailScreen(
                 )
             }
         }
-        when (tab) {
-            0 -> MonitoringView(token, server, refresh)
-            1 -> SitesScreen(token, server.id, lock, activity)
-            2 -> DatabasesScreen(token, server.id, lock, activity)
-            5 -> BackupsTab(token, server.id, lock, activity)
-            6 -> CrontabsScreen(token, server.id, lock, activity)
-            7 -> DaemonsScreen(token, server.id, lock, activity)
-            8 -> NetworkRulesScreen(token, server.id, lock, activity)
-            9 -> SystemUsersScreen(token, server.id, lock, activity)
-            10 -> OneOffScriptScreen(token, server.id)
-            11 -> ServicesScreen(token, server, lock, activity)
-            12 -> SshKeysScreen(token, server.id, lock, activity)
-            13 -> LoadBalancerScreen(token, server, lock, activity)
-            14 -> InsightsScreen(token, server.id, lock, activity)
-            15 -> ContainersScreen(token, server.id, lock, activity)
-            3 -> ServerInfoTab(token, server, lock, activity, onChanged, onDeleted)
-            else -> ServerLogsTab(token, server.id)
+        Box(Modifier.weight(1f).fillMaxWidth()) {
+            when (tab) {
+                0 -> MonitoringView(token, server, refresh)
+                1 -> SitesScreen(token, server.id, lock, activity)
+                2 -> DatabasesScreen(token, server.id, lock, activity)
+                5 -> BackupsTab(token, server.id, lock, activity)
+                6 -> CrontabsScreen(token, server.id, lock, activity)
+                7 -> DaemonsScreen(token, server.id, lock, activity)
+                8 -> NetworkRulesScreen(token, server.id, lock, activity)
+                9 -> SystemUsersScreen(token, server.id, lock, activity)
+                10 -> OneOffScriptScreen(token, server.id)
+                11 -> ServicesScreen(token, server, lock, activity)
+                12 -> SshKeysScreen(token, server.id, lock, activity)
+                13 -> LoadBalancerScreen(token, server, lock, activity)
+                14 -> InsightsScreen(token, server.id, lock, activity)
+                15 -> ContainersScreen(token, server.id, lock, activity)
+                3 -> ServerInfoTab(token, server, lock, activity, onChanged, onDeleted)
+                else -> ServerLogsTab(token, server.id)
+            }
         }
     }
 }

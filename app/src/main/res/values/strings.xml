@@ -789,4 +789,14 @@
     <string name="settings_profile_token_invalid">Jeton illisible : ce profil ne peut pas être activé.</string>
     <string name="monitor_response_time">Temps de réponse</string>
     <string name="monitor_response_range">Min %1$s s · Max %2$s s</string>
+    <string name="dashboard_eyebrow">VOTRE INFRASTRUCTURE</string>
+    <plurals name="dashboard_page_count">
+        <item quantity="one">%1$d serveur sur cette page</item>
+        <item quantity="other">%1$d serveurs sur cette page</item>
+    </plurals>
+    <string name="dashboard_page_scope">Page %1$s / %2$s · données Ploi</string>
+    <string name="dashboard_empty">Aucun serveur sur cette page. Créez-en un ou actualisez la liste.</string>
+    <string name="widget_route_unavailable">Impossible d’ouvrir ce serveur depuis le widget. Vérifiez le profil et réessayez.</string>
+    <string name="settings_widgets">Widgets d’accueil</string>
+    <string name="settings_widgets_hint">Depuis l’écran d’accueil, ouvrez « Widgets » puis choisissez Ploi · Serveur ou Ploi · Serveurs. Configurez le profil, les serveurs et les mesures après avoir saisi votre PIN. Les données s’affichent sur l’écran d’accueil déverrouillé et s’actualisent au mieux selon Android (minimum 15 min, non garanti).</string>
 </resources>

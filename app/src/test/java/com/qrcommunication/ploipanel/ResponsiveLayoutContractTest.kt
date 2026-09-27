@@ -48,6 +48,19 @@ class ResponsiveLayoutContractTest {
         assertTrue(lockScreen.contains("R.string.use_biometric"))
     }
 
+    @Test fun dashboardUsesActualPageAndDetailStaysInsideViewport() {
+        val main = source("${ui}MainActivity.kt")
+        val detail = source("${ui}ServerScreen.kt")
+        val dashboard = source("${ui}ServerDashboard.kt")
+        assertTrue(dashboard.contains("page.servers.size"))
+        assertTrue(dashboard.contains("page.currentPage.toString(), page.lastPage.toString()"))
+        assertTrue(main.contains("servers = null"))
+        assertTrue(main.contains("ServerPageHero(pageData)"))
+        assertTrue(main.contains("ServerItemCard(server)"))
+        assertTrue(main.contains("Box(Modifier.weight(1f).fillMaxWidth())"))
+        assertTrue(detail.contains("Box(Modifier.weight(1f).fillMaxWidth())"))
+    }
+
     @Test fun onboardingAndLongSiteActionsRemainScrollable() {
         val onboarding = source("${ui}LockScreen.kt")
         val site = source("${ui}SitesScreen.kt")

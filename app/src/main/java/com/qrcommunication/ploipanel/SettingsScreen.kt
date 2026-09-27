@@ -1,5 +1,6 @@
 package com.qrcommunication.ploipanel
 
+import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.FlowRow
@@ -13,7 +14,9 @@ import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Button
 import androidx.compose.material3.Card
+import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.FilterChip
+import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.OutlinedTextField
@@ -57,13 +60,22 @@ internal fun SettingsScreen(
         Modifier.fillMaxSize().verticalScroll(rememberScrollState()).padding(16.dp),
         verticalArrangement = Arrangement.spacedBy(18.dp)
     ) {
-        Text(stringResource(R.string.settings_profiles), style = MaterialTheme.typography.titleLarge, fontWeight = FontWeight.Bold)
+        SettingsSectionHeading(R.string.settings_profiles)
         if (profileError != 0) Text(stringResource(profileError), color = MaterialTheme.colorScheme.error)
         profiles.forEach { profile ->
-            Card(Modifier.fillMaxWidth()) {
+            val isActive = profile.id == active?.id
+            Card(
+                modifier = Modifier.fillMaxWidth(),
+                colors = CardDefaults.cardColors(
+                    containerColor = if (isActive) MaterialTheme.colorScheme.primaryContainer else MaterialTheme.colorScheme.surface
+                ),
+                border = BorderStroke(
+                    1.dp, if (isActive) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.outlineVariant
+                )
+            ) {
                 Column(Modifier.fillMaxWidth().padding(16.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
                     Text(profile.label, style = MaterialTheme.typography.titleMedium)
-                    if (profile.id == active?.id) Text(
+                    if (isActive) Text(
                         stringResource(R.string.settings_profile_active), color = MaterialTheme.colorScheme.primary
                     )
                     FlowRow(
@@ -93,7 +105,7 @@ internal fun SettingsScreen(
             Text(stringResource(R.string.settings_profile_add))
         }
 
-        Text(stringResource(R.string.settings_appearance), style = MaterialTheme.typography.titleLarge, fontWeight = FontWeight.Bold)
+        SettingsSectionHeading(R.string.settings_appearance)
         Text(stringResource(R.string.settings_theme), style = MaterialTheme.typography.titleMedium)
         FlowRow(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
             listOf(AppTheme.SYSTEM, AppTheme.LIGHT, AppTheme.DARK).forEach { option ->
@@ -117,7 +129,19 @@ internal fun SettingsScreen(
             }
         }
 
-        Text(stringResource(R.string.settings_security), style = MaterialTheme.typography.titleLarge, fontWeight = FontWeight.Bold)
+        SettingsSectionHeading(R.string.settings_widgets)
+        Card(
+            colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.secondaryContainer),
+            modifier = Modifier.fillMaxWidth()
+        ) {
+            Text(
+                stringResource(R.string.settings_widgets_hint),
+                Modifier.padding(16.dp), style = MaterialTheme.typography.bodyMedium,
+                color = MaterialTheme.colorScheme.onSecondaryContainer
+            )
+        }
+
+        SettingsSectionHeading(R.string.settings_security)
         BiometricToggle(lock, activity)
         Text(stringResource(R.string.settings_biometric_hint), style = MaterialTheme.typography.bodySmall)
         if (pinChanged) Text(stringResource(R.string.settings_pin_changed), color = MaterialTheme.colorScheme.primary)
@@ -126,8 +150,17 @@ internal fun SettingsScreen(
             OutlinedButton(onClick = onLock) { Text(stringResource(R.string.lock_now)) }
         }
 
-        Text(stringResource(R.string.settings_about), style = MaterialTheme.typography.titleLarge, fontWeight = FontWeight.Bold)
-        Text(stringResource(R.string.settings_version, BuildConfig.VERSION_NAME))
+        SettingsSectionHeading(R.string.settings_about)
+        Card(
+            colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.secondaryContainer),
+            modifier = Modifier.fillMaxWidth()
+        ) {
+            Text(
+                stringResource(R.string.settings_version, BuildConfig.VERSION_NAME),
+                Modifier.padding(18.dp), color = MaterialTheme.colorScheme.onSecondaryContainer,
+                style = MaterialTheme.typography.titleMedium
+            )
+        }
     }
 
     if (addProfile) ProfileEditorDialog(
@@ -170,6 +203,14 @@ internal fun SettingsScreen(
     if (changePin) ChangePinDialog(lock, onDismiss = { changePin = false }) {
         changePin = false
         pinChanged = true
+    }
+}
+
+@Composable
+private fun SettingsSectionHeading(title: Int) {
+    Column(Modifier.fillMaxWidth(), verticalArrangement = Arrangement.spacedBy(8.dp)) {
+        Text(stringResource(title), style = MaterialTheme.typography.titleLarge, fontWeight = FontWeight.Bold)
+        HorizontalDivider(color = MaterialTheme.colorScheme.outlineVariant)
     }
 }
 

@@ -789,4 +789,14 @@
     <string name="settings_profile_token_invalid">Token unreadable: this profile cannot be activated.</string>
     <string name="monitor_response_time">Response time</string>
     <string name="monitor_response_range">Min %1$s s · Max %2$s s</string>
+    <string name="dashboard_eyebrow">YOUR INFRASTRUCTURE</string>
+    <plurals name="dashboard_page_count">
+        <item quantity="one">%1$d server on this page</item>
+        <item quantity="other">%1$d servers on this page</item>
+    </plurals>
+    <string name="dashboard_page_scope">Page %1$s / %2$s · Ploi data</string>
+    <string name="dashboard_empty">No servers on this page. Add one or refresh the list.</string>
+    <string name="widget_route_unavailable">Cannot open this server from the widget. Check the profile and try again.</string>
+    <string name="settings_widgets">Home screen widgets</string>
+    <string name="settings_widgets_hint">From your home screen, open “Widgets” and choose Ploi · Server or Ploi · Servers. Enter your PIN to select the profile, servers and metrics. Data appears on the unlocked home screen and refreshes on Android’s best-effort schedule (minimum 15 minutes, not guaranteed).</string>
 </resources>
