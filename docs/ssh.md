@@ -29,14 +29,28 @@ Livré (pur JVM, couvert par `SshKnownHostsTest` et `SshKeyVaultTest`) :
   structurellement au type annoncé (l'en-tête du blob SSH est vérifié).
 - **Suppression de profil** : `ProfileStore.remove` efface désormais aussi le coffre SSH et
   le magasin de confiance du profil, sans toucher aux autres profils.
+- **Écran de gestion** (`SshDeviceScreen.kt`, section « SSH sur cet appareil » des réglages,
+  profil actif uniquement) :
+  - liste des clés importées (nom, type, date d'ajout, alerte `ssh-rsa`) ; import par collage
+    d'une ligne publique OpenSSH (`type base64 [commentaire]`, le commentaire est ignoré) et
+    du PEM privé ; la suppression d'une clé exige une confirmation PIN/biométrie fraîche
+    (`SensitiveConfirmDialog`) ; le PEM privé n'est **jamais** relu pour affichage ;
+  - liste des hôtes épinglés (hôte:port, type, empreinte `SHA256:`, alerte `ssh-rsa`) ;
+    retrait d'une épingle et effacement complet derrière des confirmations explicites ;
+    import `known_hosts` par collage avec rapport visible (ajouts + lignes rejetées) tant que
+    l'opérateur ne ferme pas la boîte de dialogue ;
+  - le formulaire d'import reste ouvert en cas d'erreur de validation pour correction ;
+  - alias Keystore dédié `ploi-panel.ssh-keys`, distinct des jetons Ploi et des modèles de
+    scripts.
 
 ## Explicitement NON implémenté
 
 - Aucune session réseau SSH, aucun terminal, aucune exécution de commande : aucune
   bibliothèque SSH n'est encore embarquée et aucune connexion n'a été testée.
 - Pas de génération de clés sur l'appareil, pas de passphrase PEM, pas d'agent forwarding.
-- Pas d'UI : les écrans de confirmation d'empreinte, de re-pin et de gestion des clés
-  restent à construire au-dessus de ce socle.
+- Pas de boîte de dialogue de confirmation d'empreinte ni de re-pin **à la connexion** : ces
+  écrans n'auront de sens qu'avec une vraie session SSH. L'écran de gestion ne permet
+  volontairement ni `trust()` ni `repin()` — seulement l'import, le retrait et l'effacement.
 
 ## Modèle de menace et règles permanentes
 

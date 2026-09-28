@@ -161,6 +161,9 @@ internal fun SettingsScreen(
             OutlinedButton(onClick = onLock) { Text(stringResource(R.string.lock_now)) }
         }
 
+        SettingsSectionHeading(R.string.ssh_device_title)
+        SshDeviceSection(active?.id, lock, activity)
+
         SettingsSectionHeading(R.string.settings_about)
         Card(
             colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.secondaryContainer),

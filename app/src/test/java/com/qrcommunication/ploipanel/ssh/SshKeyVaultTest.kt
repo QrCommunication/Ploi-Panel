@@ -208,4 +208,31 @@ b3BlbnNzaC1rZXktdjEAAAAABG5vbmUAAAAEbm9uZQ==
         assertTrue(v.list("p2").isEmpty())
         assertThrows(IllegalArgumentException::class.java) { v.remove("p2", "whatever") }
     }
+
+    @Test
+    fun `public key line parses type and payload and drops comment`() {
+        val parsed = SshKeyVault.parsePublicKeyLine("  ssh-ed25519  $PUBLIC_A  deploy@laptop ")
+        assertEquals("ssh-ed25519", parsed.first)
+        assertEquals(PUBLIC_A, parsed.second)
+    }
+
+    @Test
+    fun `public key line rejects missing payload and unsupported types`() {
+        assertThrows(IllegalArgumentException::class.java) { SshKeyVault.parsePublicKeyLine("") }
+        assertThrows(IllegalArgumentException::class.java) { SshKeyVault.parsePublicKeyLine("ssh-ed25519") }
+        // Hardware-backed sk-* types are host-key material only, never importable PEM keys.
+        assertThrows(IllegalArgumentException::class.java) {
+            SshKeyVault.parsePublicKeyLine("«redacted:sk-…»@openssh.com $PUBLIC_A")
+        }
+    }
+
+    @Test
+    fun `import through a parsed public key line round trips`() {
+        val prefs = VaultMemoryPrefs()
+        val v = vault(prefs)
+        val (keyType, publicKey) = SshKeyVault.parsePublicKeyLine("ssh-ed25519 $PUBLIC_A comment")
+        val entry = v.import("p1", "via line", keyType, OPENSSH_PEM, publicKey)
+        assertEquals("ssh-ed25519", entry.keyType)
+        assertEquals(PUBLIC_A, entry.publicKeyBase64)
+    }
 }

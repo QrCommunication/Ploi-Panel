@@ -1,0 +1,37 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="ssh_device_title">SSH sur cet appareil</string>
+    <string name="ssh_device_hint">Clés privées et empreintes d’hôtes propres à ce profil, stockées sur l’appareil (clés chiffrées). La session SSH (connexion, terminal) n’est pas encore disponible.</string>
+    <string name="ssh_device_need_profile">Activez un profil pour gérer ses clés SSH et ses hôtes de confiance.</string>
+    <string name="ssh_keys_heading">Clés privées importées</string>
+    <string name="ssh_keys_empty">Aucune clé importée pour ce profil.</string>
+    <string name="ssh_key_added">Ajoutée le %1$s</string>
+    <string name="ssh_weak_rsa">ssh-rsa (SHA-1) : réservé aux hôtes anciens.</string>
+    <string name="ssh_key_import">Importer une clé</string>
+    <string name="ssh_key_label">Nom de la clé</string>
+    <string name="ssh_key_public_line">Clé publique (ligne OpenSSH)</string>
+    <string name="ssh_key_public_hint">ssh-ed25519 AAAA… commentaire</string>
+    <string name="ssh_key_private_pem">Clé privée (PEM)</string>
+    <string name="ssh_key_imported">Clé importée et chiffrée.</string>
+    <string name="ssh_key_delete">Supprimer</string>
+    <string name="ssh_key_delete_confirm">Supprimer la clé « %1$s » de cet appareil ? Le PEM privé sera effacé définitivement.</string>
+    <string name="ssh_hosts_heading">Hôtes de confiance (TOFU)</string>
+    <string name="ssh_hosts_empty">Aucun hôte épinglé pour ce profil.</string>
+    <string name="ssh_host_revoke">Retirer</string>
+    <string name="ssh_host_revoke_confirm">Retirer l’empreinte de %1$s ? La prochaine connexion demandera une nouvelle confirmation explicite.</string>
+    <string name="ssh_hosts_import">Importer known_hosts</string>
+    <string name="ssh_hosts_import_hint">Collez le contenu d’un fichier known_hosts. Hôtes hachés, jokers, marqueurs et conflits sont rejetés et signalés, jamais appliqués.</string>
+    <string name="ssh_hosts_imported">Épingles ajoutées : %1$d</string>
+    <string name="ssh_hosts_import_errors">Lignes rejetées :</string>
+    <string name="ssh_hosts_clear">Tout effacer</string>
+    <string name="ssh_hosts_clear_confirm">Effacer toutes les empreintes d’hôtes de ce profil ? Chaque prochaine connexion demandera une confirmation explicite.</string>
+    <string name="ssh_close">Fermer</string>
+    <string name="ssh_error_public_line">Ligne de clé publique attendue : type puis données base64.</string>
+    <string name="ssh_error_key_type">Type de clé non pris en charge.</string>
+    <string name="ssh_error_invalid_label">Nom de clé invalide.</string>
+    <string name="ssh_error_duplicate_label">Une clé porte déjà ce nom.</string>
+    <string name="ssh_error_limit">Nombre maximal de clés atteint.</string>
+    <string name="ssh_error_encrypted_pem">Les clés PEM protégées par phrase de passe ne sont pas prises en charge.</string>
+    <string name="ssh_error_malformed_key">Clé privée ou publique illisible.</string>
+    <string name="ssh_error_vault">Coffre SSH illisible : données corrompues ou clé de chiffrement absente.</string>
+</resources>

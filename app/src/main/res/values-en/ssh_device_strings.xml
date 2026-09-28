@@ -1,0 +1,37 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="ssh_device_title">SSH on this device</string>
+    <string name="ssh_device_hint">Private keys and host fingerprints scoped to this profile, stored on the device (keys encrypted). SSH sessions (connect, terminal) are not available yet.</string>
+    <string name="ssh_device_need_profile">Activate a profile to manage its SSH keys and trusted hosts.</string>
+    <string name="ssh_keys_heading">Imported private keys</string>
+    <string name="ssh_keys_empty">No key imported for this profile.</string>
+    <string name="ssh_key_added">Added %1$s</string>
+    <string name="ssh_weak_rsa">ssh-rsa (SHA-1): for legacy hosts only.</string>
+    <string name="ssh_key_import">Import a key</string>
+    <string name="ssh_key_label">Key name</string>
+    <string name="ssh_key_public_line">Public key (OpenSSH line)</string>
+    <string name="ssh_key_public_hint">ssh-ed25519 AAAA… comment</string>
+    <string name="ssh_key_private_pem">Private key (PEM)</string>
+    <string name="ssh_key_imported">Key imported and encrypted.</string>
+    <string name="ssh_key_delete">Delete</string>
+    <string name="ssh_key_delete_confirm">Delete key “%1$s” from this device? The private PEM will be erased permanently.</string>
+    <string name="ssh_hosts_heading">Trusted hosts (TOFU)</string>
+    <string name="ssh_hosts_empty">No host pinned for this profile.</string>
+    <string name="ssh_host_revoke">Remove</string>
+    <string name="ssh_host_revoke_confirm">Remove the fingerprint for %1$s? The next connection will require a new explicit confirmation.</string>
+    <string name="ssh_hosts_import">Import known_hosts</string>
+    <string name="ssh_hosts_import_hint">Paste the contents of a known_hosts file. Hashed hosts, wildcards, markers and conflicts are rejected and reported, never applied.</string>
+    <string name="ssh_hosts_imported">Pins added: %1$d</string>
+    <string name="ssh_hosts_import_errors">Rejected lines:</string>
+    <string name="ssh_hosts_clear">Clear all</string>
+    <string name="ssh_hosts_clear_confirm">Erase every host fingerprint of this profile? Each next connection will require an explicit confirmation.</string>
+    <string name="ssh_close">Close</string>
+    <string name="ssh_error_public_line">Expected public key line: type then base64 data.</string>
+    <string name="ssh_error_key_type">Unsupported key type.</string>
+    <string name="ssh_error_invalid_label">Invalid key name.</string>
+    <string name="ssh_error_duplicate_label">A key already uses this name.</string>
+    <string name="ssh_error_limit">Maximum number of keys reached.</string>
+    <string name="ssh_error_encrypted_pem">Passphrase-protected PEM keys are not supported.</string>
+    <string name="ssh_error_malformed_key">Unreadable private or public key.</string>
+    <string name="ssh_error_vault">Unreadable SSH vault: corrupted data or missing encryption key.</string>
+</resources>

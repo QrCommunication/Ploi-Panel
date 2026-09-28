@@ -73,6 +73,19 @@ internal class SshKeyVault(private val prefs: ProfilePrefs, private val cipher: 
             return trimmed
         }
 
+        /**
+         * Splits an OpenSSH public key line (`type base64 [comment]`) into its key type and
+         * base64 payload. The optional comment is dropped; the payload itself is checked
+         * structurally by [validatePublicKey] at import time.
+         */
+        internal fun parsePublicKeyLine(line: String): Pair<String, String> {
+            val fields = line.trim().split(Regex("\\s+")).filter(String::isNotEmpty)
+            require(fields.size >= 2) { "Expected key type and key data" }
+            val keyType = fields[0]
+            require(keyType in PRIVATE_KEY_TYPES) { "Unsupported key type" }
+            return keyType to fields[1]
+        }
+
         internal fun validatePublicKey(keyType: String, publicKeyBase64: String): String {
             val trimmed = publicKeyBase64.trim()
             val blob = try {
