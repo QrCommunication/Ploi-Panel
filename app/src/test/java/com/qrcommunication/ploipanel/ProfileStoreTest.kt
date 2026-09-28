@@ -85,9 +85,15 @@ class ProfileStoreTest {
         val store = newStore(prefs)
         val keep = store.add("Keep", "token-keep")
         val drop = store.add("Drop", "token-drop")
+        prefs.map[com.qrcommunication.ploipanel.ssh.SshKeyVault.key(drop.id)] = "ssh-keys"
+        prefs.map[com.qrcommunication.ploipanel.ssh.SshHostTrustStore.key(drop.id)] = "ssh-pins"
+        prefs.map[com.qrcommunication.ploipanel.ssh.SshKeyVault.key(keep.id)] = "ssh-keys-keep"
         store.remove(drop.id)
         assertEquals(listOf(keep), store.profiles())
         assertNull(prefs.map[ProfileStore.TOKEN_PREFIX + drop.id])
+        assertNull(prefs.map[com.qrcommunication.ploipanel.ssh.SshKeyVault.key(drop.id)])
+        assertNull(prefs.map[com.qrcommunication.ploipanel.ssh.SshHostTrustStore.key(drop.id)])
+        assertEquals("ssh-keys-keep", prefs.map[com.qrcommunication.ploipanel.ssh.SshKeyVault.key(keep.id)])
         assertNull(store.tokenFor(drop.id))
         assertEquals("token-keep", store.tokenFor(keep.id))
     }
