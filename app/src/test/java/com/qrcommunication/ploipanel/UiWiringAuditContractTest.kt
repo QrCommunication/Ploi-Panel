@@ -45,6 +45,18 @@ class UiWiringAuditContractTest {
         assertTrue(screen("MainActivity").contains("if (!creating) LazyRow("))
     }
 
+    @Test fun archivePickerSurvivesAppRelockAndNeverGetsRawTokensInIntent() {
+        val activity = screen("MainActivity")
+        val ui = screen("PortableConfigurationUi")
+        assertTrue(activity.contains("rememberLauncherForActivityResult(ActivityResultContracts.CreateDocument"))
+        assertTrue(activity.contains("rememberLauncherForActivityResult(ActivityResultContracts.OpenDocument"))
+        assertTrue(activity.contains("pendingArchive = encrypted"))
+        assertTrue(activity.contains("MessageDigest.isEqual(encrypted, saved)"))
+        assertTrue(ui.contains("manager.export(passphrase)"))
+        assertTrue(ui.contains("onSaveEncryptedArchive(encrypted)"))
+        assertTrue(ui.contains("manager.import(bytes, passphrase)"))
+    }
+
     @Test fun failedFormsRemainVisibleForRetry() {
         assertTrue(screen("ProjectsScreen").contains("onSuccess = { creating = false; editing = null }"))
         assertTrue(screen("StatusPagesScreen").contains("onSuccess = { creating = false }"))

@@ -2,10 +2,13 @@ package com.qrcommunication.ploipanel
 
 import android.content.Intent
 import android.content.res.Configuration
+import android.net.Uri
 import android.os.Bundle
 import android.view.WindowManager
 import androidx.activity.compose.LocalActivity
+import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.compose.setContent
+import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.isSystemInDarkTheme
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -49,6 +52,7 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -69,7 +73,9 @@ import androidx.lifecycle.compose.LocalLifecycleOwner
 import com.qrcommunication.ploipanel.widget.WidgetRefresh
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
+import java.security.MessageDigest
 import java.util.Locale
 
 internal data class WidgetRoute(val profileId: String, val serverId: Long?)
@@ -101,6 +107,37 @@ class MainActivity : FragmentActivity() {
 @Composable
 private fun PloiPanel(widgetRoute: WidgetRoute?, onWidgetRouteConsumed: () -> Unit) {
     val activity = LocalActivity.current as FragmentActivity
+    val scope = rememberCoroutineScope()
+    var pendingArchive by remember { mutableStateOf<ByteArray?>(null) }
+    var importUri by remember { mutableStateOf<Uri?>(null) }
+    var transferStatus by remember { mutableIntStateOf(0) }
+    val saveArchive = rememberLauncherForActivityResult(ActivityResultContracts.CreateDocument("application/octet-stream")) { uri ->
+        val encrypted = pendingArchive
+        pendingArchive = null
+        if (uri == null || encrypted == null) {
+            encrypted?.fill(0)
+        } else {
+            scope.launch {
+                try {
+                    withContext(Dispatchers.IO) {
+                        activity.contentResolver.openOutputStream(uri, "wt")?.use { it.write(encrypted) }
+                            ?: error("Could not open archive destination")
+                        val saved = activity.contentResolver.openInputStream(uri)?.use(::readLimitedArchive)
+                            ?: error("Could not verify saved archive")
+                        check(MessageDigest.isEqual(encrypted, saved)) { "Archive verification failed" }
+                    }
+                    transferStatus = R.string.config_export_saved
+                } catch (cancelled: CancellationException) {
+                    throw cancelled
+                } catch (_: Exception) {
+                    transferStatus = R.string.config_export_error
+                } finally { encrypted.fill(0) }
+            }
+        }
+    }
+    val openArchive = rememberLauncherForActivityResult(ActivityResultContracts.OpenDocument()) { uri ->
+        if (uri != null) importUri = uri
+    }
     val systemConfiguration = LocalConfiguration.current
     val preferences = remember(activity) { UiPreferences(SharedPreferencesProfilePrefs(activity)) }
     var theme by remember { mutableStateOf(preferences.theme()) }
@@ -159,6 +196,22 @@ private fun PloiPanel(widgetRoute: WidgetRoute?, onWidgetRouteConsumed: () -> Un
                     lock, activity, theme, language,
                     widgetRoute = widgetRoute,
                     onWidgetRouteConsumed = onWidgetRouteConsumed,
+                    importUri = importUri,
+                    onImportUriConsumed = { importUri = null },
+                    onChooseImport = {
+                        transferStatus = 0
+                        try { openArchive.launch(arrayOf("*/*")) }
+                        catch (_: Exception) { transferStatus = R.string.config_import_error }
+                    },
+                    onSaveEncryptedArchive = { encrypted ->
+                        pendingArchive?.fill(0)
+                        pendingArchive = encrypted
+                        transferStatus = 0
+                        try { saveArchive.launch("Ploi-Panel-config.ploi") }
+                        catch (_: Exception) { pendingArchive = null; encrypted.fill(0); transferStatus = R.string.config_export_error }
+                    },
+                    transferStatus = transferStatus,
+                    onImportSuccess = { transferStatus = R.string.config_import_saved },
                     onThemeChanged = { preferences.setTheme(it); theme = it },
                     onLanguageChanged = {
                         preferences.setLanguage(it)
@@ -178,11 +231,15 @@ private fun PloiPanel(widgetRoute: WidgetRoute?, onWidgetRouteConsumed: () -> Un
 private fun PanelHome(
     lock: AppLock, activity: FragmentActivity, theme: AppTheme, language: AppLanguage,
     widgetRoute: WidgetRoute?, onWidgetRouteConsumed: () -> Unit,
+    importUri: Uri?, onImportUriConsumed: () -> Unit,
+    onChooseImport: () -> Unit, onSaveEncryptedArchive: (ByteArray) -> Unit,
+    transferStatus: Int, onImportSuccess: () -> Unit,
     onThemeChanged: (AppTheme) -> Unit, onLanguageChanged: (AppLanguage) -> Unit,
     onLock: () -> Unit
 ) {
     val context = LocalContext.current
     val store = remember { ProfileStore(SharedPreferencesProfilePrefs(context), KeystoreTokenCipher()) }
+    val configurationManager = remember { PortableConfigurationManager(SharedPreferencesProfilePrefs(context), KeystoreTokenCipher()) }
     var profilesVersion by remember { mutableIntStateOf(0) }
     val profiles = remember(profilesVersion) { store.profiles() }
     var draftLabel by remember { mutableStateOf("") }
@@ -205,6 +262,26 @@ private fun PanelHome(
     var error by remember { mutableStateOf<Throwable?>(null) }
     var loading by remember { mutableStateOf(false) }
     var deepLinkError by remember { mutableStateOf(false) }
+
+    fun onConfigurationImported() {
+        profilesVersion++
+        activeProfile = store.activeProfileId()?.let { id ->
+            store.profiles().firstOrNull { it.id == id }?.let { it to store.tokenFor(id) }
+        }?.takeIf { it.second != null }
+        selected = null
+        servers = null
+        creating = false
+        showMonitored = false
+        page = 1
+        refresh++
+        val restored = UiPreferences(SharedPreferencesProfilePrefs(context))
+        onThemeChanged(restored.theme())
+        onLanguageChanged(restored.language())
+    }
+
+    LaunchedEffect(importUri, token, transferStatus) {
+        if ((importUri != null || transferStatus != 0) && token != null) panelTab = 7
+    }
 
     // Route only after the application lock has been passed. Opaque widget IDs are never
     // trusted as credentials; resolve the saved profile and server with the normal API client.
@@ -321,6 +398,12 @@ private fun PanelHome(
                     }
                 }
             }, enabled = draftLabel.isNotBlank() && draftToken.isNotBlank()) { Text(stringResource(R.string.add_profile)) }
+            SettingsSectionHeading(R.string.config_transfer_title)
+            ConfigurationTransferSection(
+                configurationManager, lock, activity, importUri, onImportUriConsumed,
+                onChooseImport, onSaveEncryptedArchive, transferStatus,
+                onImported = { onImportSuccess(); onConfigurationImported() }
+            )
         }
         pendingProfileRemoval?.let { profile ->
             SensitiveConfirmDialog(
@@ -431,6 +514,13 @@ private fun PanelHome(
                             page = 1
                             refresh++
                         },
+                        configurationManager = configurationManager,
+                        importUri = importUri,
+                        onImportUriConsumed = onImportUriConsumed,
+                        onChooseImport = onChooseImport,
+                        onSaveEncryptedArchive = onSaveEncryptedArchive,
+                        transferStatus = transferStatus,
+                        onImported = { onImportSuccess(); onConfigurationImported() },
                         onLock = onLock
                     )
                     else -> {

@@ -336,7 +336,6 @@
     <string name="backup_next_run">Prochaine exécution : %1$s</string>
     <string name="backup_inactive">Sauvegarde inactive</string>
     <string name="run_backup">Exécuter</string>
-    <string name="backup_run_started">Sauvegarde lancée.</string>
     <string name="edit_backup">Modifier</string>
     <string name="backup_updated">Sauvegarde mise à jour.</string>
     <string name="delete_backup">Supprimer</string>
@@ -437,7 +436,7 @@
     <string name="run_script_title">Exécuter « %1$s » sur des serveurs</string>
     <string name="run_script_submit">Lancer l’exécution</string>
     <string name="empty_run_servers">Aucun serveur disponible dans ce compte.</string>
-    <string name="script_started_on">Script lancé sur : %1$s</string>
+    <string name="script_started_on">Demande d’exécution envoyée à : %1$s (résultat non confirmé)</string>
     <string name="delete_script">Supprimer</string>
     <string name="confirm_delete_script">Supprimer définitivement le script « %1$s » ? Cette action est irréversible.</string>
     <string name="script_deleted">Script supprimé.</string>

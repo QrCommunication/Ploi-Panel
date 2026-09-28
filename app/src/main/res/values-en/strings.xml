@@ -336,7 +336,6 @@
     <string name="backup_next_run">Next run: %1$s</string>
     <string name="backup_inactive">Backup inactive</string>
     <string name="run_backup">Run</string>
-    <string name="backup_run_started">Backup started.</string>
     <string name="edit_backup">Edit</string>
     <string name="backup_updated">Backup updated.</string>
     <string name="delete_backup">Delete</string>
@@ -437,7 +436,7 @@
     <string name="run_script_title">Run "%1$s" on servers</string>
     <string name="run_script_submit">Run now</string>
     <string name="empty_run_servers">No server available in this account.</string>
-    <string name="script_started_on">Script started on: %1$s</string>
+    <string name="script_started_on">Run requested on: %1$s (result not confirmed)</string>
     <string name="delete_script">Delete</string>
     <string name="confirm_delete_script">Permanently delete the script "%1$s"? This action cannot be undone.</string>
     <string name="script_deleted">Script deleted.</string>

@@ -1,0 +1,27 @@
+<resources>
+    <string name="config_transfer_title">Backup and restore</string>
+    <string name="config_transfer_hint">Back up Ploi profiles (including their tokens), theme and language into a file encrypted with a passphrase separate from your app PIN. Import never replaces existing profiles. PIN, biometrics, launcher widgets and caches are not transferred.</string>
+    <string name="config_export">Export</string>
+    <string name="config_import">Import</string>
+    <string name="config_export_confirm">Allow exporting every profile’s token into an encrypted archive? Keep both the passphrase and file safe.</string>
+    <string name="config_import_confirm">Allow importing Ploi profiles from an encrypted file? Existing profiles will not be overwritten, but theme and language will be restored from the archive.</string>
+    <string name="config_passphrase">Archive passphrase</string>
+    <string name="config_confirm_passphrase">Confirm passphrase</string>
+    <string name="config_passphrase_new_hint">Choose at least 12 characters. The backup cannot be recovered without this passphrase. It is not saved.</string>
+    <string name="config_passphrase_import_hint">Enter the passphrase you chose on export. Your device PIN remains unchanged.</string>
+    <string name="config_passphrase_invalid">Invalid passphrase (12–256 characters) or confirmation does not match.</string>
+    <string name="config_export_saved">Encrypted archive saved.</string>
+    <string name="config_import_saved">Configuration restored. Imported profiles are available.</string>
+    <string name="config_export_error">Export failed. Check file access and profile tokens.</string>
+    <string name="config_invalid_archive">Wrong passphrase, damaged archive or unsupported format.</string>
+    <string name="config_import_error">Could not import this configuration. Check file access and retry.</string>
+    <string name="config_conflict">A profile already has this name with a different token. Rename it before importing.</string>
+    <string name="config_limit">The profile limit would be exceeded. Remove profiles before importing.</string>
+    <plurals name="config_imported">
+        <item quantity="one">%d profile imported. Preferences restored.</item>
+        <item quantity="other">%d profiles imported. Preferences restored.</item>
+    </plurals>
+    <string name="confirm_detach_backup_channel">Detach this notification channel from the backup?</string>
+    <string name="execution_following">Temporarily checking execution status (best effort).</string>
+    <string name="execution_manual_refresh">Execution status is still unknown. Refresh to check the result.</string>
+</resources>

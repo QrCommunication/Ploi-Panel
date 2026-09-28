@@ -2,14 +2,12 @@ package com.qrcommunication.ploipanel
 
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
-import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.FlowRow
 import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
-import androidx.compose.foundation.rememberScrollState
-import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Button
 import androidx.compose.material3.Card
@@ -147,13 +145,13 @@ internal fun SiteMonitorsScreen(token: String, serverId: Long, siteId: Long, loc
             onDismissRequest = { uptime = null },
             title = { Text(stringResource(R.string.monitor_responses_title, monitor.label.ifBlank { "#${monitor.id}" })) },
             text = {
-                Column(
-                    Modifier.verticalScroll(rememberScrollState()),
+                LazyColumn(
+                    Modifier.heightIn(max = 440.dp),
                     verticalArrangement = Arrangement.spacedBy(4.dp)
                 ) {
-                    if (responses.isEmpty()) Text(stringResource(R.string.empty_uptime_responses))
-                    ResponseTimeTrend(responses)
-                    responses.take(50).forEach { response ->
+                    if (responses.isEmpty()) item { Text(stringResource(R.string.empty_uptime_responses)) }
+                    item { ResponseTimeTrend(responses) }
+                    items(responses) { response ->
                         Text(
                             stringResource(
                                 R.string.monitor_response_entry,

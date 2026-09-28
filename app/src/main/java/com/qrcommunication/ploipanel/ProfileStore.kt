@@ -1,5 +1,6 @@
 package com.qrcommunication.ploipanel
 
+import android.annotation.SuppressLint
 import android.content.Context
 import androidx.core.content.edit
 import org.json.JSONArray
@@ -14,6 +15,7 @@ internal data class PloiProfile(val id: String, val label: String)
 internal interface ProfilePrefs {
     fun read(key: String): String?
     fun write(key: String, value: String?)
+    fun writeBatch(values: Map<String, String?>) { values.forEach { (key, value) -> write(key, value) } }
 }
 
 internal class SharedPreferencesProfilePrefs(context: Context) : ProfilePrefs {
@@ -21,6 +23,14 @@ internal class SharedPreferencesProfilePrefs(context: Context) : ProfilePrefs {
     override fun read(key: String): String? = prefs.getString(key, null)
     override fun write(key: String, value: String?) {
         prefs.edit { if (value == null) remove(key) else putString(key, value) }
+    }
+    @SuppressLint("UseKtx") // KTX edit() discards commit's success flag; import must detect storage failure.
+    override fun writeBatch(values: Map<String, String?>) {
+        val editor = prefs.edit()
+        values.forEach { (key, value) ->
+            if (value == null) editor.remove(key) else editor.putString(key, value)
+        }
+        check(editor.commit()) { "Could not persist imported configuration" }
     }
     private companion object { const val PREFS_FILE = "ploi_profiles" }
 }

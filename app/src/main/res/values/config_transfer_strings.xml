@@ -1,0 +1,27 @@
+<resources xmlns:tools="http://schemas.android.com/tools">
+    <string name="config_transfer_title" tools:ignore="Typos">Sauvegarde et restauration</string>
+    <string name="config_transfer_hint">Sauvegardez les profils Ploi (avec leurs jetons), le thème et la langue dans un fichier chiffré par une phrase de passe indépendante du code de l’application. Importation sans remplacement des profils existants. Le code PIN, la biométrie, les widgets du lanceur et les caches ne sont pas transférés.</string>
+    <string name="config_export">Exporter</string>
+    <string name="config_import">Importer</string>
+    <string name="config_export_confirm">Autoriser l’export des jetons de tous les profils dans une archive chiffrée ? Conservez la phrase de passe et le fichier en lieu sûr.</string>
+    <string name="config_import_confirm" tools:ignore="Typos">Autoriser l’import de profils Ploi depuis un fichier chiffré ? Aucun profil existant ne sera écrasé, mais le thème et la langue seront restaurés depuis l’archive.</string>
+    <string name="config_passphrase">Phrase de passe de l’archive</string>
+    <string name="config_confirm_passphrase">Confirmer la phrase de passe</string>
+    <string name="config_passphrase_new_hint" tools:ignore="Typos">Choisissez au moins 12 caractères. Sans cette phrase de passe, la restauration est impossible. Elle n’est pas enregistrée.</string>
+    <string name="config_passphrase_import_hint">Saisissez la phrase de passe choisie lors de l’export. Le code PIN du téléphone reste inchangé.</string>
+    <string name="config_passphrase_invalid">Phrase de passe invalide (12 à 256 caractères) ou confirmation différente.</string>
+    <string name="config_export_saved">Archive chiffrée enregistrée.</string>
+    <string name="config_import_saved">Configuration restaurée. Les profils ajoutés sont disponibles.</string>
+    <string name="config_export_error">Échec de l’export. Vérifiez l’accès au fichier et les jetons des profils.</string>
+    <string name="config_invalid_archive">Phrase de passe incorrecte, archive endommagée ou format non pris en charge.</string>
+    <string name="config_import_error">Impossible d’importer cette configuration. Vérifiez l’accès au fichier et réessayez.</string>
+    <string name="config_conflict">Un profil porte déjà ce nom avec un jeton différent. Renommez-le avant l’import.</string>
+    <string name="config_limit">La limite de profils serait dépassée. Supprimez des profils avant l’import.</string>
+    <plurals name="config_imported">
+        <item quantity="one">%d profil importé. Les préférences ont été restaurées.</item>
+        <item quantity="other">%d profils importés. Les préférences ont été restaurées.</item>
+    </plurals>
+    <string name="confirm_detach_backup_channel">Détacher ce canal de notification de la sauvegarde ?</string>
+    <string name="execution_following">Suivi temporaire de l’exécution en cours (au mieux).</string>
+    <string name="execution_manual_refresh">Statut encore indéterminé. Actualisez pour consulter le résultat.</string>
+</resources>

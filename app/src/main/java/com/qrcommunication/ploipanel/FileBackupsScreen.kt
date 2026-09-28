@@ -35,6 +35,7 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.res.pluralStringResource
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.text.input.PasswordVisualTransformation
@@ -87,7 +88,7 @@ internal fun FileBackupsScreen(token: String, serverId: Long, lock: AppLock, act
     var confirmDelete by remember { mutableStateOf<FileBackup?>(null) }
 
     val createdMessage = stringResource(R.string.backup_created)
-    val runMessage = stringResource(R.string.backup_run_started)
+    val runMessage = stringResource(R.string.backup_run_requested)
     val updatedMessage = stringResource(R.string.backup_updated)
     val deletedMessage = stringResource(R.string.backup_deleted)
 
@@ -201,7 +202,7 @@ internal fun FileBackupsScreen(token: String, serverId: Long, lock: AppLock, act
                             FlowRow(horizontalArrangement = Arrangement.spacedBy(8.dp), verticalArrangement = Arrangement.spacedBy(4.dp)) {
                                 OutlinedButton(
                                     onClick = {
-                                        runAction(runMessage) { PloiApi.runFileBackup(token, backup.id) }
+                                        runAction(runMessage) { PloiApi.runFileBackup(token, backup.id); "" }
                                     },
                                     enabled = !busy
                                 ) { Text(stringResource(R.string.run_backup)) }
@@ -255,6 +256,7 @@ internal fun FileBackupsScreen(token: String, serverId: Long, lock: AppLock, act
             token = token,
             backupId = backup.id,
             title = backup.siteDomain.ifBlank { backup.label },
+            lock = lock, activity = activity,
             listChannels = { PloiApi.fileBackupNotificationChannels(token, backup.id) },
             attachChannel = { channelId, location ->
                 PloiApi.attachFileBackupNotificationChannel(token, backup.id, channelId, location)
@@ -290,10 +292,8 @@ private fun CreateFileBackupDialog(
     token: String, serverId: Long, busy: Boolean,
     onCreate: (CreateFileBackupRequest) -> Unit, onDismiss: () -> Unit
 ) {
-    var configurations by remember { mutableStateOf<List<BackupConfiguration>?>(null) }
-    var sites by remember { mutableStateOf<List<Site>?>(null) }
-    var optionsError by remember { mutableStateOf<Throwable?>(null) }
     var configurationId by remember { mutableLongStateOf(0L) }
+    var configurationLabel by remember { mutableStateOf("") }
     var selectedSites by remember { mutableStateOf(setOf<Long>()) }
     val sitePaths = remember { mutableStateMapOf<Long, String>() }
     var interval by remember { mutableStateOf("0") }
@@ -306,21 +306,6 @@ private fun CreateFileBackupDialog(
     var deleteOnFail by remember { mutableStateOf(false) }
     var invalid by remember { mutableStateOf(false) }
 
-    LaunchedEffect(token, serverId) {
-        try {
-            configurations = withContext(Dispatchers.IO) {
-                PloiApi.backupConfigurations(token, perPage = 50).configurations
-            }
-            sites = withContext(Dispatchers.IO) {
-                PloiApi.sites(token, serverId, perPage = 50).sites
-            }
-        } catch (cancelled: CancellationException) {
-            throw cancelled
-        } catch (failure: Exception) {
-            optionsError = failure
-        }
-    }
-
     AlertDialog(
         onDismissRequest = onDismiss,
         title = { Text(stringResource(R.string.new_file_backup)) },
@@ -329,33 +314,37 @@ private fun CreateFileBackupDialog(
                 Modifier.verticalScroll(rememberScrollState()),
                 verticalArrangement = Arrangement.spacedBy(10.dp)
             ) {
-                if (optionsError != null) ApiErrorText(optionsError!!)
-                if (optionsError == null && (configurations == null || sites == null)) {
-                    FlowRow(horizontalArrangement = Arrangement.spacedBy(8.dp), verticalArrangement = Arrangement.spacedBy(4.dp)) {
-                        CircularProgressIndicator()
-                        Text(stringResource(R.string.backup_loading_options), Modifier.padding(top = 12.dp))
-                    }
-                }
-                configurations?.let { list ->
-                    Text(stringResource(R.string.backup_configuration_label))
-                    if (list.isEmpty()) Text(stringResource(R.string.backup_no_configurations))
-                    list.forEach { configuration ->
+                PagedOptionPicker(
+                    key = token to "configurations", label = stringResource(R.string.backup_configuration_label),
+                    emptyLabel = stringResource(R.string.backup_no_configurations),
+                    load = { page -> PloiApi.backupConfigurations(token, page = page, perPage = 50).let {
+                        PickerOptions(it.configurations, it.currentPage, it.lastPage)
+                    } }
+                ) { configuration ->
                         Row(Modifier.fillMaxWidth()) {
                             RadioButton(
                                 selected = configurationId == configuration.id,
-                                onClick = { configurationId = configuration.id }
+                                onClick = {
+                                    configurationId = configuration.id
+                                    configurationLabel = configuration.label.ifBlank {
+                                        configuration.humanType.ifBlank { configuration.type }
+                                    }
+                                }
                             )
                             Text(
                                 configuration.label.ifBlank { configuration.humanType.ifBlank { configuration.type } },
                                 Modifier.padding(top = 12.dp)
                             )
                         }
-                    }
                 }
-                sites?.let { list ->
-                    Text(stringResource(R.string.backup_sites_label))
-                    if (list.isEmpty()) Text(stringResource(R.string.backup_no_sites))
-                    list.forEach { site ->
+                if (configurationId > 0L) Text(stringResource(R.string.picker_selected_configuration, configurationLabel))
+                PagedOptionPicker(
+                    key = token to serverId, label = stringResource(R.string.backup_sites_label),
+                    emptyLabel = stringResource(R.string.backup_no_sites),
+                    load = { page -> PloiApi.sites(token, serverId, page = page, perPage = 50).let {
+                        PickerOptions(it.sites, it.currentPage, it.lastPage)
+                    } }
+                ) { site ->
                         Row(Modifier.fillMaxWidth()) {
                             Checkbox(
                                 checked = site.id in selectedSites,
@@ -374,8 +363,9 @@ private fun CreateFileBackupDialog(
                                 singleLine = true, modifier = Modifier.fillMaxWidth()
                             )
                         }
-                    }
                 }
+                if (selectedSites.isNotEmpty()) Text(pluralStringResource(R.plurals.picker_selected_items,
+                    selectedSites.size, selectedSites.size))
                 OutlinedTextField(value = interval, onValueChange = { interval = it.filter(Char::isDigit) },
                     label = { Text(stringResource(R.string.backup_interval_label)) },
                     supportingText = { Text(stringResource(R.string.file_backup_create_interval_hint)) },

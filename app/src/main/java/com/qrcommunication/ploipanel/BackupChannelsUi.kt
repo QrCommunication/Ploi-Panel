@@ -26,6 +26,7 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
+import androidx.fragment.app.FragmentActivity
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
@@ -48,6 +49,8 @@ internal fun BackupChannelsDialog(
     token: String,
     backupId: Long,
     title: String,
+    lock: AppLock,
+    activity: FragmentActivity,
     listChannels: suspend () -> List<BackupNotificationChannel>,
     attachChannel: suspend (channelId: Long, location: String) -> List<BackupNotificationChannel>,
     detachChannel: suspend (channelId: Long, location: String) -> List<BackupNotificationChannel>,
@@ -60,6 +63,7 @@ internal fun BackupChannelsDialog(
     var feedback by remember { mutableStateOf("") }
     var busy by remember { mutableStateOf(false) }
     var attaching by remember { mutableStateOf(false) }
+    var pendingDetach by remember { mutableStateOf<Pair<Long, String>?>(null) }
 
     val attachedMessage = stringResource(R.string.backup_channel_attached)
     val detachedMessage = stringResource(R.string.backup_channel_detached)
@@ -131,9 +135,7 @@ internal fun BackupChannelsDialog(
                                     Text(stringResource(R.string.detail_created, channel.createdAt))
                                 }
                                 OutlinedButton(
-                                    onClick = {
-                                        runAction(detachedMessage) { detachChannel(channel.id, channel.location) }
-                                    },
+                                    onClick = { pendingDetach = channel.id to channel.location },
                                     enabled = !busy
                                 ) {
                                     Text(
@@ -150,6 +152,18 @@ internal fun BackupChannelsDialog(
         confirmButton = { OutlinedButton(onClick = onDismiss, enabled = !busy) { Text(stringResource(R.string.close)) } }
     )
 
+    pendingDetach?.let { (channelId, location) ->
+        SensitiveConfirmDialog(
+            lock, activity,
+            stringResource(R.string.confirm_detach_backup_channel),
+            R.string.detach_backup_channel,
+            onConfirmed = {
+                pendingDetach = null
+                runAction(detachedMessage) { detachChannel(channelId, location) }
+            },
+            onDismiss = { pendingDetach = null }
+        )
+    }
     if (attaching) {
         AttachBackupChannelDialog(
             token = token, busy = busy,
@@ -168,22 +182,8 @@ private fun AttachBackupChannelDialog(
     token: String, busy: Boolean,
     onAttach: (channelId: Long, location: String) -> Unit, onDismiss: () -> Unit
 ) {
-    var available by remember { mutableStateOf<List<NotificationChannel>?>(null) }
-    var optionsError by remember { mutableStateOf<Throwable?>(null) }
     var channelId by remember { mutableLongStateOf(0L) }
     var location by remember { mutableStateOf("failed-backup") }
-
-    LaunchedEffect(token) {
-        try {
-            available = withContext(Dispatchers.IO) {
-                PloiApi.notificationChannels(token, perPage = 50).channels
-            }
-        } catch (cancelled: CancellationException) {
-            throw cancelled
-        } catch (failure: Exception) {
-            optionsError = failure
-        }
-    }
 
     AlertDialog(
         onDismissRequest = onDismiss,
@@ -193,17 +193,13 @@ private fun AttachBackupChannelDialog(
                 Modifier.verticalScroll(rememberScrollState()),
                 verticalArrangement = Arrangement.spacedBy(10.dp)
             ) {
-                if (optionsError != null) ApiErrorText(optionsError!!)
-                if (available == null && optionsError == null) {
-                    Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                        CircularProgressIndicator()
-                        Text(stringResource(R.string.backup_loading_options), Modifier.padding(top = 12.dp))
-                    }
-                }
-                available?.let { list ->
-                    Text(stringResource(R.string.backup_channel_label))
-                    if (list.isEmpty()) Text(stringResource(R.string.backup_no_channels_available))
-                    list.forEach { channel ->
+                PagedOptionPicker(
+                    key = token, label = stringResource(R.string.backup_channel_label),
+                    emptyLabel = stringResource(R.string.backup_no_channels_available),
+                    load = { page -> PloiApi.notificationChannels(token, page = page, perPage = 50).let {
+                        PickerOptions(it.channels, it.currentPage, it.lastPage)
+                    } }
+                ) { channel ->
                         Row(Modifier.fillMaxWidth()) {
                             RadioButton(
                                 selected = channelId == channel.id,
@@ -211,7 +207,6 @@ private fun AttachBackupChannelDialog(
                             )
                             Text(channel.label.ifBlank { channel.type }, Modifier.padding(top = 12.dp))
                         }
-                    }
                 }
                 Text(stringResource(R.string.backup_channel_location_label))
                 BACKUP_CHANNEL_LOCATIONS.forEach { candidate ->

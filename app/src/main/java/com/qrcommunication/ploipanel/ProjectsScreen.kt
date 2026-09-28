@@ -14,6 +14,7 @@ import androidx.compose.foundation.lazy.items
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Button
 import androidx.compose.material3.Card
+import androidx.compose.material3.Checkbox
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedButton
@@ -23,6 +24,7 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableIntStateOf
+import androidx.compose.runtime.mutableLongStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
@@ -151,6 +153,7 @@ internal fun ProjectsScreen(token: String, lock: AppLock, activity: FragmentActi
     if (creating || editing != null) {
         ProjectDialog(
             initial = editing,
+            token = token,
             busy = busy,
             submitError = error,
             onSubmit = { request ->
@@ -178,10 +181,10 @@ internal fun ProjectsScreen(token: String, lock: AppLock, activity: FragmentActi
     }
 }
 
-/** Create/edit dialog of a project: title plus comma-separated server and site ids. */
+/** Create/edit dialog: paged server/site pickers plus manual IDs for existing associations. */
 @Composable
 private fun ProjectDialog(
-    initial: PloiProject?, busy: Boolean, submitError: Throwable?,
+    initial: PloiProject?, token: String, busy: Boolean, submitError: Throwable?,
     onSubmit: (ProjectRequest) -> Unit, onDismiss: () -> Unit
 ) {
     var title by remember(initial?.id) { mutableStateOf(initial?.title.orEmpty()) }
@@ -191,6 +194,7 @@ private fun ProjectDialog(
     var sites by remember(initial?.id) {
         mutableStateOf(initial?.sites?.joinToString(",") { it.id.toString() }.orEmpty())
     }
+    var browsingServer by remember(initial?.id) { mutableLongStateOf(initial?.serverIds?.firstOrNull() ?: 0L) }
     var invalid by remember { mutableStateOf(false) }
     AlertDialog(
         onDismissRequest = { if (!busy) onDismiss() },
@@ -213,6 +217,42 @@ private fun ProjectDialog(
                     label = { Text(stringResource(R.string.project_sites_label)) },
                     singleLine = true, modifier = Modifier.fillMaxWidth()
                 )
+                PagedOptionPicker(
+                    key = token, label = stringResource(R.string.project_pick_servers),
+                    emptyLabel = stringResource(R.string.project_no_servers),
+                    load = { page -> PloiApi.servers(token, page = page, perPage = 50).let {
+                        PickerOptions(it.servers, it.currentPage, it.lastPage)
+                    } }
+                ) { server ->
+                    Row(Modifier.fillMaxWidth()) {
+                        Checkbox(
+                            checked = server.id in parseProjectIds(servers).orEmpty(),
+                            onCheckedChange = { checked -> servers = toggleProjectId(servers, server.id, checked) },
+                            enabled = parseProjectIds(servers) != null
+                        )
+                        OutlinedButton(onClick = { browsingServer = server.id }) {
+                            Text(stringResource(R.string.project_browse_server_sites, server.name))
+                        }
+                    }
+                }
+                if (browsingServer > 0) {
+                    PagedOptionPicker(
+                        key = token to browsingServer, label = stringResource(R.string.project_pick_sites),
+                        emptyLabel = stringResource(R.string.project_no_sites),
+                        load = { page -> PloiApi.sites(token, browsingServer, page = page, perPage = 50).let {
+                            PickerOptions(it.sites, it.currentPage, it.lastPage)
+                        } }
+                    ) { site ->
+                        Row(Modifier.fillMaxWidth()) {
+                            Checkbox(
+                                checked = site.id in parseProjectIds(sites).orEmpty(),
+                                onCheckedChange = { checked -> sites = toggleProjectId(sites, site.id, checked) },
+                                enabled = parseProjectIds(sites) != null
+                            )
+                            Text(site.domain, Modifier.padding(top = 12.dp))
+                        }
+                    }
+                }
                 if (invalid) Text(stringResource(R.string.invalid_form), color = MaterialTheme.colorScheme.error)
                 if (submitError != null) ApiErrorText(submitError)
             }
@@ -220,13 +260,12 @@ private fun ProjectDialog(
         confirmButton = {
             Button(
                 onClick = {
-                    fun parseIds(raw: String): List<Long> =
-                        raw.split(",").map { it.trim() }.filter { it.isNotEmpty() }.map { it.toLong() }
-                    val request = try {
-                        ProjectRequest(title.trim(), parseIds(servers), parseIds(sites))
-                    } catch (invalidRequest: Exception) {
-                        null
-                    }
+                    val serverIds = parseProjectIds(servers)
+                    val siteIds = parseProjectIds(sites)
+                    val request = if (serverIds != null && siteIds != null) {
+                        try { ProjectRequest(title.trim(), serverIds, siteIds) }
+                        catch (_: IllegalArgumentException) { null }
+                    } else null
                     if (request == null) invalid = true else onSubmit(request)
                 },
                 enabled = !busy && title.isNotBlank()

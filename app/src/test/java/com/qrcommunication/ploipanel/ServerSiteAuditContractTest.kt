@@ -37,8 +37,32 @@ class ServerSiteAuditContractTest {
 
     @Test fun optionLoadingDoesNotSpinForeverAfterFailure() {
         listOf("BackupChannelsUi", "DatabaseBackupsScreen", "FileBackupsScreen").forEach { name ->
-            assertTrue("$name", screen(name).contains("optionsError == null"))
+            assertTrue("$name", screen(name).contains("PagedOptionPicker("))
         }
+        val picker = screen("PagedOptionPicker")
+        assertTrue(picker.contains("error = failure"))
+        assertTrue(picker.contains("loading = false"))
+        assertTrue(picker.contains("retry++"))
+    }
+
+    @Test fun backupPickersRequestPagesAndKeepSelectionInForm() {
+        val database = screen("DatabaseBackupsScreen")
+        val file = screen("FileBackupsScreen")
+        val channel = screen("BackupChannelsUi")
+        val projects = screen("ProjectsScreen")
+        listOf(database, file, channel, projects).forEach {
+            assertTrue(it.contains("page = page, perPage = 50"))
+        }
+        assertTrue(database.contains("database.id in selectedDatabases"))
+        assertTrue(file.contains("site.id in selectedSites"))
+        assertTrue(file.contains("sitePaths[site.id]"))
+        assertTrue(channel.contains("channelId == channel.id"))
+        assertTrue(channel.contains("pendingDetach = channel.id to channel.location"))
+        assertTrue(channel.contains("stringResource(R.string.confirm_detach_backup_channel)"))
+        assertTrue(projects.contains("toggleProjectId(servers"))
+        assertTrue(projects.contains("toggleProjectId(sites"))
+        assertTrue(screen("SiteMonitorsScreen").contains("items(responses)"))
+        assertTrue(!screen("SiteMonitorsScreen").contains("responses.take(50)"))
     }
 
     @Test fun wpCliAndNonDryRunReplaceRequireFreshConfirmation() {

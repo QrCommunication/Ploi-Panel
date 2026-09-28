@@ -1,5 +1,6 @@
 package com.qrcommunication.ploipanel
 
+import android.net.Uri
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
@@ -47,6 +48,10 @@ internal fun SettingsScreen(
     theme: AppTheme, language: AppLanguage,
     onThemeChanged: (AppTheme) -> Unit, onLanguageChanged: (AppLanguage) -> Unit,
     onProfilesChanged: () -> Unit, onActiveChanged: (PloiProfile?) -> Unit,
+    configurationManager: PortableConfigurationManager, importUri: Uri?,
+    onImportUriConsumed: () -> Unit, onChooseImport: () -> Unit,
+    onSaveEncryptedArchive: (ByteArray) -> Unit, transferStatus: Int,
+    onImported: () -> Unit,
     onLock: () -> Unit
 ) {
     var addProfile by remember { mutableStateOf(false) }
@@ -141,6 +146,12 @@ internal fun SettingsScreen(
             )
         }
 
+        SettingsSectionHeading(R.string.config_transfer_title)
+        ConfigurationTransferSection(
+            configurationManager, lock, activity, importUri, onImportUriConsumed,
+            onChooseImport, onSaveEncryptedArchive, transferStatus, onImported
+        )
+
         SettingsSectionHeading(R.string.settings_security)
         BiometricToggle(lock, activity)
         Text(stringResource(R.string.settings_biometric_hint), style = MaterialTheme.typography.bodySmall)
@@ -207,7 +218,7 @@ internal fun SettingsScreen(
 }
 
 @Composable
-private fun SettingsSectionHeading(title: Int) {
+internal fun SettingsSectionHeading(title: Int) {
     Column(Modifier.fillMaxWidth(), verticalArrangement = Arrangement.spacedBy(8.dp)) {
         Text(stringResource(title), style = MaterialTheme.typography.titleLarge, fontWeight = FontWeight.Bold)
         HorizontalDivider(color = MaterialTheme.colorScheme.outlineVariant)

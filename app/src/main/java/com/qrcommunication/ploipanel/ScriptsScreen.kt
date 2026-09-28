@@ -1022,9 +1022,13 @@ private fun <T> ActionFormDialog(
     )
 }
 
+internal fun shouldPollExecution(execution: ScriptExecution?): Boolean =
+    execution != null && execution.finishedAt.isBlank() &&
+        execution.status.lowercase(java.util.Locale.ROOT) !in setOf("completed", "finished", "failed", "cancelled", "canceled")
+
 /**
  * One-off script run on a single server: POST /servers/{server}/scripts/run plus
- * manual polling of GET /servers/{server}/scripts/run/{execution}.
+ * bounded best-effort polling of GET /servers/{server}/scripts/run/{execution}.
  */
 @Composable
 internal fun OneOffScriptScreen(token: String, serverId: Long, lock: AppLock, activity: FragmentActivity) {
@@ -1032,17 +1036,18 @@ internal fun OneOffScriptScreen(token: String, serverId: Long, lock: AppLock, ac
     var content by remember(token, serverId) { mutableStateOf("") }
     var user by remember(token, serverId) { mutableStateOf("ploi") }
     var busy by remember(token, serverId) { mutableStateOf(false) }
+    var polling by remember(token, serverId) { mutableStateOf(false) }
     var pendingRun by remember(token, serverId) { mutableStateOf<Pair<String, String>?>(null) }
     var execution by remember(token, serverId) { mutableStateOf<ScriptExecution?>(null) }
     var error by remember(token, serverId) { mutableStateOf<Throwable?>(null) }
     var invalid by remember(token, serverId) { mutableStateOf(false) }
 
-    fun launchAction(block: suspend () -> Unit) {
+    fun launchAction(block: suspend () -> ScriptExecution) {
         busy = true
         error = null
         scope.launch {
             try {
-                withContext(Dispatchers.IO) { block() }
+                execution = withContext(Dispatchers.IO) { block() }
             } catch (cancelled: CancellationException) {
                 throw cancelled
             } catch (failure: Exception) {
@@ -1050,6 +1055,26 @@ internal fun OneOffScriptScreen(token: String, serverId: Long, lock: AppLock, ac
             } finally {
                 busy = false
             }
+        }
+    }
+
+    LaunchedEffect(token, serverId, execution?.id) {
+        val id = execution?.id ?: return@LaunchedEffect
+        if (!shouldPollExecution(execution)) return@LaunchedEffect
+        polling = true
+        try {
+            repeat(8) {
+                kotlinx.coroutines.delay(5_000)
+                val latest = withContext(Dispatchers.IO) { PloiApi.scriptExecution(token, serverId, id) }
+                execution = latest
+                if (!shouldPollExecution(latest)) return@LaunchedEffect
+            }
+        } catch (cancelled: CancellationException) {
+            throw cancelled
+        } catch (failure: Exception) {
+            error = failure
+        } finally {
+            polling = false
         }
     }
 
@@ -1078,10 +1103,12 @@ internal fun OneOffScriptScreen(token: String, serverId: Long, lock: AppLock, ac
                     pendingRun = content to user.trim()
                 }
             },
-            enabled = !busy && content.isNotBlank()
+            enabled = !busy && !polling && content.isNotBlank()
         ) { Text(stringResource(R.string.run_script_submit)) }
         if (error != null) ApiErrorText(error!!)
         if (busy) CircularProgressIndicator()
+        if (polling) Text(stringResource(R.string.execution_following))
+        if (!polling && shouldPollExecution(execution)) Text(stringResource(R.string.execution_manual_refresh))
         execution?.let { exec ->
             Card(Modifier.fillMaxWidth()) {
                 Column(Modifier.padding(12.dp), verticalArrangement = Arrangement.spacedBy(6.dp)) {
@@ -1098,8 +1125,8 @@ internal fun OneOffScriptScreen(token: String, serverId: Long, lock: AppLock, ac
                         Text(exec.output)
                     }
                     OutlinedButton(
-                        onClick = { launchAction { execution = PloiApi.scriptExecution(token, serverId, exec.id) } },
-                        enabled = !busy
+                        onClick = { launchAction { PloiApi.scriptExecution(token, serverId, exec.id) } },
+                        enabled = !busy && !polling
                     ) { Text(stringResource(R.string.refresh_execution)) }
                 }
             }
@@ -1114,7 +1141,7 @@ internal fun OneOffScriptScreen(token: String, serverId: Long, lock: AppLock, ac
             onConfirmed = {
                 pendingRun = null
                 execution = null
-                launchAction { execution = PloiApi.runOneOffScript(token, serverId, script, scriptUser) }
+                launchAction { PloiApi.runOneOffScript(token, serverId, script, scriptUser) }
             },
             onDismiss = { pendingRun = null }
         )
