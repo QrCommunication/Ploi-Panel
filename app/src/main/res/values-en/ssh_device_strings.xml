@@ -1,7 +1,7 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
     <string name="ssh_device_title">SSH on this device</string>
-    <string name="ssh_device_hint">Private keys and host fingerprints scoped to this profile, stored on the device (keys encrypted). SSH sessions (connect, terminal) are not available yet.</string>
+    <string name="ssh_device_hint">Private keys and host fingerprints scoped to this profile, stored on the device (keys encrypted). Host verification (SSH handshake, no credential) is available; sessions/terminal are not yet.</string>
     <string name="ssh_device_need_profile">Activate a profile to manage its SSH keys and trusted hosts.</string>
     <string name="ssh_keys_heading">Imported private keys</string>
     <string name="ssh_keys_empty">No key imported for this profile.</string>
@@ -34,4 +34,21 @@
     <string name="ssh_error_encrypted_pem">Passphrase-protected PEM keys are not supported.</string>
     <string name="ssh_error_malformed_key">Unreadable private or public key.</string>
     <string name="ssh_error_vault">Unreadable SSH vault: corrupted data or missing encryption key.</string>
+    <string name="ssh_probe_title">Check a host</string>
+    <string name="ssh_probe_hint">Probes the host with an SSH handshake (no credential, no command) and confronts the presented key with this profile’s pinned fingerprints.</string>
+    <string name="ssh_probe_host">Host (IP or name)</string>
+    <string name="ssh_probe_port">Port</string>
+    <string name="ssh_probe_run">Probe</string>
+    <string name="ssh_probe_invalid">Invalid host or port.</string>
+    <string name="ssh_probe_error">Host unreachable or SSH key not retrieved.</string>
+    <string name="ssh_probe_trusted">Fingerprint verified: the presented key matches the existing pin.</string>
+    <string name="ssh_probe_first">First contact: compare this fingerprint with a trusted source (Ploi console, server operator) before pinning.</string>
+    <string name="ssh_probe_pin">Pin this host</string>
+    <string name="ssh_probe_pinned">Host pinned for this profile.</string>
+    <string name="ssh_probe_mismatch">WARNING: the presented key differs from the existing pin. Possible interception or reinstalled server — continue only after out-of-band verification.</string>
+    <string name="ssh_probe_mismatch_old">Pinned fingerprint:</string>
+    <string name="ssh_probe_mismatch_new">Presented fingerprint:</string>
+    <string name="ssh_probe_repin">Re-pin the new key</string>
+    <string name="ssh_probe_repin_confirm">Replace the pin for %1$s with the presented key? Confirm only if you verified the new fingerprint out of band.</string>
+    <string name="ssh_probe_repinned">Pin replaced for this profile.</string>
 </resources>

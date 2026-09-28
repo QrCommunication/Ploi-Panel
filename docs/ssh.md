@@ -42,15 +42,27 @@ Livré (pur JVM, couvert par `SshKnownHostsTest` et `SshKeyVaultTest`) :
   - le formulaire d'import reste ouvert en cas d'erreur de validation pour correction ;
   - alias Keystore dédié `ploi-panel.ssh-keys`, distinct des jetons Ploi et des modèles de
     scripts.
+- **Vérification d'hôte à la connexion** (`SshProbeDialog.kt` + `ssh/SshHostKeyProbe.kt`) :
+  - sonde SSH **poignée de main uniquement** (JSch, `SshHostKeyTransport`) : aucun identifiant,
+    aucune authentification, aucun canal ni commande ; la clé d'hôte présentée est capturée via
+    un dépôt qui répond toujours `NOT_INCLUDED` (vérification stricte, aucun `UserInfo`) — le
+    transport n'accepte ni n'épingle jamais rien ;
+  - décision pure et testée (`assessPresentedKey`, `SshHostKeyProbeTest`) : clé déjà épinglée et
+    identique → confiance affichée ; premier contact → empreinte `SHA256:` affichée et épinglage
+    **uniquement** sur confirmation explicite (`trust()`) ; clé différente → **blocage dur** avec
+    empreintes épinglée et présentée côte à côte, ré-épinglage (`repin()`) derrière une
+    confirmation PIN/biométrie fraîche ;
+  - hôte/port validés avant tout trafic réseau, délai borné (10 s), sonde sur `Dispatchers.IO` ;
+  - la boîte de dialogue de sonde est le **seul** point d'entrée UI autorisé à appeler
+    `trust()`/`repin()` ; l'écran de gestion conserve l'interdiction (tests de contrat).
 
 ## Explicitement NON implémenté
 
-- Aucune session réseau SSH, aucun terminal, aucune exécution de commande : aucune
-  bibliothèque SSH n'est encore embarquée et aucune connexion n'a été testée.
+- Aucune session authentifiée, aucun terminal, aucune exécution de commande : la sonde s'arrête
+  à la poignée de main et aucune connexion authentifiée n'a été testée.
 - Pas de génération de clés sur l'appareil, pas de passphrase PEM, pas d'agent forwarding.
-- Pas de boîte de dialogue de confirmation d'empreinte ni de re-pin **à la connexion** : ces
-  écrans n'auront de sens qu'avec une vraie session SSH. L'écran de gestion ne permet
-  volontairement ni `trust()` ni `repin()` — seulement l'import, le retrait et l'effacement.
+- La sonde capture une seule clé d'hôte par connexion (algorithme négocié) ; les autres
+  algorithmes du serveur sont découverts au fil des vérifications, comme avec OpenSSH.
 
 ## Modèle de menace et règles permanentes
 
@@ -65,6 +77,7 @@ Livré (pur JVM, couvert par `SshKnownHostsTest` et `SshKeyVaultTest`) :
 
 ## Limites de validation
 
-Tests JVM uniquement (parsing, transitions de confiance, chiffrement simulé par un chiffre
-de test) : le Keystore réel, une session SSH réelle et l'UI associée n'ont pas été validés
-sur appareil ni contre un serveur. Ne pas annoncer « SSH fonctionnel » à ce stade.
+Tests JVM uniquement (parsing, transitions de confiance, décision de la sonde, chiffrement
+simulé par un chiffre de test) : le Keystore réel, une poignée de main SSH réelle et l'UI
+associée n'ont pas été validés sur appareil ni contre un serveur. Ne pas annoncer « SSH
+fonctionnel » à ce stade.

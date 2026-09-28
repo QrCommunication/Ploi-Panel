@@ -1,7 +1,7 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
     <string name="ssh_device_title">SSH sur cet appareil</string>
-    <string name="ssh_device_hint">Clés privées et empreintes d’hôtes propres à ce profil, stockées sur l’appareil (clés chiffrées). La session SSH (connexion, terminal) n’est pas encore disponible.</string>
+    <string name="ssh_device_hint">Clés privées et empreintes d’hôtes propres à ce profil, stockées sur l’appareil (clés chiffrées). La vérification d’un hôte (poignée de main SSH, sans identifiant) est disponible ; la session/terminal ne l’est pas encore.</string>
     <string name="ssh_device_need_profile">Activez un profil pour gérer ses clés SSH et ses hôtes de confiance.</string>
     <string name="ssh_keys_heading">Clés privées importées</string>
     <string name="ssh_keys_empty">Aucune clé importée pour ce profil.</string>
@@ -34,4 +34,21 @@
     <string name="ssh_error_encrypted_pem">Les clés PEM protégées par phrase de passe ne sont pas prises en charge.</string>
     <string name="ssh_error_malformed_key">Clé privée ou publique illisible.</string>
     <string name="ssh_error_vault">Coffre SSH illisible : données corrompues ou clé de chiffrement absente.</string>
+    <string name="ssh_probe_title">Vérifier un hôte</string>
+    <string name="ssh_probe_hint">Interroge l’hôte par une poignée de main SSH (aucun identifiant, aucune commande) et confronte la clé présentée aux empreintes épinglées de ce profil.</string>
+    <string name="ssh_probe_host">Hôte (IP ou nom)</string>
+    <string name="ssh_probe_port">Port</string>
+    <string name="ssh_probe_run">Interroger</string>
+    <string name="ssh_probe_invalid">Hôte ou port invalide.</string>
+    <string name="ssh_probe_error">Hôte injoignable ou clé SSH non récupérée.</string>
+    <string name="ssh_probe_trusted">Empreinte vérifiée : la clé présentée correspond à l’épingle existante.</string>
+    <string name="ssh_probe_first">Premier contact : comparez cette empreinte avec une source de confiance (console Ploi, opérateur du serveur) avant d’épingler.</string>
+    <string name="ssh_probe_pin">Épingler cet hôte</string>
+    <string name="ssh_probe_pinned">Hôte épinglé pour ce profil.</string>
+    <string name="ssh_probe_mismatch">ALERTE : la clé présentée diffère de l’épingle existante. Interception possible ou serveur réinstallé — ne continuez qu’après vérification hors bande.</string>
+    <string name="ssh_probe_mismatch_old">Empreinte épinglée :</string>
+    <string name="ssh_probe_mismatch_new">Empreinte présentée :</string>
+    <string name="ssh_probe_repin">Ré-épingler la nouvelle clé</string>
+    <string name="ssh_probe_repin_confirm">Remplacer l’épingle de %1$s par la clé présentée ? Confirmez uniquement si vous avez vérifié la nouvelle empreinte hors bande.</string>
+    <string name="ssh_probe_repinned">Épingle remplacée pour ce profil.</string>
 </resources>

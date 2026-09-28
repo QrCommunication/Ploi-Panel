@@ -56,6 +56,8 @@ dependencies {
     implementation("androidx.activity:activity-compose:1.11.0")
     implementation("androidx.biometric:biometric:1.1.0")
     implementation("androidx.work:work-runtime-ktx:2.10.5")
+    // SSH transport for the handshake-only host key probe (TOFU confirmation at connection time).
+    implementation("com.github.mwiede:jsch:2.28.7")
     implementation(platform("androidx.compose:compose-bom:2025.12.00"))
     implementation("androidx.compose.ui:ui")
     implementation("androidx.compose.material3:material3")

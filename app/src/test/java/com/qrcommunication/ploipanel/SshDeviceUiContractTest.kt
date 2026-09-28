@@ -45,4 +45,25 @@ class SshDeviceUiContractTest {
         assertTrue(ui.contains("error = mapSshError(failure)"))
         assertTrue(ui.contains("enabled = !busy && label.isNotBlank()"))
     }
+
+    @Test fun managementScreenOpensTheProbeButNeverPinsItself() {
+        val ui = screen("SshDeviceScreen")
+        assertTrue(ui.contains("SshHostProbeDialog("))
+        assertTrue(ui.contains("JSchHostKeyTransport()"))
+        assertFalse("management UI must not trust host keys", ui.contains(".trust("))
+        assertFalse("management UI must not re-pin host keys", ui.contains("repin("))
+    }
+
+    @Test fun probeDialogIsTheOnlyConnectionTimeTrustEntryPoint() {
+        val ui = screen("SshProbeDialog")
+        assertTrue("probe runs off the main thread", ui.contains("Dispatchers.IO"))
+        assertTrue(ui.contains("transport.fetchHostKey(targetHost, targetPort)"))
+        assertTrue("presented key is confronted with the trust store", ui.contains("assessPresentedKey("))
+        assertTrue("first contact pins only on explicit confirmation", ui.contains("trustStore.trust("))
+        assertTrue("mismatch re-pin only via the dialog", ui.contains("trustStore.repin("))
+        assertTrue("re-pin requires a fresh PIN/biometric gate", ui.contains("SensitiveConfirmDialog("))
+        assertTrue("pinned and presented fingerprints are both shown", ui.contains("ssh_probe_mismatch_old"))
+        assertTrue(ui.contains("ssh_probe_mismatch_new"))
+        assertFalse("the probe never authenticates", ui.contains("setPassword"))
+    }
 }

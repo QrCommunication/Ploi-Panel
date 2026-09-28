@@ -30,6 +30,7 @@ import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.unit.dp
 import androidx.fragment.app.FragmentActivity
+import com.qrcommunication.ploipanel.ssh.JSchHostKeyTransport
 import com.qrcommunication.ploipanel.ssh.KnownHostsImport
 import com.qrcommunication.ploipanel.ssh.SshHostKey
 import com.qrcommunication.ploipanel.ssh.SshHostTrustStore
@@ -61,8 +62,9 @@ private fun mapSshError(failure: Throwable): Int = when (failure.message) {
 /**
  * Device-side SSH management for the active profile: imported private keys (write-only, the
  * PEM is never read back for display) and pinned host keys (TOFU). Destructive actions stay
- * explicit; key deletion is gated by a fresh PIN/biometric confirmation. No SSH session,
- * terminal or connection-time fingerprint dialog exists yet.
+ * explicit; key deletion is gated by a fresh PIN/biometric confirmation. The host probe opens
+ * [SshHostProbeDialog], the only connection-time UI allowed to trust or re-pin a host key.
+ * No authenticated SSH session or terminal exists yet.
  */
 @Composable
 internal fun SshDeviceSection(profileId: String?, lock: AppLock, activity: FragmentActivity) {
@@ -90,6 +92,7 @@ internal fun SshDeviceSection(profileId: String?, lock: AppLock, activity: Fragm
     var pendingDelete by remember { mutableStateOf<SshKeyEntry?>(null) }
     var pendingRevoke by remember { mutableStateOf<SshHostKey?>(null) }
     var confirmClear by remember { mutableStateOf(false) }
+    var probing by remember { mutableStateOf(false) }
 
     LaunchedEffect(profileId, keysVersion) {
         keys = null
@@ -177,6 +180,9 @@ internal fun SshDeviceSection(profileId: String?, lock: AppLock, activity: Fragm
             }
         }
         FlowRow(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+            OutlinedButton(onClick = { probing = true }) {
+                Text(stringResource(R.string.ssh_probe_title))
+            }
             OutlinedButton(onClick = { importingHosts = true }, enabled = hosts != null) {
                 Text(stringResource(R.string.ssh_hosts_import))
             }
@@ -202,6 +208,14 @@ internal fun SshDeviceSection(profileId: String?, lock: AppLock, activity: Fragm
         trustStore = trustStore,
         onDismiss = { importingHosts = false },
         onImported = { hostsVersion++ }
+    )
+    if (probing) SshHostProbeDialog(
+        trustStore = trustStore,
+        transport = remember { JSchHostKeyTransport() },
+        lock = lock,
+        activity = activity,
+        onDismiss = { probing = false },
+        onPinnedChanged = { hostsVersion++ }
     )
     pendingDelete?.let { entry ->
         SensitiveConfirmDialog(
