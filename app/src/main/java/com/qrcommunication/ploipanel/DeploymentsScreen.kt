@@ -2,6 +2,8 @@ package com.qrcommunication.ploipanel
 
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.imePadding
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.FlowRow
 import androidx.compose.foundation.layout.fillMaxWidth
@@ -15,6 +17,7 @@ import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.OutlinedTextField
+import androidx.compose.material3.Surface
 import androidx.compose.material3.Switch
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
@@ -27,8 +30,11 @@ import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.window.Dialog
+import androidx.compose.ui.window.DialogProperties
 import androidx.fragment.app.FragmentActivity
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.Dispatchers
@@ -243,14 +249,14 @@ internal fun DeployScriptDialog(
     lock: AppLock, activity: FragmentActivity, onDismiss: () -> Unit
 ) {
     val scope = rememberCoroutineScope()
-    var content by remember { mutableStateOf<String?>(null) }
-    var draft by remember { mutableStateOf("") }
-    var editing by remember { mutableStateOf(false) }
-    var loading by remember { mutableStateOf(true) }
+    var content by remember(token, serverId, siteId) { mutableStateOf<String?>(null) }
+    var draft by remember(token, serverId, siteId) { mutableStateOf("") }
+    var loading by remember(token, serverId, siteId) { mutableStateOf(true) }
     var saving by remember { mutableStateOf(false) }
     var error by remember { mutableStateOf<Throwable?>(null) }
     var feedback by remember { mutableStateOf("") }
     var pendingSave by remember { mutableStateOf<String?>(null) }
+    var confirmDiscard by remember { mutableStateOf(false) }
     val savedMessage = stringResource(R.string.deploy_script_saved)
 
     LaunchedEffect(token, serverId, siteId) {
@@ -271,44 +277,49 @@ internal fun DeployScriptDialog(
         }
     }
 
-    AlertDialog(
-        onDismissRequest = onDismiss,
-        title = { Text(stringResource(R.string.deploy_script)) },
-        text = {
-            Column(
-                Modifier.verticalScroll(rememberScrollState()),
-                verticalArrangement = Arrangement.spacedBy(8.dp)
-            ) {
+    Dialog(
+        onDismissRequest = { if (!saving) { if (content != null && draft != content) confirmDiscard = true else onDismiss() } },
+        properties = DialogProperties(usePlatformDefaultWidth = false)
+    ) {
+        Surface(Modifier.fillMaxSize().imePadding().padding(12.dp), shape = MaterialTheme.shapes.large) {
+            Column(Modifier.fillMaxSize().padding(16.dp), verticalArrangement = Arrangement.spacedBy(10.dp)) {
+                Text(stringResource(R.string.deploy_script) + " — " + siteDomain,
+                    style = MaterialTheme.typography.titleLarge)
+                Text(stringResource(R.string.deploy_site_editor_hint), style = MaterialTheme.typography.bodySmall)
                 if (loading) CircularProgressIndicator()
                 if (error != null) ApiErrorText(error!!)
-                if (feedback.isNotEmpty()) Text(feedback)
-                content?.let { current ->
-                    if (editing) {
-                        OutlinedTextField(
-                            value = draft, onValueChange = { draft = it },
-                            label = { Text(stringResource(R.string.deploy_script_edit)) },
-                            modifier = Modifier.fillMaxWidth()
-                        )
-                    } else {
-                        Text(current, style = MaterialTheme.typography.bodySmall)
+                if (feedback.isNotEmpty()) Text(feedback, color = MaterialTheme.colorScheme.primary)
+                if (content != null) {
+                    OutlinedTextField(
+                        value = draft, onValueChange = { draft = it; feedback = "" },
+                        label = { Text(stringResource(R.string.deploy_script_edit)) },
+                        textStyle = MaterialTheme.typography.bodyMedium.copy(fontFamily = FontFamily.Monospace),
+                        enabled = !saving, modifier = Modifier.weight(1f).fillMaxWidth()
+                    )
+                    Text(stringResource(R.string.deploy_global_length, draft.length, DEPLOY_SCRIPT_MAX_LENGTH),
+                        style = MaterialTheme.typography.bodySmall)
+                } else androidx.compose.foundation.layout.Spacer(Modifier.weight(1f))
+                FlowRow(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                    OutlinedButton(onClick = {
+                        if (draft != content && content != null) confirmDiscard = true else onDismiss()
+                    }, enabled = !saving) { Text(stringResource(R.string.back)) }
+                    Button(onClick = { pendingSave = draft },
+                        enabled = !saving && content != null && draft != content &&
+                            draft.isNotBlank() && draft.length <= DEPLOY_SCRIPT_MAX_LENGTH) {
+                        Text(stringResource(R.string.save))
                     }
                 }
             }
-        },
-        confirmButton = {
-            if (editing) {
-                Button(onClick = {
-                    if (draft.isNotBlank() && draft.length <= DEPLOY_SCRIPT_MAX_LENGTH) pendingSave = draft
-                }, enabled = !saving && draft.isNotBlank() && draft.length <= DEPLOY_SCRIPT_MAX_LENGTH) {
-                    Text(stringResource(R.string.save))
-                }
-            } else {
-                Button(onClick = { editing = true }, enabled = content != null && !saving) {
-                    Text(stringResource(R.string.edit_site))
-                }
-            }
-        },
-        dismissButton = { OutlinedButton(onClick = onDismiss) { Text(stringResource(R.string.cancel)) } }
+        }
+    }
+    if (confirmDiscard) AlertDialog(
+        onDismissRequest = { confirmDiscard = false },
+        title = { Text(stringResource(R.string.deploy_discard_title)) },
+        text = { Text(stringResource(R.string.deploy_discard_message)) },
+        confirmButton = { Button(onClick = { confirmDiscard = false; onDismiss() }) {
+            Text(stringResource(R.string.deploy_discard_action))
+        } },
+        dismissButton = { OutlinedButton(onClick = { confirmDiscard = false }) { Text(stringResource(R.string.cancel)) } }
     )
 
     val pending = pendingSave
@@ -323,9 +334,12 @@ internal fun DeployScriptDialog(
                 feedback = ""
                 scope.launch {
                     try {
-                        withContext(Dispatchers.IO) { PloiApi.updateDeployScript(token, serverId, siteId, pending) }
-                        content = pending
-                        editing = false
+                        val confirmed = withContext(Dispatchers.IO) {
+                            PloiApi.updateDeployScript(token, serverId, siteId, pending)
+                            PloiApi.deployScript(token, serverId, siteId)
+                        }
+                        check(confirmed == pending) { "Deployment script readback differs" }
+                        content = confirmed
                         feedback = savedMessage
                     } catch (cancelled: CancellationException) {
                         throw cancelled

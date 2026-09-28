@@ -1,0 +1,18 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="site_category_overview">Aperçu</string>
+    <string name="site_category_deployment">Déploiement</string>
+    <string name="site_category_configuration">Configuration</string>
+    <string name="site_category_security">Sécurité</string>
+    <string name="site_category_operations">Opérations</string>
+    <string name="site_category_overview_description">État et gestion du site</string>
+    <string name="site_category_deployment_description">Dépôt, déploiements et script</string>
+    <string name="site_category_configuration_description">Site, PHP, nginx, .env et domaine de test</string>
+    <string name="site_category_security_description">Certificats et accès protégés</string>
+    <string name="site_category_operations_description">Files, logs et outils du site</string>
+    <string name="site_category_back">Retour aux catégories</string>
+    <string name="site_category_resume_confirmation">Réactiver le site %1$s ?</string>
+    <string name="site_category_edit_confirmation">Enregistrer les modifications du site %1$s ?</string>
+    <string name="site_category_php_confirmation">Changer la version PHP du site %1$s ?</string>
+    <string name="site_category_clone_confirmation">Cloner le site %1$s ?</string>
+</resources>

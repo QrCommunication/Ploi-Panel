@@ -1,0 +1,44 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="deploy_global_tab">Déploiements</string>
+    <string name="deploy_global_templates">Modèles de déploiement</string>
+    <string name="deploy_global_local_hint">Modèles conservés localement, chiffrés et séparés par profil. Ce texte remplace le script Ploi des sites choisis ; il ne lance pas de déploiement.</string>
+    <string name="deploy_global_new">Nouveau modèle</string>
+    <string name="deploy_global_name">Nom du modèle</string>
+    <string name="deploy_global_text">Contenu du script</string>
+    <string name="deploy_global_length">%1$d / %2$d</string>
+    <string name="deploy_global_save_local">Enregistrer le modèle local</string>
+    <string name="deploy_global_delete">Supprimer le modèle</string>
+    <string name="deploy_global_delete_confirm">Supprimer ce modèle local ? Les scripts déjà enregistrés sur Ploi ne seront pas modifiés.</string>
+    <string name="deploy_global_invalid">Nom, contenu, domaine ou variables invalides. Vérifiez également la taille du script et les doublons.</string>
+    <string name="deploy_global_placeholders">Variables facultatives : {{domain}} (nom du site protégé pour le shell), {{server_id}}, {{site_id}}. Ne placez pas {{domain}} à l’intérieur de guillemets existants. Inspectez le script avant de l’appliquer.</string>
+    <string name="deploy_global_select_sites">Sites cibles</string>
+    <string name="deploy_global_replace_warning">Choisissez explicitement les sites. Le script actuel sera remplacé sur chacun ; vérifiez les chemins et les commandes propres au site. Aucun déploiement n’est lancé.</string>
+    <string name="deploy_global_servers">Serveurs du compte</string>
+    <string name="deploy_global_empty_servers">Aucun serveur disponible</string>
+    <string name="deploy_global_sites_on">Sites sur %1$s</string>
+    <plurals name="deploy_global_count">
+        <item quantity="one">%d site sélectionné</item>
+        <item quantity="other">%d sites sélectionnés</item>
+    </plurals>
+    <string name="deploy_global_remove_site">Retirer %1$s (%2$s)</string>
+    <string name="deploy_global_preview">Aperçu extrait pour %1$s :</string>
+    <string name="deploy_global_apply">Appliquer le texte aux sites choisis</string>
+    <plurals name="deploy_global_confirm">
+        <item quantity="one">Remplacer le contenu du script de déploiement du site sélectionné ? Vérification PIN ou empreinte requise. Aucun déploiement ne sera lancé.</item>
+        <item quantity="other">Remplacer le contenu du script de déploiement des %d sites sélectionnés ? Vérification PIN ou empreinte requise. Aucun déploiement ne sera lancé.</item>
+    </plurals>
+    <string name="deploy_global_progress">Sites traités : %1$d / %2$d</string>
+    <string name="deploy_global_preflight_abort">Aucun script modifié : lecture préalable impossible sur au moins un site.</string>
+    <string name="deploy_global_report">Résultat par site (mise à jour du script, pas déploiement)</string>
+    <string name="deploy_global_verified">Enregistré et relu</string>
+    <string name="deploy_global_unverified">Modification envoyée, lecture de contrôle non confirmée</string>
+    <string name="deploy_global_failed">Échec de la demande</string>
+    <string name="deploy_global_preflight_failed">Lecture préalable impossible</string>
+    <string name="deploy_global_skipped">Non modifié</string>
+    <string name="deploy_global_result">%1$s : %2$s</string>
+    <string name="deploy_site_editor_hint">Texte de déploiement propre à ce site. Enregistrer remplace le script Ploi après validation PIN/biométrie ; cela ne déclenche pas un déploiement.</string>
+    <string name="deploy_discard_title">Quitter sans enregistrer ?</string>
+    <string name="deploy_discard_message">Les modifications de ce script ne seront pas conservées.</string>
+    <string name="deploy_discard_action">Ignorer les modifications</string>
+</resources>

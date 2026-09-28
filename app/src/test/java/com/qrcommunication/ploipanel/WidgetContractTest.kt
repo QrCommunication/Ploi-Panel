@@ -42,7 +42,8 @@ class WidgetContractTest {
     @Test fun widgetTapRechecksProfileAfterUnlock() {
         val main = source("app/src/main/java/com/qrcommunication/ploipanel/MainActivity.kt")
         assertTrue(main.contains("!unlocked -> PinUnlockScreen("))
-        assertTrue(main.contains("LaunchedEffect(widgetRoute)"))
+        assertTrue(main.contains("LaunchedEffect(widgetRoute, globalBatchRunning)"))
+        assertTrue(main.contains("if (globalBatchRunning) return@LaunchedEffect"))
         assertTrue(main.contains("store.profiles().firstOrNull { it.id == route.profileId }"))
         assertTrue(main.contains("PloiApi.server(routeToken, route.serverId)"))
     }

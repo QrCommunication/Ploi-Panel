@@ -94,6 +94,7 @@ internal class ProfileStore(private val prefs: ProfilePrefs, private val cipher:
     fun remove(id: String) {
         persist(profiles().filterNot { it.id == id })
         prefs.write(TOKEN_PREFIX + id, null)
+        prefs.write(DeployScriptTemplateStore.key(id), null)
         if (prefs.read(KEY_ACTIVE) == id) prefs.write(KEY_ACTIVE, null)
     }
 

@@ -239,7 +239,10 @@ private fun PanelHome(
 ) {
     val context = LocalContext.current
     val store = remember { ProfileStore(SharedPreferencesProfilePrefs(context), KeystoreTokenCipher()) }
-    val configurationManager = remember { PortableConfigurationManager(SharedPreferencesProfilePrefs(context), KeystoreTokenCipher()) }
+    val configurationManager = remember {
+        PortableConfigurationManager(SharedPreferencesProfilePrefs(context), KeystoreTokenCipher(),
+            KeystoreTokenCipher("ploi-panel.deploy-templates"))
+    }
     var profilesVersion by remember { mutableIntStateOf(0) }
     val profiles = remember(profilesVersion) { store.profiles() }
     var draftLabel by remember { mutableStateOf("") }
@@ -255,6 +258,7 @@ private fun PanelHome(
     var page by remember { mutableIntStateOf(1) }
     var selected by remember { mutableStateOf<Server?>(null) }
     var panelTab by remember { mutableIntStateOf(0) }
+    var globalBatchRunning by remember { mutableStateOf(false) }
     var refresh by remember { mutableIntStateOf(0) }
     var creating by remember { mutableStateOf(false) }
     var showMonitored by remember { mutableStateOf(false) }
@@ -279,14 +283,15 @@ private fun PanelHome(
         onLanguageChanged(restored.language())
     }
 
-    LaunchedEffect(importUri, token, transferStatus) {
-        if ((importUri != null || transferStatus != 0) && token != null) panelTab = 7
+    LaunchedEffect(importUri, token, transferStatus, globalBatchRunning) {
+        if ((importUri != null || transferStatus != 0) && token != null && !globalBatchRunning) panelTab = 7
     }
 
     // Route only after the application lock has been passed. Opaque widget IDs are never
     // trusted as credentials; resolve the saved profile and server with the normal API client.
-    LaunchedEffect(widgetRoute) {
+    LaunchedEffect(widgetRoute, globalBatchRunning) {
         val route = widgetRoute ?: return@LaunchedEffect
+        if (globalBatchRunning) return@LaunchedEffect
         deepLinkError = false
         try {
             val profile = store.profiles().firstOrNull { it.id == route.profileId }
@@ -439,6 +444,7 @@ private fun PanelHome(
                                     5 -> stringResource(R.string.webserver_templates_tab)
                                     6 -> stringResource(R.string.projects_tab)
                                     7 -> stringResource(R.string.settings_tab)
+                                    8 -> stringResource(R.string.deploy_global_tab)
                                     else -> stringResource(if (creating) R.string.new_server else R.string.servers)
                                 },
                                 style = MaterialTheme.typography.titleLarge, fontWeight = FontWeight.Bold
@@ -461,7 +467,7 @@ private fun PanelHome(
                                 servers = null
                                 error = null
                                 page = 1
-                            }) { Text(stringResource(R.string.disconnect)) }
+                            }, enabled = !globalBatchRunning) { Text(stringResource(R.string.disconnect)) }
                         }
                     }
                 }
@@ -470,22 +476,25 @@ private fun PanelHome(
                     Text(stringResource(R.string.widget_route_unavailable), color = MaterialTheme.colorScheme.error)
                 }
                 val sections = listOf(
-                    R.string.servers, R.string.providers, R.string.account, R.string.scripts_tab,
-                    R.string.status_pages_tab, R.string.webserver_templates_tab, R.string.projects_tab,
-                    R.string.settings_tab
+                    0 to R.string.servers, 8 to R.string.deploy_global_tab,
+                    1 to R.string.providers, 2 to R.string.account, 3 to R.string.scripts_tab,
+                    4 to R.string.status_pages_tab, 5 to R.string.webserver_templates_tab,
+                    6 to R.string.projects_tab, 7 to R.string.settings_tab
                 )
                 val navigationState = rememberLazyListState()
-                LaunchedEffect(panelTab) { navigationState.animateScrollToItem(panelTab) }
+                LaunchedEffect(panelTab) { navigationState.animateScrollToItem(sections.indexOfFirst { it.first == panelTab }.coerceAtLeast(0)) }
                 if (!creating) LazyRow(
                     modifier = Modifier.fillMaxWidth(),
                     state = navigationState,
                     horizontalArrangement = Arrangement.spacedBy(8.dp)
                 ) {
                     items(sections.size) { index ->
+                        val (tab, label) = sections[index]
                         FilterChip(
-                            selected = panelTab == index,
-                            onClick = { panelTab = index },
-                            label = { Text(stringResource(sections[index])) }
+                            selected = panelTab == tab,
+                            enabled = !globalBatchRunning || panelTab == tab,
+                            onClick = { panelTab = tab },
+                            label = { Text(stringResource(label)) }
                         )
                     }
                 }
@@ -499,6 +508,10 @@ private fun PanelHome(
                     4 -> StatusPagesScreen(token, lock, activity)
                     5 -> WebserverTemplatesScreen(token)
                     6 -> ProjectsScreen(token, lock, activity)
+                    8 -> activeProfile?.first?.id?.let { profileId ->
+                        GlobalDeployScriptsScreen(token, profileId, lock, activity,
+                            onRunningChange = { globalBatchRunning = it })
+                    }
                     7 -> SettingsScreen(
                         store = store, profiles = profiles, active = activeProfile?.first,
                         lock = lock, activity = activity, theme = theme, language = language,

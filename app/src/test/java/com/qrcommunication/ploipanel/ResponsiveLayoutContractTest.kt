@@ -28,7 +28,8 @@ class ResponsiveLayoutContractTest {
     @Test fun accountAndServerTabsAreBoundedAndKeepSelectionVisible() {
         val main = source("${ui}MainActivity.kt")
         val detail = source("${ui}ServerScreen.kt")
-        assertTrue(main.contains("LazyRow(") && main.contains("animateScrollToItem(panelTab)"))
+        assertTrue(main.contains("LazyRow(") && main.contains("animateScrollToItem(sections.indexOfFirst { it.first == panelTab }.coerceAtLeast(0))"))
+        assertTrue(main.contains("0 to R.string.servers, 8 to R.string.deploy_global_tab"))
         assertTrue(detail.contains("LazyRow(") && detail.contains("tabState.animateScrollToItem("))
         assertTrue(main.contains("Modifier.weight(1f).fillMaxWidth()"))
         assertTrue(detail.contains("FilterChip(") && main.contains("FilterChip("))

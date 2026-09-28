@@ -1,5 +1,7 @@
 package com.qrcommunication.ploipanel
 
+import androidx.activity.compose.BackHandler
+import androidx.annotation.StringRes
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.BoxWithConstraints
@@ -26,6 +28,7 @@ import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.key
 import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
@@ -40,6 +43,34 @@ import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
+
+internal enum class SiteCategory(@param:StringRes val title: Int, @param:StringRes val description: Int) {
+    OVERVIEW(R.string.site_category_overview, R.string.site_category_overview_description),
+    DEPLOYMENT(R.string.site_category_deployment, R.string.site_category_deployment_description),
+    CONFIGURATION(R.string.site_category_configuration, R.string.site_category_configuration_description),
+    SECURITY(R.string.site_category_security, R.string.site_category_security_description),
+    OPERATIONS(R.string.site_category_operations, R.string.site_category_operations_description)
+}
+
+internal fun siteSubsectionCategory(section: Int): SiteCategory = when (section) {
+    3, 4 -> SiteCategory.SECURITY
+    in 1..2, in 5..9 -> SiteCategory.OPERATIONS
+    else -> throw IllegalArgumentException("Unknown site subsection: $section")
+}
+
+@Composable
+private fun SiteNavigationCard(
+    @StringRes title: Int, @StringRes description: Int? = null,
+    enabled: Boolean, destructive: Boolean = false, onClick: () -> Unit
+) {
+    Card(onClick = onClick, enabled = enabled, modifier = Modifier.fillMaxWidth()) {
+        Column(Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(4.dp)) {
+            Text(stringResource(title), style = MaterialTheme.typography.titleMedium,
+                color = if (destructive) MaterialTheme.colorScheme.error else MaterialTheme.colorScheme.onSurface)
+            if (description != null) Text(stringResource(description), style = MaterialTheme.typography.bodySmall)
+        }
+    }
+}
 
 @Composable
 internal fun SitesScreen(token: String, serverId: Long, lock: AppLock, activity: FragmentActivity) {
@@ -72,11 +103,13 @@ internal fun SitesScreen(token: String, serverId: Long, lock: AppLock, activity:
         val createdMessage = stringResource(R.string.site_created)
         var feedback by remember(token, serverId) { mutableStateOf("") }
         val detail: @Composable (Long) -> Unit = { id ->
-            SiteDetail(token, serverId, id, lock, activity, onDeleted = {
-                selectedId = null
-                feedback = ""
-                refresh++
-            }, onChanged = { refresh++ })
+            key(token, serverId, id) {
+                SiteDetail(token, serverId, id, lock, activity, onDeleted = {
+                    selectedId = null
+                    feedback = ""
+                    refresh++
+                }, onChanged = { refresh++ })
+            }
         }
         Column(Modifier.fillMaxSize()) {
         if (feedback.isNotEmpty()) Text(feedback, Modifier.padding(bottom = 8.dp))
@@ -254,6 +287,20 @@ private fun SiteDetail(
     var confirmResetPermissions by remember { mutableStateOf(false) }
     var pendingNginxContent by remember { mutableStateOf<String?>(null) }
     var siteSection by remember(token, serverId, siteId) { mutableIntStateOf(0) }
+    var siteCategory by remember(token, serverId, siteId) { mutableStateOf<SiteCategory?>(null) }
+    var confirmResume by remember { mutableStateOf(false) }
+    var pendingEdit by remember { mutableStateOf<Triple<String, Boolean, Boolean>?>(null) }
+    var pendingPhpVersion by remember { mutableStateOf<String?>(null) }
+    var pendingClone by remember { mutableStateOf<Pair<Long, String>?>(null) }
+
+    BackHandler(enabled = siteSection != 0 || siteCategory != null) {
+        if (siteSection != 0) {
+            siteCategory = siteSubsectionCategory(siteSection)
+            siteSection = 0
+        } else {
+            siteCategory = null
+        }
+    }
 
     val updatedMessage = stringResource(R.string.site_updated)
     val suspendedMessage = stringResource(R.string.site_suspended)
@@ -304,7 +351,10 @@ private fun SiteDetail(
 
     if (siteSection != 0) {
         Column(Modifier.fillMaxSize().padding(16.dp)) {
-            OutlinedButton(onClick = { siteSection = 0 }) { Text(stringResource(R.string.back)) }
+            OutlinedButton(onClick = {
+                siteCategory = siteSubsectionCategory(siteSection)
+                siteSection = 0
+            }) { Text(stringResource(R.string.back)) }
             Box(Modifier.weight(1f).fillMaxWidth()) { when (siteSection) {
                 1 -> QueueWorkersScreen(token, serverId, siteId, lock, activity)
                 2 -> RedirectsScreen(token, serverId, siteId, lock, activity)
@@ -322,125 +372,92 @@ private fun SiteDetail(
         return
     }
 
-    Column(
-        Modifier.padding(16.dp).verticalScroll(rememberScrollState()),
-        verticalArrangement = Arrangement.spacedBy(10.dp)
-    ) {
-        if (loading) CircularProgressIndicator()
-        if (error != null) ApiErrorText(error!!)
-        site?.let { details ->
-            val yes = stringResource(R.string.flag_yes)
-            val no = stringResource(R.string.flag_no)
-            Text(details.domain, style = MaterialTheme.typography.headlineSmall)
-            Text(stringResource(R.string.server_status, details.status))
-            if (details.phpVersion.isNotBlank()) Text(stringResource(R.string.site_php, details.phpVersion))
-            if (details.webDirectory.isNotBlank()) Text(stringResource(R.string.site_directory, details.webDirectory))
-            if (details.projectType.isNotBlank()) Text(stringResource(R.string.site_project_type, details.projectType))
-            if (details.systemUser.isNotBlank()) Text(stringResource(R.string.site_system_user, details.systemUser))
-            if (details.diskUsage.isNotBlank()) Text(stringResource(R.string.site_disk, details.diskUsage))
-            if (details.healthUrl.isNotBlank()) Text(stringResource(R.string.site_health, details.healthUrl))
-            if (details.testDomain.isNotBlank()) Text(stringResource(R.string.test_domain, details.testDomain))
-            if (details.lastDeployAt.isNotBlank()) Text(stringResource(R.string.site_last_deploy, details.lastDeployAt))
-            if (details.createdAt.isNotBlank()) Text(stringResource(R.string.site_created_at, details.createdAt))
-            Text(stringResource(R.string.site_repository, if (details.hasRepository) yes else no))
-            Text(stringResource(R.string.site_zero_downtime, if (details.zeroDowntimeDeployment) yes else no))
-            Text(stringResource(R.string.site_robots, if (details.disableRobots) yes else no))
-            Text(stringResource(R.string.site_fastcgi, if (details.fastcgiCache) yes else no))
-
-            FlowRow(horizontalArrangement = Arrangement.spacedBy(8.dp), verticalArrangement = Arrangement.spacedBy(4.dp)) {
-                OutlinedButton(onClick = { editing = true }, enabled = !busy) {
-                    Text(stringResource(R.string.edit_site))
-                }
-                if (details.status.equals("suspended", ignoreCase = true)) {
-                    OutlinedButton(onClick = {
-                        runAction(resumedMessage) { PloiApi.resumeSite(token, serverId, siteId) }
-                    }, enabled = !busy) { Text(stringResource(R.string.resume_site)) }
-                } else {
-                    OutlinedButton(onClick = { suspendDialog = true }, enabled = !busy) {
-                        Text(stringResource(R.string.suspend_site))
+    Column(Modifier.fillMaxSize().padding(16.dp), verticalArrangement = Arrangement.spacedBy(10.dp)) {
+        if (siteCategory == null) {
+            if (loading) CircularProgressIndicator()
+            if (error != null) ApiErrorText(error!!)
+            site?.let { details ->
+                Text(details.domain, style = MaterialTheme.typography.headlineSmall)
+                Column(Modifier.weight(1f).fillMaxWidth().verticalScroll(rememberScrollState()),
+                    verticalArrangement = Arrangement.spacedBy(10.dp)) {
+                    SiteCategory.entries.forEach { category ->
+                        SiteNavigationCard(category.title, category.description, enabled = !busy) {
+                            siteCategory = category
+                        }
                     }
                 }
-                OutlinedButton(onClick = { confirmDelete = true }, enabled = !busy) {
-                    Text(stringResource(R.string.delete_site), color = MaterialTheme.colorScheme.error)
+            }
+        } else {
+            OutlinedButton(onClick = { siteCategory = null }, enabled = !busy) {
+                Text(stringResource(R.string.site_category_back))
+            }
+            Text(stringResource(siteCategory!!.title), style = MaterialTheme.typography.titleLarge)
+            Column(Modifier.weight(1f).fillMaxWidth().verticalScroll(rememberScrollState()),
+                verticalArrangement = Arrangement.spacedBy(10.dp)) {
+                if (loading) CircularProgressIndicator()
+                if (error != null) ApiErrorText(error!!)
+                site?.let { details ->
+                    when (siteCategory ?: return@let) {
+                        SiteCategory.OVERVIEW -> {
+                            val yes = stringResource(R.string.flag_yes)
+                            val no = stringResource(R.string.flag_no)
+                            Text(details.domain, style = MaterialTheme.typography.headlineSmall)
+                            Text(stringResource(R.string.server_status, details.status))
+                            if (details.phpVersion.isNotBlank()) Text(stringResource(R.string.site_php, details.phpVersion))
+                            if (details.webDirectory.isNotBlank()) Text(stringResource(R.string.site_directory, details.webDirectory))
+                            if (details.projectType.isNotBlank()) Text(stringResource(R.string.site_project_type, details.projectType))
+                            if (details.systemUser.isNotBlank()) Text(stringResource(R.string.site_system_user, details.systemUser))
+                            if (details.diskUsage.isNotBlank()) Text(stringResource(R.string.site_disk, details.diskUsage))
+                            if (details.healthUrl.isNotBlank()) Text(stringResource(R.string.site_health, details.healthUrl))
+                            if (details.testDomain.isNotBlank()) Text(stringResource(R.string.test_domain, details.testDomain))
+                            if (details.lastDeployAt.isNotBlank()) Text(stringResource(R.string.site_last_deploy, details.lastDeployAt))
+                            if (details.createdAt.isNotBlank()) Text(stringResource(R.string.site_created_at, details.createdAt))
+                            Text(stringResource(R.string.site_repository, if (details.hasRepository) yes else no))
+                            Text(stringResource(R.string.site_zero_downtime, if (details.zeroDowntimeDeployment) yes else no))
+                            Text(stringResource(R.string.site_robots, if (details.disableRobots) yes else no))
+                            Text(stringResource(R.string.site_fastcgi, if (details.fastcgiCache) yes else no))
+                            SiteNavigationCard(R.string.clone_site, enabled = !busy) { cloneDialog = true }
+                            if (details.status.equals("suspended", ignoreCase = true)) {
+                                SiteNavigationCard(R.string.resume_site, enabled = !busy) { confirmResume = true }
+                            } else {
+                                SiteNavigationCard(R.string.suspend_site, enabled = !busy) { suspendDialog = true }
+                            }
+                            SiteNavigationCard(R.string.delete_site, enabled = !busy, destructive = true) { confirmDelete = true }
+                        }
+                        SiteCategory.DEPLOYMENT -> {
+                            SiteNavigationCard(R.string.repository_title, enabled = !busy) { repositoryDialog = true }
+                            SiteNavigationCard(R.string.deploy_site, enabled = !busy) { confirmDeploy = true }
+                            SiteNavigationCard(R.string.deploy_production, enabled = !busy) { confirmDeployProduction = true }
+                            SiteNavigationCard(R.string.deploy_script, enabled = !busy) { deployScriptDialog = true }
+                        }
+                        SiteCategory.CONFIGURATION -> {
+                            SiteNavigationCard(R.string.edit_site, enabled = !busy) { editing = true }
+                            SiteNavigationCard(R.string.php_version_change, enabled = !busy) { phpDialog = true }
+                            SiteNavigationCard(R.string.nginx_configuration, enabled = !busy) { nginxDialog = true }
+                            SiteNavigationCard(R.string.env_file, enabled = !busy) { envDialog = true }
+                            SiteNavigationCard(R.string.reset_permissions, enabled = !busy) { confirmResetPermissions = true }
+                            TestDomainSection(token, serverId, siteId, busy, lock, activity,
+                                onBusy = { busy = it }, onError = { actionError = it },
+                                onChanged = { refresh++; onChanged() })
+                        }
+                        SiteCategory.SECURITY -> {
+                            SiteNavigationCard(R.string.certificates_tab, enabled = !busy) { siteSection = 3 }
+                            SiteNavigationCard(R.string.auth_users_tab, enabled = !busy) { siteSection = 4 }
+                        }
+                        SiteCategory.OPERATIONS -> {
+                            SiteNavigationCard(R.string.queues_tab, enabled = !busy) { siteSection = 1 }
+                            SiteNavigationCard(R.string.site_logs, enabled = !busy) { logsDialog = true }
+                            SiteNavigationCard(R.string.horizon_statistics, enabled = !busy) { horizonDialog = true }
+                            SiteNavigationCard(R.string.redirects_tab, enabled = !busy) { siteSection = 2 }
+                            SiteNavigationCard(R.string.aliases_tab, enabled = !busy) { siteSection = 5 }
+                            SiteNavigationCard(R.string.tenants_tab, enabled = !busy) { siteSection = 6 }
+                            SiteNavigationCard(R.string.site_monitors_tab, enabled = !busy) { siteSection = 7 }
+                            SiteNavigationCard(R.string.apps_tab, enabled = !busy) { siteSection = 8 }
+                            SiteNavigationCard(R.string.wordpress_tab, enabled = !busy) { siteSection = 9 }
+                        }
+                    }
                 }
             }
-            FlowRow(horizontalArrangement = Arrangement.spacedBy(8.dp), verticalArrangement = Arrangement.spacedBy(4.dp)) {
-                OutlinedButton(onClick = { phpDialog = true }, enabled = !busy) {
-                    Text(stringResource(R.string.php_version_change))
-                }
-                OutlinedButton(onClick = { cloneDialog = true }, enabled = !busy) {
-                    Text(stringResource(R.string.clone_site))
-                }
-                OutlinedButton(onClick = { confirmResetPermissions = true }, enabled = !busy) {
-                    Text(stringResource(R.string.reset_permissions))
-                }
-            }
-            FlowRow(horizontalArrangement = Arrangement.spacedBy(8.dp), verticalArrangement = Arrangement.spacedBy(4.dp)) {
-                OutlinedButton(onClick = { nginxDialog = true }, enabled = !busy) {
-                    Text(stringResource(R.string.nginx_configuration))
-                }
-                OutlinedButton(onClick = { logsDialog = true }, enabled = !busy) {
-                    Text(stringResource(R.string.site_logs))
-                }
-                OutlinedButton(onClick = { horizonDialog = true }, enabled = !busy) {
-                    Text(stringResource(R.string.horizon_statistics))
-                }
-            }
-            FlowRow(horizontalArrangement = Arrangement.spacedBy(8.dp), verticalArrangement = Arrangement.spacedBy(4.dp)) {
-                OutlinedButton(onClick = { repositoryDialog = true }, enabled = !busy) {
-                    Text(stringResource(R.string.repository_title))
-                }
-                OutlinedButton(onClick = { confirmDeploy = true }, enabled = !busy) {
-                    Text(stringResource(R.string.deploy_site))
-                }
-                OutlinedButton(onClick = { confirmDeployProduction = true }, enabled = !busy) {
-                    Text(stringResource(R.string.deploy_production))
-                }
-            }
-            FlowRow(horizontalArrangement = Arrangement.spacedBy(8.dp), verticalArrangement = Arrangement.spacedBy(4.dp)) {
-                OutlinedButton(onClick = { deployScriptDialog = true }, enabled = !busy) {
-                    Text(stringResource(R.string.deploy_script))
-                }
-                OutlinedButton(onClick = { envDialog = true }, enabled = !busy) {
-                    Text(stringResource(R.string.env_file))
-                }
-            }
-            FlowRow(horizontalArrangement = Arrangement.spacedBy(8.dp), verticalArrangement = Arrangement.spacedBy(4.dp)) {
-                OutlinedButton(onClick = { siteSection = 1 }, enabled = !busy) {
-                    Text(stringResource(R.string.queues_tab))
-                }
-                OutlinedButton(onClick = { siteSection = 2 }, enabled = !busy) {
-                    Text(stringResource(R.string.redirects_tab))
-                }
-                OutlinedButton(onClick = { siteSection = 3 }, enabled = !busy) {
-                    Text(stringResource(R.string.certificates_tab))
-                }
-            }
-            FlowRow(horizontalArrangement = Arrangement.spacedBy(8.dp), verticalArrangement = Arrangement.spacedBy(4.dp)) {
-                OutlinedButton(onClick = { siteSection = 4 }, enabled = !busy) {
-                    Text(stringResource(R.string.auth_users_tab))
-                }
-                OutlinedButton(onClick = { siteSection = 5 }, enabled = !busy) {
-                    Text(stringResource(R.string.aliases_tab))
-                }
-                OutlinedButton(onClick = { siteSection = 6 }, enabled = !busy) {
-                    Text(stringResource(R.string.tenants_tab))
-                }
-            }
-            FlowRow(horizontalArrangement = Arrangement.spacedBy(8.dp), verticalArrangement = Arrangement.spacedBy(4.dp)) {
-                OutlinedButton(onClick = { siteSection = 7 }, enabled = !busy) {
-                    Text(stringResource(R.string.site_monitors_tab))
-                }
-                OutlinedButton(onClick = { siteSection = 8 }, enabled = !busy) {
-                    Text(stringResource(R.string.apps_tab))
-                }
-                OutlinedButton(onClick = { siteSection = 9 }, enabled = !busy) {
-                    Text(stringResource(R.string.wordpress_tab))
-                }
-            }
-            TestDomainSection(token, serverId, siteId, busy,
-                onBusy = { busy = it }, onError = { actionError = it },
-                onChanged = { refresh++; onChanged() })
         }
         if (actionError != null) ApiErrorText(actionError!!)
         if (actionFeedback.isNotEmpty()) Text(actionFeedback)
@@ -450,30 +467,64 @@ private fun SiteDetail(
         EditSiteDialog(current = site!!, busy = busy,
             onSave = { domain, zeroDowntime, robots ->
                 editing = false
-                runAction(updatedMessage) {
-                    PloiApi.updateSite(
-                        token, serverId, siteId,
-                        rootDomain = domain,
-                        zeroDowntimeDeployment = zeroDowntime.takeIf { it != site!!.zeroDowntimeDeployment },
-                        disableRobots = robots.takeIf { it != site!!.disableRobots }
-                    )
-                }
+                pendingEdit = Triple(domain, zeroDowntime, robots)
             },
             onDismiss = { editing = false })
     }
     if (phpDialog) {
         PhpVersionDialog(busy = busy, onPick = { version ->
             phpDialog = false
-            runAction(updatedMessage) { PloiApi.changeSitePhpVersion(token, serverId, siteId, version) }
+            pendingPhpVersion = version
         }, onDismiss = { phpDialog = false })
     }
     if (cloneDialog) {
         CloneSiteDialog(busy = busy, onClone = { target, domain ->
             cloneDialog = false
-            runAction(clonedMessage, refreshAfter = false) {
-                PloiApi.cloneSite(token, serverId, siteId, target, domain)
-            }
+            pendingClone = target to domain
         }, onDismiss = { cloneDialog = false })
+    }
+    pendingEdit?.let { (domain, zeroDowntime, robots) ->
+        if (site != null) SensitiveConfirmDialog(lock = lock, activity = activity,
+            message = stringResource(R.string.site_category_edit_confirmation, site!!.domain),
+            confirmLabel = R.string.save,
+            onConfirmed = {
+                pendingEdit = null
+                val current = site!!
+                runAction(updatedMessage) {
+                    PloiApi.updateSite(token, serverId, siteId, rootDomain = domain,
+                        zeroDowntimeDeployment = zeroDowntime.takeIf { it != current.zeroDowntimeDeployment },
+                        disableRobots = robots.takeIf { it != current.disableRobots })
+                }
+            }, onDismiss = { pendingEdit = null })
+    }
+    pendingPhpVersion?.let { version ->
+        if (site != null) SensitiveConfirmDialog(lock = lock, activity = activity,
+            message = stringResource(R.string.site_category_php_confirmation, site!!.domain),
+            confirmLabel = R.string.save,
+            onConfirmed = {
+                pendingPhpVersion = null
+                runAction(updatedMessage) { PloiApi.changeSitePhpVersion(token, serverId, siteId, version) }
+            }, onDismiss = { pendingPhpVersion = null })
+    }
+    pendingClone?.let { (target, domain) ->
+        if (site != null) SensitiveConfirmDialog(lock = lock, activity = activity,
+            message = stringResource(R.string.site_category_clone_confirmation, site!!.domain),
+            confirmLabel = R.string.clone_site,
+            onConfirmed = {
+                pendingClone = null
+                runAction(clonedMessage, refreshAfter = false) {
+                    PloiApi.cloneSite(token, serverId, siteId, target, domain)
+                }
+            }, onDismiss = { pendingClone = null })
+    }
+    if (confirmResume && site != null) {
+        SensitiveConfirmDialog(lock = lock, activity = activity,
+            message = stringResource(R.string.site_category_resume_confirmation, site!!.domain),
+            confirmLabel = R.string.resume_site,
+            onConfirmed = {
+                confirmResume = false
+                runAction(resumedMessage) { PloiApi.resumeSite(token, serverId, siteId) }
+            }, onDismiss = { confirmResume = false })
     }
     if (suspendDialog) {
         SuspendSiteDialog(busy = busy, onConfirm = { reason ->
@@ -589,13 +640,14 @@ private fun SiteDetail(
 /** Test domain status + enable/disable (GET 404 means none is active). */
 @Composable
 private fun TestDomainSection(
-    token: String, serverId: Long, siteId: Long, busy: Boolean,
+    token: String, serverId: Long, siteId: Long, busy: Boolean, lock: AppLock, activity: FragmentActivity,
     onBusy: (Boolean) -> Unit, onError: (Throwable?) -> Unit, onChanged: () -> Unit
 ) {
     val scope = rememberCoroutineScope()
     var refresh by remember(token, serverId, siteId) { mutableIntStateOf(0) }
     var info by remember(token, serverId, siteId) { mutableStateOf<TestDomain?>(null) }
     var loaded by remember(token, serverId, siteId) { mutableStateOf(false) }
+    var pendingEnable by remember(token, serverId, siteId) { mutableStateOf<Boolean?>(null) }
     val dnsHint = stringResource(R.string.test_domain_dns_hint)
 
     LaunchedEffect(token, serverId, siteId, refresh) {
@@ -617,33 +669,33 @@ private fun TestDomainSection(
             CircularProgressIndicator()
         } else if (info == null || info!!.testDomain.isBlank()) {
             Text(stringResource(R.string.test_domain_none))
-            OutlinedButton(onClick = {
-                onBusy(true)
-                onError(null)
-                scope.launch {
-                    try {
-                        info = withContext(Dispatchers.IO) { PloiApi.enableTestDomain(token, serverId, siteId) }
-                        refresh++
-                        onChanged()
-                    } catch (cancelled: CancellationException) {
-                        throw cancelled
-                    } catch (failure: Exception) {
-                        onError(failure)
-                    } finally {
-                        onBusy(false)
-                    }
-                }
-            }, enabled = !busy) { Text(stringResource(R.string.enable_test_domain)) }
+            OutlinedButton(onClick = { pendingEnable = true }, enabled = !busy) {
+                Text(stringResource(R.string.enable_test_domain))
+            }
         } else {
             Text(stringResource(R.string.test_domain, info!!.fullTestDomain.ifBlank { info!!.testDomain }))
             Text(dnsHint, style = MaterialTheme.typography.bodySmall)
-            OutlinedButton(onClick = {
+            OutlinedButton(onClick = { pendingEnable = false }, enabled = !busy) {
+                Text(stringResource(R.string.disable_test_domain))
+            }
+        }
+    }
+    pendingEnable?.let { enable ->
+        SensitiveConfirmDialog(lock = lock, activity = activity,
+            message = stringResource(if (enable) R.string.enable_test_domain else R.string.disable_test_domain),
+            confirmLabel = if (enable) R.string.enable_test_domain else R.string.disable_test_domain,
+            onConfirmed = {
+                pendingEnable = null
                 onBusy(true)
                 onError(null)
                 scope.launch {
                     try {
-                        withContext(Dispatchers.IO) { PloiApi.disableTestDomain(token, serverId, siteId) }
-                        info = null
+                        if (enable) {
+                            info = withContext(Dispatchers.IO) { PloiApi.enableTestDomain(token, serverId, siteId) }
+                        } else {
+                            withContext(Dispatchers.IO) { PloiApi.disableTestDomain(token, serverId, siteId) }
+                            info = null
+                        }
                         refresh++
                         onChanged()
                     } catch (cancelled: CancellationException) {
@@ -654,8 +706,7 @@ private fun TestDomainSection(
                         onBusy(false)
                     }
                 }
-            }, enabled = !busy) { Text(stringResource(R.string.disable_test_domain)) }
-        }
+            }, onDismiss = { pendingEnable = null })
     }
 }
 
