@@ -799,4 +799,13 @@
     <string name="widget_route_unavailable">Cannot open this server from the widget. Check the profile and try again.</string>
     <string name="settings_widgets">Home screen widgets</string>
     <string name="settings_widgets_hint">From your home screen, open “Widgets” and choose Ploi · Server or Ploi · Servers. Enter your PIN to select the profile, servers and metrics. Data appears on the unlocked home screen and refreshes on Android’s best-effort schedule (minimum 15 minutes, not guaranteed).</string>
+    <plurals name="confirm_run_script">
+        <item quantity="one">Run script “%1$s” on %2$d server? Its contents may change that server.</item>
+        <item quantity="other">Run script “%1$s” on %2$d servers? Its contents may change those servers.</item>
+    </plurals>
+    <string name="confirm_wpcli_run">Run this WP-CLI command on the server? It may change the site and its data.</string>
+    <string name="confirm_one_off_script">Run this command on the server? It may change the system and sites.</string>
+    <string name="custom_leave_title">Leave setup?</string>
+    <string name="custom_leave_warning">Copy the public SSH key and installation command before leaving. This screen won’t show them again.</string>
+    <string name="custom_leave_action">Leave anyway</string>
 </resources>

@@ -62,6 +62,8 @@ internal fun RepositoryDialog(
     LaunchedEffect(token, serverId, siteId, refresh) {
         loading = true
         error = null
+        feedback = ""
+        repository = null
         try {
             repository = withContext(Dispatchers.IO) { PloiApi.repository(token, serverId, siteId) }
             missing = false
@@ -82,6 +84,7 @@ internal fun RepositoryDialog(
     fun runAction(message: String, block: suspend () -> Unit) {
         busy = true
         error = null
+        feedback = ""
         scope.launch {
             try {
                 withContext(Dispatchers.IO) { block() }
@@ -253,6 +256,8 @@ internal fun DeployScriptDialog(
     LaunchedEffect(token, serverId, siteId) {
         loading = true
         error = null
+        feedback = ""
+        content = null
         try {
             val fetched = withContext(Dispatchers.IO) { PloiApi.deployScript(token, serverId, siteId) }
             content = fetched
@@ -315,6 +320,7 @@ internal fun DeployScriptDialog(
                 pendingSave = null
                 saving = true
                 error = null
+                feedback = ""
                 scope.launch {
                     try {
                         withContext(Dispatchers.IO) { PloiApi.updateDeployScript(token, serverId, siteId, pending) }
@@ -354,6 +360,8 @@ internal fun EnvDialog(
     LaunchedEffect(token, serverId, siteId) {
         loading = true
         error = null
+        feedback = ""
+        content = null
         try {
             val fetched = withContext(Dispatchers.IO) { PloiApi.environmentFile(token, serverId, siteId) }
             content = fetched
@@ -416,6 +424,7 @@ internal fun EnvDialog(
                 pendingSave = null
                 saving = true
                 error = null
+                feedback = ""
                 scope.launch {
                     try {
                         withContext(Dispatchers.IO) { PloiApi.updateEnvironmentFile(token, serverId, siteId, pending) }

@@ -67,6 +67,7 @@ internal fun BackupChannelsDialog(
     LaunchedEffect(token, backupId) {
         loading = true
         error = null
+        channels = null
         try {
             channels = withContext(Dispatchers.IO) { listChannels() }
         } catch (cancelled: CancellationException) {
@@ -82,6 +83,7 @@ internal fun BackupChannelsDialog(
     fun runAction(message: String, block: suspend () -> List<BackupNotificationChannel>) {
         busy = true
         error = null
+        feedback = ""
         scope.launch {
             try {
                 channels = withContext(Dispatchers.IO) { block() }
@@ -192,7 +194,7 @@ private fun AttachBackupChannelDialog(
                 verticalArrangement = Arrangement.spacedBy(10.dp)
             ) {
                 if (optionsError != null) ApiErrorText(optionsError!!)
-                if (available == null) {
+                if (available == null && optionsError == null) {
                     Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                         CircularProgressIndicator()
                         Text(stringResource(R.string.backup_loading_options), Modifier.padding(top = 12.dp))

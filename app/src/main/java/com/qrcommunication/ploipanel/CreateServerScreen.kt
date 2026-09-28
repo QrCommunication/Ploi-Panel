@@ -1,5 +1,6 @@
 package com.qrcommunication.ploipanel
 
+import androidx.activity.compose.BackHandler
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
@@ -44,20 +45,39 @@ import kotlinx.coroutines.withContext
 @Composable
 internal fun CreateServerScreen(token: String, onDone: () -> Unit, onCancel: () -> Unit) {
     var mode by remember { mutableIntStateOf(0) }
+    var customResultReady by remember { mutableStateOf(false) }
+    var confirmExit by remember { mutableStateOf(false) }
+    BackHandler { if (customResultReady) confirmExit = true else onCancel() }
     Column(
         Modifier.padding(16.dp).verticalScroll(rememberScrollState()),
         verticalArrangement = Arrangement.spacedBy(12.dp)
     ) {
         FlowRow(horizontalArrangement = Arrangement.spacedBy(8.dp), verticalArrangement = Arrangement.spacedBy(4.dp)) {
-            OutlinedButton(onClick = onCancel) { Text(stringResource(R.string.back)) }
-            OutlinedButton(onClick = { mode = 0 }, enabled = mode != 0) {
+            OutlinedButton(onClick = { if (customResultReady) confirmExit = true else onCancel() }) {
+                Text(stringResource(R.string.back))
+            }
+            OutlinedButton(onClick = { mode = 0 }, enabled = mode != 0 && !customResultReady) {
                 Text(stringResource(R.string.create_via_provider))
             }
             OutlinedButton(onClick = { mode = 1 }, enabled = mode != 1) {
                 Text(stringResource(R.string.create_custom))
             }
         }
-        if (mode == 0) ProviderCreateForm(token, onDone) else CustomCreateForm(token, onDone)
+        if (mode == 0) ProviderCreateForm(token, onDone)
+        else CustomCreateForm(token, onDone, onCreated = { customResultReady = true })
+    }
+    if (confirmExit) {
+        AlertDialog(
+            onDismissRequest = { confirmExit = false },
+            title = { Text(stringResource(R.string.custom_leave_title)) },
+            text = { Text(stringResource(R.string.custom_leave_warning)) },
+            confirmButton = {
+                Button(onClick = { confirmExit = false; onCancel() }) { Text(stringResource(R.string.custom_leave_action)) }
+            },
+            dismissButton = {
+                OutlinedButton(onClick = { confirmExit = false }) { Text(stringResource(R.string.cancel)) }
+            }
+        )
     }
 }
 
@@ -95,6 +115,7 @@ private fun OptionPicker(
 private fun ProviderCreateForm(token: String, onDone: () -> Unit) {
     val scope = rememberCoroutineScope()
     var providers by remember(token) { mutableStateOf<ProviderPage?>(null) }
+    var providerPage by remember(token) { mutableIntStateOf(1) }
     var loading by remember(token) { mutableStateOf(true) }
     var error by remember(token) { mutableStateOf<Throwable?>(null) }
     var credential by remember { mutableStateOf<ProviderCredential?>(null) }
@@ -109,11 +130,12 @@ private fun ProviderCreateForm(token: String, onDone: () -> Unit) {
     var submitError by remember { mutableStateOf<Throwable?>(null) }
     var invalid by remember { mutableStateOf(false) }
 
-    LaunchedEffect(token) {
+    LaunchedEffect(token, providerPage) {
         loading = true
+        providers = null
         error = null
         try {
-            providers = withContext(Dispatchers.IO) { PloiApi.providers(token, perPage = 50) }
+            providers = withContext(Dispatchers.IO) { PloiApi.providers(token, page = providerPage, perPage = 50) }
         } catch (cancelled: CancellationException) {
             throw cancelled
         } catch (failure: Exception) {
@@ -132,9 +154,13 @@ private fun ProviderCreateForm(token: String, onDone: () -> Unit) {
         } else {
             OptionPicker(
                 label = stringResource(R.string.credential_label),
-                selected = credential?.displayName.orEmpty(),
-                options = page.providers.map { it.displayName }
-            ) { chosen -> credential = page.providers.first { it.displayName == chosen }; plan = ""; region = "" }
+                selected = credential?.let { "${it.displayName} (#${it.id})" }.orEmpty(),
+                options = page.providers.map { "${it.displayName} (#${it.id})" }
+            ) { chosen ->
+                credential = page.providers.first { "${it.displayName} (#${it.id})" == chosen }
+                plan = ""
+                region = ""
+            }
             credential?.let { chosen ->
                 OptionPicker(
                     label = stringResource(R.string.plan_label),
@@ -146,6 +172,18 @@ private fun ProviderCreateForm(token: String, onDone: () -> Unit) {
                     selected = region,
                     options = chosen.regions.map { option -> option.id + " — " + option.name }
                 ) { picked -> region = chosen.regions.first { picked.startsWith(it.id + " — ") }.id }
+            }
+        }
+        if (page.currentPage > 1 || page.hasNext) {
+            FlowRow(horizontalArrangement = Arrangement.spacedBy(8.dp), verticalArrangement = Arrangement.spacedBy(4.dp)) {
+                OutlinedButton(onClick = {
+                    credential = null; plan = ""; region = ""; providerPage = page.currentPage - 1
+                }, enabled = page.currentPage > 1) { Text(stringResource(R.string.previous)) }
+                Text(stringResource(R.string.page, page.currentPage.toString(), page.lastPage.toString()),
+                    Modifier.padding(top = 12.dp))
+                OutlinedButton(onClick = {
+                    credential = null; plan = ""; region = ""; providerPage = page.currentPage + 1
+                }, enabled = page.hasNext) { Text(stringResource(R.string.next)) }
             }
         }
     }
@@ -174,7 +212,8 @@ private fun ProviderCreateForm(token: String, onDone: () -> Unit) {
                         phpVersion = phpVersion, name = name.trim()
                     )
                     val created = withContext(Dispatchers.IO) { PloiApi.createServer(token, request) }
-                    if (created.id > 0) onDone()
+                    if (created.id <= 0L) throw PloiMalformedPayloadException(IllegalStateException("Missing created server ID"))
+                    onDone()
                 } catch (invalidRequest: IllegalArgumentException) {
                     invalid = true
                 } catch (cancelled: CancellationException) {
@@ -192,7 +231,7 @@ private fun ProviderCreateForm(token: String, onDone: () -> Unit) {
 
 /** POST /servers/custom then optional POST /servers/custom/{id}/start. */
 @Composable
-private fun CustomCreateForm(token: String, onDone: () -> Unit) {
+private fun CustomCreateForm(token: String, onDone: () -> Unit, onCreated: () -> Unit) {
     val scope = rememberCoroutineScope()
     var type by remember { mutableStateOf("server") }
     var ip by remember { mutableStateOf("") }
@@ -248,7 +287,10 @@ private fun CustomCreateForm(token: String, onDone: () -> Unit) {
                             type = type, ip = ip.trim(), sshPort = port,
                             databaseType = databaseType, phpVersion = phpVersion, name = name.trim()
                         )
-                        creation = withContext(Dispatchers.IO) { PloiApi.createCustomServer(token, request) }
+                        val created = withContext(Dispatchers.IO) { PloiApi.createCustomServer(token, request) }
+                        if (created.id <= 0L) throw PloiMalformedPayloadException(IllegalStateException("Missing created server ID"))
+                        creation = created
+                        onCreated()
                     } catch (invalidRequest: IllegalArgumentException) {
                         invalid = true
                     } catch (cancelled: CancellationException) {

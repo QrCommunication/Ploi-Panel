@@ -1,0 +1,28 @@
+# Audit de navigation et des contrôles — Ploi Panel
+
+Revue des écrans et appels `PloiApi` dans les sources Android ; cette revue **n'est pas** un test end-to-end contre un compte Ploi ni un test visuel sur Android. Voir [l'audit serveur/site](audit-server-site.md) pour les sous-écrans site et les limites de vérification. Une méthode API présente dans le code n'est pas une preuve que l'opération distante a réussi.
+
+| Parcours | Branchement vérifié dans le code et correction | Limites |
+| --- | --- | --- |
+| Verrouillage, profils, liste serveurs et widgets (`MainActivity`) | PIN/biométrie avant la navigation ; routes widget résolues après déverrouillage ; profil/serveur remis à zéro lors d'un changement de compte ; pagination réinitialise le détail sélectionné ; affichage loading/erreur distinct. | Lancement depuis un vrai widget, retour d'arrière-plan et grandes polices non testés sur appareil. |
+| Paramètres (`SettingsScreen`) | Gestion profil, apparence, langue et verrouillage reliés aux préférences et à `AppLock`. | BiometricPrompt/Keystore et rotation à confirmer physiquement. |
+| Création serveur (`CreateServerScreen`) | Modes provider/personnalisé et POST Ploi ; fournisseur paginé (50/page) et identifiants distincts même si noms égaux ; réponse sans ID valide signalée comme malformée ; navigation principale masquée pendant le formulaire ; retour Android avertit de sauvegarder la clé/commande personnalisée. | Plans/régions selon API réelle à vérifier ; provisioning différé non suivi ; verrouiller l'app efface l'écran de résultat, comme le reste de l'état sensible en mémoire. |
+| Fournisseurs (`ProvidersScreen`) | Liste et détail GET reliés ; détail conserve un viewport scrollable ; changement de page nettoie le détail précédent. | Plans et régions selon la réponse API réelle à vérifier ; action « ajouter une clé » dans Ploi ouvre le navigateur externe. |
+| Compte (`AccountScreen`) | Informations, configurations de sauvegarde, notifications, contrôles source et dépôts GET reliés ; les trois premières collections ont pagination indépendante et état d'attente par page. | Le chemin API des dépôts retourne une liste sans métadonnées de pagination ; son exhaustivité dépend du backend et des scopes. |
+| Scripts (`ScriptsScreen`, `OneOffScriptScreen`) | CRUD et exécutions reliés ; erreur de création/édition conserve le formulaire ; liste des serveurs bornée en hauteur ; script global et commande ad hoc demandent une confirmation fraîche avant exécution. | Les résultats asynchrones d'exécution nécessitent un rafraîchissement manuel ; confirmer l'effet réel côté Ploi. |
+| Pages de statut (`StatusPagesScreen`) | Liste, détail et incidents reliés ; échec de création garde les données dans le formulaire ; dialogues défilants. | Certaines opérations ne sont pas exposées par l'API, aucun bouton fictif ajouté. |
+| Modèles webserver (`WebserverTemplatesScreen`) | Liste, détail, création/édition/suppression reliés ; chargement vide l'ancien résultat. | Manipulation des contenus longs et droits API à vérifier sur appareil/compte. |
+| Projets (`ProjectsScreen`) | Liste, édition, associations et suppression reliées ; formulaire conservé si API refuse, erreurs visibles, pagination. | Association par identifiants saisis manuellement : manque un sélecteur de serveurs/sites ; valider sur compte réel. |
+| Services PHP / WP-CLI serveur (`ServicesScreen`) | Info, versions PHP, bascule CLI et services reliés ; erreur de chargement PHP visible, bascule limitée aux versions installées, actions reflow ; commande WP-CLI protégée. | État définitif des redémarrages/installations non suivi automatiquement. |
+| Chargeur, métriques, conteneurs (`LoadBalancerScreen`, `InsightsScreen`, `ContainersScreen`) | Routes GET/actions reliées ; chargement nettoie les données périmées ; actions sensibles dans des confirmations lorsque disponibles. | Télémetrie selon disponibilité API ; conteneurs/déploiement à éprouver sur serveur compatible. |
+| Cron, démons, pare-feu, workers, clés, comptes système (`CrontabsScreen`, `DaemonsScreen`, `NetworkRulesScreen`, `QueueWorkersScreen`, `SshKeysScreen`, `SystemUsersScreen`) | Listes paginées, formulaires/actions API, erreurs et confirmations des opérations destructives audités ; résultat précédent effacé pendant un changement de page. | Permissions et états différés à valider sur un compte autorisé. |
+| Sous-écrans site (`SitesScreen` et onglets) | Détail dans un viewport borné, retour toujours visible ; voir [l'audit dédié](audit-server-site.md). | Plusieurs choix de formulaire limités aux 50 premiers résultats, notamment sauvegardes/sites et canaux ; pagination à compléter. |
+
+## Déficits encore connus
+
+- Aucune session réseau authentifiée ni appareil/émulateur : **ne pas annoncer « tout fonctionne »**. Les tests JVM vérifient le parsing et des contrats statiques mais pas le toucher, les claviers, les tailles d'écran, les permissions Android ni les opérations Ploi en conditions réelles.
+- Quelques sélecteurs affichent toujours une seule page de 50 résultats (sauvegardes, canaux, sites associés). Débordement possible sur les comptes volumineux.
+- Les écritures API qui déclenchent un job asynchrone confirment l'acceptation, pas l'achèvement. Prévoir un suivi de tâche avant d'afficher une réussite définitive.
+- Les identifiants d'associations dans les projets sont saisis à la main. Fournir des listes nommées avec recherche avant de considérer ce flux accessible.
+
+Validation locale : `:app:testDebugUnitTest :app:lintDebug :app:assembleDebug` et `git diff --check` ; relancer après tout nouvel ajustement. `adb devices` : aucun appareil connecté à la date de cette revue.

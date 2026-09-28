@@ -58,6 +58,7 @@ internal fun DaemonsScreen(token: String, serverId: Long, lock: AppLock, activit
 
     LaunchedEffect(token, serverId, page, refresh) {
         loading = true
+        result = null
         error = null
         try {
             result = withContext(Dispatchers.IO) { PloiApi.daemons(token, serverId, page) }
@@ -74,6 +75,7 @@ internal fun DaemonsScreen(token: String, serverId: Long, lock: AppLock, activit
     fun runAction(message: String, block: suspend () -> Unit) {
         busy = true
         error = null
+        feedback = ""
         scope.launch {
             try {
                 withContext(Dispatchers.IO) { block() }

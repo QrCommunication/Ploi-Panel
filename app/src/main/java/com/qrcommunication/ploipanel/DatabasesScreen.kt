@@ -68,6 +68,7 @@ internal fun DatabasesScreen(token: String, serverId: Long, lock: AppLock, activ
     LaunchedEffect(token, serverId, page, refresh) {
         loading = true
         error = null
+        result = null
         try {
             result = withContext(Dispatchers.IO) { PloiApi.databases(token, serverId, page) }
         } catch (cancelled: CancellationException) {
@@ -83,6 +84,7 @@ internal fun DatabasesScreen(token: String, serverId: Long, lock: AppLock, activ
     fun runAction(message: String, block: suspend () -> Unit) {
         busy = true
         error = null
+        feedback = ""
         scope.launch {
             try {
                 withContext(Dispatchers.IO) { block() }
@@ -392,6 +394,7 @@ private fun DatabaseUsersDialog(
     LaunchedEffect(token, serverId, database.id, page, refresh) {
         loading = true
         error = null
+        result = null
         try {
             result = withContext(Dispatchers.IO) { PloiApi.databaseUsers(token, serverId, database.id, page) }
         } catch (cancelled: CancellationException) {
@@ -407,6 +410,7 @@ private fun DatabaseUsersDialog(
     fun runAction(message: String, block: suspend () -> Unit) {
         busy = true
         error = null
+        feedback = ""
         scope.launch {
             try {
                 withContext(Dispatchers.IO) { block() }

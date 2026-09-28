@@ -2,9 +2,9 @@ package com.qrcommunication.ploipanel
 
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
-import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.FlowRow
 import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
@@ -12,6 +12,7 @@ import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Button
 import androidx.compose.material3.Card
 import androidx.compose.material3.CircularProgressIndicator
+import androidx.compose.material3.FilterChip
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.OutlinedTextField
@@ -45,6 +46,7 @@ internal fun ServicesScreen(token: String, server: Server, lock: AppLock, activi
     var versions by remember(token, server.id) { mutableStateOf<List<String>?>(null) }
     var loading by remember(token, server.id) { mutableStateOf(true) }
     var error by remember(token, server.id) { mutableStateOf<Throwable?>(null) }
+    var phpError by remember(token, server.id) { mutableStateOf<Throwable?>(null) }
     var feedback by remember(token, server.id) { mutableStateOf("") }
     var busy by remember(token, server.id) { mutableStateOf(false) }
     var serviceAction by remember { mutableStateOf<Pair<String, Boolean>?>(null) } // service to restart(isRestart) / reload
@@ -53,23 +55,28 @@ internal fun ServicesScreen(token: String, server: Server, lock: AppLock, activi
     var phpDialog by remember { mutableStateOf(false) }
     var cliDialog by remember { mutableStateOf(false) }
     var wpCliDialog by remember { mutableStateOf(false) }
+    var pendingWpCommand by remember { mutableStateOf<String?>(null) }
 
     val doneMessage = stringResource(R.string.action_done)
 
     LaunchedEffect(token, server.id, refresh) {
         loading = true
         error = null
+        phpError = null
+        detail = null
+        versions = null
         try {
-            val loaded = withContext(Dispatchers.IO) {
-                PloiApi.server(token, server.id) to runCatching { PloiApi.phpVersions(token, server.id) }.getOrNull()
+            detail = withContext(Dispatchers.IO) { PloiApi.server(token, server.id) }
+            try {
+                versions = withContext(Dispatchers.IO) { PloiApi.phpVersions(token, server.id) }
+            } catch (cancelled: CancellationException) {
+                throw cancelled
+            } catch (failure: Exception) {
+                phpError = failure
             }
-            detail = loaded.first
-            versions = loaded.second
         } catch (cancelled: CancellationException) {
             throw cancelled
         } catch (failure: Exception) {
-            detail = null
-            versions = null
             error = failure
         } finally {
             loading = false
@@ -79,6 +86,7 @@ internal fun ServicesScreen(token: String, server: Server, lock: AppLock, activi
     fun runAction(message: String, block: suspend () -> Unit) {
         busy = true
         error = null
+        feedback = ""
         scope.launch {
             try {
                 withContext(Dispatchers.IO) { block() }
@@ -110,11 +118,11 @@ internal fun ServicesScreen(token: String, server: Server, lock: AppLock, activi
         Text(stringResource(R.string.services_section), style = MaterialTheme.typography.titleMedium)
         listOf("nginx", "mysql", "redis", "supervisor").forEach { service ->
             Card(modifier = Modifier.fillMaxWidth()) {
-                Row(
-                    Modifier.fillMaxWidth().padding(12.dp),
-                    horizontalArrangement = Arrangement.SpaceBetween
+                Column(
+                    Modifier.fillMaxWidth().padding(16.dp),
+                    verticalArrangement = Arrangement.spacedBy(8.dp)
                 ) {
-                    Text(service, style = MaterialTheme.typography.titleSmall, modifier = Modifier.padding(top = 12.dp))
+                    Text(service, style = MaterialTheme.typography.titleMedium)
                     FlowRow(horizontalArrangement = Arrangement.spacedBy(8.dp), verticalArrangement = Arrangement.spacedBy(4.dp)) {
                         OutlinedButton(onClick = { serviceAction = service to true }, enabled = !busy) {
                             Text(stringResource(R.string.restart_service))
@@ -149,15 +157,16 @@ internal fun ServicesScreen(token: String, server: Server, lock: AppLock, activi
         }
 
         Text(stringResource(R.string.php_versions_section), style = MaterialTheme.typography.titleMedium)
+        if (phpError != null) ApiErrorText(phpError!!)
         versions?.let { installed ->
             if (installed.isEmpty()) Text(stringResource(R.string.empty_php_versions))
             Text(installed.joinToString(", "))
         }
         FlowRow(horizontalArrangement = Arrangement.spacedBy(8.dp), verticalArrangement = Arrangement.spacedBy(4.dp)) {
-            OutlinedButton(onClick = { phpDialog = true }, enabled = !busy) {
+            OutlinedButton(onClick = { phpDialog = true }, enabled = !busy && versions != null) {
                 Text(stringResource(R.string.php_install_version))
             }
-            OutlinedButton(onClick = { cliDialog = true }, enabled = !busy) {
+            OutlinedButton(onClick = { cliDialog = true }, enabled = !busy && !versions.isNullOrEmpty()) {
                 Text(stringResource(R.string.php_switch_cli))
             }
         }
@@ -260,6 +269,7 @@ internal fun ServicesScreen(token: String, server: Server, lock: AppLock, activi
         PhpVersionDialog(
             title = R.string.php_switch_cli,
             busy = busy,
+            options = versions.orEmpty(),
             onSubmit = { version ->
                 cliDialog = false
                 runAction(doneMessage) { PloiApi.switchPhpCliVersion(token, server.id, version) }
@@ -283,7 +293,7 @@ internal fun ServicesScreen(token: String, server: Server, lock: AppLock, activi
                 Button(
                     onClick = {
                         wpCliDialog = false
-                        runAction(doneMessage) { PloiApi.runServerWpCli(token, server.id, command.trim()) }
+                        pendingWpCommand = command.trim()
                     },
                     enabled = !busy && command.isNotBlank()
                 ) { Text(stringResource(R.string.wpcli_run)) }
@@ -293,22 +303,48 @@ internal fun ServicesScreen(token: String, server: Server, lock: AppLock, activi
             }
         )
     }
+    pendingWpCommand?.let { command ->
+        SensitiveConfirmDialog(
+            lock = lock,
+            activity = activity,
+            message = stringResource(R.string.confirm_wpcli_run),
+            confirmLabel = R.string.wpcli_run,
+            onConfirmed = {
+                pendingWpCommand = null
+                runAction(doneMessage) { PloiApi.runServerWpCli(token, server.id, command) }
+            },
+            onDismiss = { pendingWpCommand = null }
+        )
+    }
 }
 
 @Composable
-private fun PhpVersionDialog(title: Int, busy: Boolean, onSubmit: (String) -> Unit, onDismiss: () -> Unit) {
+private fun PhpVersionDialog(
+    title: Int, busy: Boolean, options: List<String> = emptyList(),
+    onSubmit: (String) -> Unit, onDismiss: () -> Unit
+) {
     var version by remember { mutableStateOf("") }
     var invalid by remember { mutableStateOf(false) }
     AlertDialog(
         onDismissRequest = onDismiss,
         title = { Text(stringResource(title)) },
         text = {
-            Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
-                OutlinedTextField(
-                    value = version, onValueChange = { version = it },
-                    label = { Text(stringResource(R.string.php_version_label)) },
-                    singleLine = true, modifier = Modifier.fillMaxWidth()
-                )
+            Column(Modifier.heightIn(max = 360.dp).verticalScroll(rememberScrollState()),
+                verticalArrangement = Arrangement.spacedBy(12.dp)) {
+                if (options.isEmpty()) {
+                    OutlinedTextField(
+                        value = version, onValueChange = { version = it },
+                        label = { Text(stringResource(R.string.php_version_label)) },
+                        singleLine = true, modifier = Modifier.fillMaxWidth()
+                    )
+                } else {
+                    FlowRow(horizontalArrangement = Arrangement.spacedBy(8.dp), verticalArrangement = Arrangement.spacedBy(4.dp)) {
+                        options.forEach { option ->
+                            FilterChip(selected = version == option, onClick = { version = option },
+                                label = { Text(option) })
+                        }
+                    }
+                }
                 if (invalid) Text(stringResource(R.string.invalid_form), color = MaterialTheme.colorScheme.error)
             }
         },

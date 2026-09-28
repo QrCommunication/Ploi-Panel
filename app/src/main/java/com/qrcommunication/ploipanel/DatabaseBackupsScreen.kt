@@ -70,6 +70,7 @@ internal fun DatabaseBackupsScreen(token: String, serverId: Long, lock: AppLock,
     LaunchedEffect(token, serverId, page, refresh) {
         loading = true
         error = null
+        result = null
         try {
             result = withContext(Dispatchers.IO) {
                 PloiApi.databaseBackups(token, serverId = serverId, page = page)
@@ -87,6 +88,7 @@ internal fun DatabaseBackupsScreen(token: String, serverId: Long, lock: AppLock,
     fun runAction(fallback: String, block: suspend () -> String) {
         busy = true
         error = null
+        feedback = ""
         scope.launch {
             try {
                 val message = withContext(Dispatchers.IO) { block() }
@@ -296,7 +298,7 @@ private fun CreateDatabaseBackupDialog(
                 verticalArrangement = Arrangement.spacedBy(10.dp)
             ) {
                 if (optionsError != null) ApiErrorText(optionsError!!)
-                if (configurations == null || databases == null) {
+                if (optionsError == null && (configurations == null || databases == null)) {
                     FlowRow(horizontalArrangement = Arrangement.spacedBy(8.dp), verticalArrangement = Arrangement.spacedBy(4.dp)) {
                         CircularProgressIndicator()
                         Text(stringResource(R.string.backup_loading_options), Modifier.padding(top = 12.dp))

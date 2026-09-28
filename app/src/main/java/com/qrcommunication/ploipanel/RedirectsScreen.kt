@@ -52,6 +52,7 @@ internal fun RedirectsScreen(token: String, serverId: Long, siteId: Long, lock: 
     LaunchedEffect(token, serverId, siteId, page, refresh) {
         loading = true
         error = null
+        result = null
         try {
             result = withContext(Dispatchers.IO) { PloiApi.redirects(token, serverId, siteId, page) }
         } catch (cancelled: CancellationException) {
@@ -67,6 +68,7 @@ internal fun RedirectsScreen(token: String, serverId: Long, siteId: Long, lock: 
     fun runAction(message: String, block: suspend () -> Unit) {
         busy = true
         error = null
+        feedback = ""
         scope.launch {
             try {
                 withContext(Dispatchers.IO) { block() }

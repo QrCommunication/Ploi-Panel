@@ -356,7 +356,7 @@ private fun PanelHome(
                                     5 -> stringResource(R.string.webserver_templates_tab)
                                     6 -> stringResource(R.string.projects_tab)
                                     7 -> stringResource(R.string.settings_tab)
-                                    else -> stringResource(R.string.servers)
+                                    else -> stringResource(if (creating) R.string.new_server else R.string.servers)
                                 },
                                 style = MaterialTheme.typography.titleLarge, fontWeight = FontWeight.Bold
                             )
@@ -365,13 +365,16 @@ private fun PanelHome(
                         }
                         FlowRow(horizontalArrangement = Arrangement.spacedBy(8.dp), verticalArrangement = Arrangement.spacedBy(4.dp)) {
                             OutlinedButton(onClick = onLock) { Text(stringResource(R.string.lock_now)) }
-                            OutlinedButton(onClick = {
+                            if (!creating) OutlinedButton(onClick = {
                                 store.deactivate()
                                 activeProfile = null
                                 draftLabel = ""
                                 draftToken = ""
                                 selected = null
+                                creating = false
+                                showMonitored = false
                                 panelTab = 0
+                                deepLinkError = false
                                 servers = null
                                 error = null
                                 page = 1
@@ -390,7 +393,7 @@ private fun PanelHome(
                 )
                 val navigationState = rememberLazyListState()
                 LaunchedEffect(panelTab) { navigationState.animateScrollToItem(panelTab) }
-                LazyRow(
+                if (!creating) LazyRow(
                     modifier = Modifier.fillMaxWidth(),
                     state = navigationState,
                     horizontalArrangement = Arrangement.spacedBy(8.dp)
@@ -421,6 +424,9 @@ private fun PanelHome(
                         onActiveChanged = { profile ->
                             activeProfile = profile?.let { it to store.tokenFor(it.id) }
                             selected = null
+                            creating = false
+                            showMonitored = false
+                            deepLinkError = false
                             servers = null
                             page = 1
                             refresh++
@@ -441,7 +447,7 @@ private fun PanelHome(
                             }
                             expanded -> Row(horizontalArrangement = Arrangement.spacedBy(16.dp)) {
                                 Column(Modifier.weight(1f)) {
-                                    ServerList(servers, loading, error, page, onPage = { page = it }, onRefresh = { refresh++ },
+                                    ServerList(servers, loading, error, page, onPage = { page = it; selected = null }, onRefresh = { refresh++ },
                                         onSelect = { selected = it }, onCreate = { creating = true }, onMonitored = { showMonitored = true })
                                 }
                                 Column(Modifier.weight(1f)) {
@@ -464,7 +470,7 @@ private fun PanelHome(
                                     )
                                 }
                             }
-                            else -> ServerList(servers, loading, error, page, onPage = { page = it }, onRefresh = { refresh++ },
+                            else -> ServerList(servers, loading, error, page, onPage = { page = it; selected = null }, onRefresh = { refresh++ },
                                 onSelect = { selected = it }, onCreate = { creating = true }, onMonitored = { showMonitored = true })
                         }
                     }

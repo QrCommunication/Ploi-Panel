@@ -48,6 +48,7 @@ internal fun WebserverTemplatesScreen(token: String) {
 
     LaunchedEffect(token, page, refresh) {
         loading = true
+        result = null
         error = null
         try {
             result = withContext(Dispatchers.IO) { PloiApi.webserverTemplates(token, page) }

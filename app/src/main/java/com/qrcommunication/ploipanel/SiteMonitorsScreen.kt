@@ -57,6 +57,7 @@ internal fun SiteMonitorsScreen(token: String, serverId: Long, siteId: Long, loc
     LaunchedEffect(token, serverId, siteId, page, refresh) {
         loading = true
         error = null
+        result = null
         try {
             result = withContext(Dispatchers.IO) { PloiApi.siteMonitors(token, serverId, siteId, page) }
         } catch (cancelled: CancellationException) {
@@ -109,6 +110,7 @@ internal fun SiteMonitorsScreen(token: String, serverId: Long, siteId: Long, loc
                                     onClick = {
                                         busy = true
                                         error = null
+                                        feedback = ""
                                         scope.launch {
                                             try {
                                                 val responses = withContext(Dispatchers.IO) {
@@ -179,6 +181,7 @@ internal fun SiteMonitorsScreen(token: String, serverId: Long, siteId: Long, loc
                 confirmDelete = null
                 busy = true
                 error = null
+                feedback = ""
                 scope.launch {
                     try {
                         withContext(Dispatchers.IO) { PloiApi.deleteSiteMonitor(token, serverId, siteId, monitor.id) }

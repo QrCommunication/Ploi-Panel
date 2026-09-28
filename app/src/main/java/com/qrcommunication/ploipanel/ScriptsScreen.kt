@@ -4,9 +4,12 @@ import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.FlowRow
+import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.verticalScroll
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.material3.AlertDialog
@@ -29,6 +32,7 @@ import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.res.pluralStringResource
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
 import androidx.fragment.app.FragmentActivity
@@ -55,6 +59,7 @@ internal fun ScriptsScreen(token: String, lock: AppLock, activity: FragmentActiv
     var creating by remember { mutableStateOf(false) }
     var editing by remember { mutableStateOf<PloiScript?>(null) }
     var running by remember { mutableStateOf<PloiScript?>(null) }
+    var pendingRun by remember { mutableStateOf<Pair<PloiScript, List<Long>>?>(null) }
     var scheduling by remember { mutableStateOf<PloiScript?>(null) }
     var actioning by remember { mutableStateOf<PloiScript?>(null) }
     var confirmDelete by remember { mutableStateOf<PloiScript?>(null) }
@@ -67,6 +72,7 @@ internal fun ScriptsScreen(token: String, lock: AppLock, activity: FragmentActiv
 
     LaunchedEffect(token, page, refresh) {
         loading = true
+        result = null
         error = null
         try {
             result = withContext(Dispatchers.IO) { PloiApi.scripts(token, page) }
@@ -80,15 +86,17 @@ internal fun ScriptsScreen(token: String, lock: AppLock, activity: FragmentActiv
         }
     }
 
-    fun runAction(message: String, block: suspend () -> Unit) {
+    fun runAction(message: String, onSuccess: () -> Unit = {}, block: suspend () -> Unit) {
         busy = true
         error = null
+        feedback = ""
         startedOn = null
         scope.launch {
             try {
                 withContext(Dispatchers.IO) { block() }
                 feedback = message
                 refresh++
+                onSuccess()
             } catch (cancelled: CancellationException) {
                 throw cancelled
             } catch (failure: Exception) {
@@ -170,10 +178,10 @@ internal fun ScriptsScreen(token: String, lock: AppLock, activity: FragmentActiv
             title = stringResource(R.string.new_script),
             submitLabel = stringResource(R.string.create_script_submit),
             initial = null,
+            submitError = error,
             build = { label, user, content -> CreateScriptRequest(label = label, user = user, content = content) },
             onSubmit = { request ->
-                creating = false
-                runAction(createdMessage) {
+                runAction(createdMessage, onSuccess = { creating = false }) {
                     PloiApi.createScript(token, request)
                 }
             },
@@ -186,10 +194,12 @@ internal fun ScriptsScreen(token: String, lock: AppLock, activity: FragmentActiv
             title = stringResource(R.string.edit_script_title, script.label),
             submitLabel = stringResource(R.string.edit_site),
             initial = script,
+            submitError = error,
             build = { label, user, content -> UpdateScriptRequest(label = label, user = user, content = content) },
             onSubmit = { request ->
-                editing = null
-                runAction(updatedMessage) { PloiApi.updateScript(token, script.id, request) }
+                runAction(updatedMessage, onSuccess = { editing = null }) {
+                    PloiApi.updateScript(token, script.id, request)
+                }
             },
             onDismiss = { editing = null }
         )
@@ -201,6 +211,19 @@ internal fun ScriptsScreen(token: String, lock: AppLock, activity: FragmentActiv
             busy = busy,
             onRun = { serverIds ->
                 running = null
+                pendingRun = script to serverIds
+            },
+            onDismiss = { running = null }
+        )
+    }
+    pendingRun?.let { (script, serverIds) ->
+        SensitiveConfirmDialog(
+            lock = lock,
+            activity = activity,
+            message = pluralStringResource(R.plurals.confirm_run_script, serverIds.size, script.label, serverIds.size),
+            confirmLabel = R.string.run_script_submit,
+            onConfirmed = {
+                pendingRun = null
                 busy = true
                 error = null
                 feedback = ""
@@ -218,7 +241,7 @@ internal fun ScriptsScreen(token: String, lock: AppLock, activity: FragmentActiv
                     }
                 }
             },
-            onDismiss = { running = null }
+            onDismiss = { pendingRun = null }
         )
     }
     scheduling?.let { script ->
@@ -261,6 +284,7 @@ private fun <T> ScriptFormDialog(
     title: String,
     submitLabel: String,
     initial: PloiScript?,
+    submitError: Throwable?,
     build: (label: String, user: String, content: String) -> T,
     onSubmit: (T) -> Unit,
     onDismiss: () -> Unit
@@ -270,10 +294,11 @@ private fun <T> ScriptFormDialog(
     var content by remember { mutableStateOf(initial?.content.orEmpty()) }
     var invalid by remember { mutableStateOf(false) }
     AlertDialog(
-        onDismissRequest = onDismiss,
+        onDismissRequest = { if (!busy) onDismiss() },
         title = { Text(title) },
         text = {
-            Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
+            Column(Modifier.heightIn(max = 440.dp).verticalScroll(rememberScrollState()),
+                verticalArrangement = Arrangement.spacedBy(12.dp)) {
                 OutlinedTextField(
                     value = label, onValueChange = { label = it },
                     label = { Text(stringResource(R.string.script_label_label)) },
@@ -287,11 +312,12 @@ private fun <T> ScriptFormDialog(
                 OutlinedTextField(
                     value = content, onValueChange = { content = it },
                     label = { Text(stringResource(R.string.script_content_label)) },
-                    modifier = Modifier.fillMaxWidth()
+                    minLines = 6, maxLines = 12, modifier = Modifier.fillMaxWidth()
                 )
                 if (invalid) {
                     Text(stringResource(R.string.invalid_form), color = MaterialTheme.colorScheme.error)
                 }
+                if (submitError != null) ApiErrorText(submitError)
             }
         },
         confirmButton = {
@@ -312,7 +338,7 @@ private fun <T> ScriptFormDialog(
             ) { Text(submitLabel) }
         },
         dismissButton = {
-            OutlinedButton(onClick = onDismiss) { Text(stringResource(R.string.cancel)) }
+            OutlinedButton(onClick = onDismiss, enabled = !busy) { Text(stringResource(R.string.cancel)) }
         }
     )
 }
@@ -347,18 +373,20 @@ private fun ServerMultiSelect(
         loadError != null -> ApiErrorText(loadError!!)
         servers == null -> CircularProgressIndicator()
         servers!!.isEmpty() -> Text(stringResource(R.string.empty_run_servers))
-        else -> servers!!.forEach { server ->
-            Row(
-                Modifier.fillMaxWidth(),
-                verticalAlignment = Alignment.CenterVertically
-            ) {
-                Checkbox(
-                    checked = server.id in selected,
-                    onCheckedChange = { checked ->
-                        onSelectionChange(if (checked) selected + server.id else selected - server.id)
-                    }
-                )
-                Text(server.name)
+        else -> LazyColumn(Modifier.heightIn(max = 280.dp)) {
+            items(servers!!, key = { it.id }) { server ->
+                Row(
+                    Modifier.fillMaxWidth(),
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    Checkbox(
+                        checked = server.id in selected,
+                        onCheckedChange = { checked ->
+                            onSelectionChange(if (checked) selected + server.id else selected - server.id)
+                        }
+                    )
+                    Text(server.name)
+                }
             }
         }
     }
@@ -426,6 +454,7 @@ private fun ScriptSchedulesDialog(
 
     LaunchedEffect(token, script.id, page, refresh) {
         loading = true
+        result = null
         error = null
         try {
             result = withContext(Dispatchers.IO) { PloiApi.scriptSchedules(token, script.id, page) }
@@ -712,6 +741,7 @@ private fun ScriptActionsDialog(
 
     LaunchedEffect(token, script.id, refresh) {
         loading = true
+        result = null
         error = null
         try {
             result = withContext(Dispatchers.IO) { PloiApi.scriptActions(token, script.id) }
@@ -997,13 +1027,14 @@ private fun <T> ActionFormDialog(
  * manual polling of GET /servers/{server}/scripts/run/{execution}.
  */
 @Composable
-internal fun OneOffScriptScreen(token: String, serverId: Long) {
+internal fun OneOffScriptScreen(token: String, serverId: Long, lock: AppLock, activity: FragmentActivity) {
     val scope = rememberCoroutineScope()
     var content by remember(token, serverId) { mutableStateOf("") }
     var user by remember(token, serverId) { mutableStateOf("ploi") }
+    var busy by remember(token, serverId) { mutableStateOf(false) }
+    var pendingRun by remember(token, serverId) { mutableStateOf<Pair<String, String>?>(null) }
     var execution by remember(token, serverId) { mutableStateOf<ScriptExecution?>(null) }
     var error by remember(token, serverId) { mutableStateOf<Throwable?>(null) }
-    var busy by remember(token, serverId) { mutableStateOf(false) }
     var invalid by remember(token, serverId) { mutableStateOf(false) }
 
     fun launchAction(block: suspend () -> Unit) {
@@ -1022,7 +1053,8 @@ internal fun OneOffScriptScreen(token: String, serverId: Long) {
         }
     }
 
-    Column(Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(10.dp)) {
+    Column(Modifier.fillMaxSize().verticalScroll(rememberScrollState()).padding(16.dp),
+        verticalArrangement = Arrangement.spacedBy(10.dp)) {
         Text(stringResource(R.string.one_off_script_title), style = MaterialTheme.typography.titleMedium)
         OutlinedTextField(
             value = user, onValueChange = { user = it },
@@ -1032,7 +1064,7 @@ internal fun OneOffScriptScreen(token: String, serverId: Long) {
         OutlinedTextField(
             value = content, onValueChange = { content = it },
             label = { Text(stringResource(R.string.one_off_script_content_label)) },
-            modifier = Modifier.fillMaxWidth()
+            minLines = 6, maxLines = 12, modifier = Modifier.fillMaxWidth()
         )
         if (invalid) {
             Text(stringResource(R.string.invalid_form), color = MaterialTheme.colorScheme.error)
@@ -1043,7 +1075,7 @@ internal fun OneOffScriptScreen(token: String, serverId: Long) {
                     invalid = true
                 } else {
                     invalid = false
-                    launchAction { execution = PloiApi.runOneOffScript(token, serverId, content, user.trim()) }
+                    pendingRun = content to user.trim()
                 }
             },
             enabled = !busy && content.isNotBlank()
@@ -1072,5 +1104,19 @@ internal fun OneOffScriptScreen(token: String, serverId: Long) {
                 }
             }
         }
+    }
+    pendingRun?.let { (script, scriptUser) ->
+        SensitiveConfirmDialog(
+            lock = lock,
+            activity = activity,
+            message = stringResource(R.string.confirm_one_off_script),
+            confirmLabel = R.string.run_script_submit,
+            onConfirmed = {
+                pendingRun = null
+                execution = null
+                launchAction { execution = PloiApi.runOneOffScript(token, serverId, script, scriptUser) }
+            },
+            onDismiss = { pendingRun = null }
+        )
     }
 }

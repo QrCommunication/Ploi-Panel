@@ -1,0 +1,4 @@
+<resources>
+    <string name="audit_confirm_wp_cli">Exécuter cette commande WP-CLI sur le site ? Elle peut modifier des données.</string>
+    <string name="audit_confirm_wp_replace">Appliquer le remplacement sur le site ? Cette opération n’est pas une simulation.</string>
+</resources>

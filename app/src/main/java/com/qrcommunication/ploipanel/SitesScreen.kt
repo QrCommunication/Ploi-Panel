@@ -1,6 +1,7 @@
 package com.qrcommunication.ploipanel
 
 import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.BoxWithConstraints
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
@@ -53,6 +54,7 @@ internal fun SitesScreen(token: String, serverId: Long, lock: AppLock, activity:
     LaunchedEffect(token, serverId, page, refresh) {
         loading = true
         error = null
+        result = null
         try {
             result = withContext(Dispatchers.IO) { PloiApi.sites(token, serverId, page) }
         } catch (cancelled: CancellationException) {
@@ -76,33 +78,35 @@ internal fun SitesScreen(token: String, serverId: Long, lock: AppLock, activity:
                 refresh++
             }, onChanged = { refresh++ })
         }
-        Column {
+        Column(Modifier.fillMaxSize()) {
         if (feedback.isNotEmpty()) Text(feedback, Modifier.padding(bottom = 8.dp))
         if (creating) {
             CreateSiteForm(token, serverId,
                 onDone = { createdId -> creating = false; selectedId = createdId; feedback = createdMessage; refresh++ },
                 onCancel = { creating = false })
         } else if (expanded) {
-            Row(horizontalArrangement = Arrangement.spacedBy(16.dp)) {
-                Column(Modifier.weight(1f)) {
+            Row(Modifier.weight(1f).fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(16.dp)) {
+                Column(Modifier.weight(1f).fillMaxSize()) {
                     SiteList(result, loading, error, page,
                         onPage = { page = it; selectedId = null }, onRefresh = { refresh++ },
                         onSelect = { selectedId = it }, onCreate = { creating = true })
                 }
-                Column(Modifier.weight(1f)) {
+                Column(Modifier.weight(1f).fillMaxSize()) {
                     val id = selectedId
                     if (id == null) Text(stringResource(R.string.select_site)) else detail(id)
                 }
             }
         } else if (selectedId != null) {
-            Column {
+            Column(Modifier.weight(1f).fillMaxWidth()) {
                 OutlinedButton(onClick = { selectedId = null }) { Text(stringResource(R.string.back_sites)) }
-                detail(selectedId!!)
+                Box(Modifier.weight(1f).fillMaxWidth()) { detail(selectedId!!) }
             }
         } else {
-            SiteList(result, loading, error, page,
-                onPage = { page = it; selectedId = null }, onRefresh = { refresh++ },
-                onSelect = { selectedId = it }, onCreate = { creating = true })
+            Box(Modifier.weight(1f).fillMaxWidth()) {
+                SiteList(result, loading, error, page,
+                    onPage = { page = it; selectedId = null }, onRefresh = { refresh++ },
+                    onSelect = { selectedId = it }, onCreate = { creating = true })
+            }
         }
         }
     }
@@ -113,7 +117,7 @@ private fun SiteList(
     data: SitePage?, loading: Boolean, error: Throwable?, page: Int,
     onPage: (Int) -> Unit, onRefresh: () -> Unit, onSelect: (Long) -> Unit, onCreate: () -> Unit
 ) {
-    Column(verticalArrangement = Arrangement.spacedBy(10.dp)) {
+    Column(Modifier.fillMaxSize(), verticalArrangement = Arrangement.spacedBy(10.dp)) {
         FlowRow(horizontalArrangement = Arrangement.spacedBy(8.dp), verticalArrangement = Arrangement.spacedBy(4.dp)) {
             OutlinedButton(onClick = onRefresh, enabled = !loading) { Text(stringResource(R.string.reload)) }
             OutlinedButton(onClick = onCreate) { Text(stringResource(R.string.new_site)) }
@@ -127,7 +131,7 @@ private fun SiteList(
                 Text(stringResource(R.string.page, data.currentPage.toString(), data.lastPage.toString()), Modifier.padding(top = 12.dp))
                 OutlinedButton(onClick = { onPage(page + 1) }, enabled = data.hasNext) { Text(stringResource(R.string.next)) }
             }
-            LazyColumn(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+            LazyColumn(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(8.dp)) {
                 items(data.sites, key = { it.id }) { site ->
                     Card(onClick = { onSelect(site.id) }, modifier = Modifier.fillMaxWidth()) {
                         Column(Modifier.padding(16.dp)) {
@@ -263,6 +267,7 @@ private fun SiteDetail(
     LaunchedEffect(token, serverId, siteId, refresh) {
         loading = true
         error = null
+        site = null
         try {
             site = withContext(Dispatchers.IO) { PloiApi.site(token, serverId, siteId) }
         } catch (cancelled: CancellationException) {
@@ -278,6 +283,7 @@ private fun SiteDetail(
     fun runAction(feedback: String, refreshAfter: Boolean = true, block: suspend () -> Unit) {
         busy = true
         actionError = null
+        actionFeedback = ""
         scope.launch {
             try {
                 withContext(Dispatchers.IO) { block() }
@@ -299,7 +305,7 @@ private fun SiteDetail(
     if (siteSection != 0) {
         Column(Modifier.fillMaxSize().padding(16.dp)) {
             OutlinedButton(onClick = { siteSection = 0 }) { Text(stringResource(R.string.back)) }
-            when (siteSection) {
+            Box(Modifier.weight(1f).fillMaxWidth()) { when (siteSection) {
                 1 -> QueueWorkersScreen(token, serverId, siteId, lock, activity)
                 2 -> RedirectsScreen(token, serverId, siteId, lock, activity)
                 3 -> CertificatesScreen(token, serverId, siteId, lock, activity)
@@ -311,7 +317,7 @@ private fun SiteDetail(
                     AppsScreen(token, serverId, siteId, details, lock, activity, onChanged = { refresh++; onChanged() })
                 }
                 else -> WordPressScreen(token, serverId, siteId, lock, activity)
-            }
+            } }
         }
         return
     }
@@ -495,6 +501,7 @@ private fun SiteDetail(
                 confirmDelete = false
                 busy = true
                 actionError = null
+                actionFeedback = ""
                 scope.launch {
                     try {
                         withContext(Dispatchers.IO) { PloiApi.deleteSite(token, serverId, siteId) }
@@ -973,6 +980,7 @@ private fun NginxDialog(token: String, serverId: Long, siteId: Long, onSave: (St
     LaunchedEffect(token, serverId, siteId) {
         loading = true
         error = null
+        content = null
         try {
             val fetched = withContext(Dispatchers.IO) { PloiApi.nginxConfiguration(token, serverId, siteId) }
             content = fetched

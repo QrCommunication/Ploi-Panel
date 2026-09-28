@@ -56,6 +56,7 @@ internal fun CertificatesScreen(token: String, serverId: Long, siteId: Long, loc
     LaunchedEffect(token, serverId, siteId, page, refresh) {
         loading = true
         error = null
+        result = null
         try {
             result = withContext(Dispatchers.IO) { PloiApi.certificates(token, serverId, siteId, page) }
         } catch (cancelled: CancellationException) {
@@ -71,6 +72,7 @@ internal fun CertificatesScreen(token: String, serverId: Long, siteId: Long, loc
     fun runAction(message: String, block: suspend () -> Unit) {
         busy = true
         error = null
+        feedback = ""
         scope.launch {
             try {
                 withContext(Dispatchers.IO) { block() }
@@ -126,6 +128,7 @@ internal fun CertificatesScreen(token: String, serverId: Long, siteId: Long, loc
                                     onClick = {
                                         busy = true
                                         error = null
+                                        feedback = ""
                                         scope.launch {
                                             try {
                                                 download = withContext(Dispatchers.IO) {

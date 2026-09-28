@@ -55,6 +55,7 @@ internal fun InsightsScreen(token: String, serverId: Long, lock: AppLock, activi
 
     LaunchedEffect(token, serverId, page, refresh) {
         loading = true
+        result = null
         error = null
         try {
             result = withContext(Dispatchers.IO) { PloiApi.insights(token, serverId, page) }
@@ -71,6 +72,7 @@ internal fun InsightsScreen(token: String, serverId: Long, lock: AppLock, activi
     fun runAction(message: String, block: suspend () -> Unit) {
         busy = true
         error = null
+        feedback = ""
         scope.launch {
             try {
                 withContext(Dispatchers.IO) { block() }

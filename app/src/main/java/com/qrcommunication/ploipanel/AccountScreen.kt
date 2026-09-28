@@ -2,6 +2,7 @@ package com.qrcommunication.ploipanel
 
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.FlowRow
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
@@ -35,6 +36,7 @@ internal fun AccountScreen(token: String) {
     var info by remember(token) { mutableStateOf<UserInfo?>(null) }
     var infoError by remember(token) { mutableStateOf<Throwable?>(null) }
     LaunchedEffect(token, refresh) {
+        info = null
         infoError = null
         try {
             info = withContext(Dispatchers.IO) { PloiApi.user(token) }
@@ -47,11 +49,13 @@ internal fun AccountScreen(token: String) {
     }
 
     var backups by remember(token) { mutableStateOf<BackupConfigurationPage?>(null) }
+    var backupPage by remember(token) { mutableIntStateOf(1) }
     var backupsError by remember(token) { mutableStateOf<Throwable?>(null) }
-    LaunchedEffect(token, refresh) {
+    LaunchedEffect(token, backupPage, refresh) {
+        backups = null
         backupsError = null
         try {
-            backups = withContext(Dispatchers.IO) { PloiApi.backupConfigurations(token, perPage = 50) }
+            backups = withContext(Dispatchers.IO) { PloiApi.backupConfigurations(token, page = backupPage, perPage = 50) }
         } catch (cancelled: CancellationException) {
             throw cancelled
         } catch (failure: Exception) {
@@ -61,11 +65,13 @@ internal fun AccountScreen(token: String) {
     }
 
     var channels by remember(token) { mutableStateOf<NotificationChannelPage?>(null) }
+    var channelsPage by remember(token) { mutableIntStateOf(1) }
     var channelsError by remember(token) { mutableStateOf<Throwable?>(null) }
-    LaunchedEffect(token, refresh) {
+    LaunchedEffect(token, channelsPage, refresh) {
+        channels = null
         channelsError = null
         try {
-            channels = withContext(Dispatchers.IO) { PloiApi.notificationChannels(token, perPage = 50) }
+            channels = withContext(Dispatchers.IO) { PloiApi.notificationChannels(token, page = channelsPage, perPage = 50) }
         } catch (cancelled: CancellationException) {
             throw cancelled
         } catch (failure: Exception) {
@@ -75,11 +81,13 @@ internal fun AccountScreen(token: String) {
     }
 
     var sourceControl by remember(token) { mutableStateOf<SourceControlPage?>(null) }
+    var sourcePage by remember(token) { mutableIntStateOf(1) }
     var sourceControlError by remember(token) { mutableStateOf<Throwable?>(null) }
-    LaunchedEffect(token, refresh) {
+    LaunchedEffect(token, sourcePage, refresh) {
+        sourceControl = null
         sourceControlError = null
         try {
-            sourceControl = withContext(Dispatchers.IO) { PloiApi.sourceControlProviders(token, perPage = 50) }
+            sourceControl = withContext(Dispatchers.IO) { PloiApi.sourceControlProviders(token, page = sourcePage, perPage = 50) }
         } catch (cancelled: CancellationException) {
             throw cancelled
         } catch (failure: Exception) {
@@ -129,6 +137,11 @@ internal fun AccountScreen(token: String) {
                 }
             }
         }
+        backups?.let { data ->
+            if (data.currentPage > 1 || data.hasNext) item {
+                AccountPager(data.currentPage, data.lastPage, data.hasNext) { backupPage = it }
+            }
+        }
         item { Text(stringResource(R.string.notification_channels), style = MaterialTheme.typography.titleMedium) }
         when {
             channelsError != null -> item { ApiErrorText(channelsError!!) }
@@ -142,6 +155,11 @@ internal fun AccountScreen(token: String) {
                         Text(channel.type, style = MaterialTheme.typography.bodySmall)
                     }
                 }
+            }
+        }
+        channels?.let { data ->
+            if (data.currentPage > 1 || data.hasNext) item {
+                AccountPager(data.currentPage, data.lastPage, data.hasNext) { channelsPage = it }
             }
         }
         item { Text(stringResource(R.string.source_control), style = MaterialTheme.typography.titleMedium) }
@@ -158,6 +176,28 @@ internal fun AccountScreen(token: String) {
                     onToggle = { expandedProvider = if (expandedProvider == provider.id) null else provider.id }
                 )
             }
+        }
+        sourceControl?.let { data ->
+            if (data.currentPage > 1 || data.hasNext) item {
+                AccountPager(data.currentPage, data.lastPage, data.hasNext) {
+                    sourcePage = it
+                    expandedProvider = null
+                }
+            }
+        }
+    }
+}
+
+@Composable
+private fun AccountPager(current: Int, last: Int, hasNext: Boolean, onPage: (Int) -> Unit) {
+    FlowRow(horizontalArrangement = Arrangement.spacedBy(8.dp), verticalArrangement = Arrangement.spacedBy(4.dp)) {
+        OutlinedButton(onClick = { onPage(current - 1) }, enabled = current > 1) {
+            Text(stringResource(R.string.previous))
+        }
+        Text(stringResource(R.string.page, current.toString(), last.toString()),
+            Modifier.padding(top = 12.dp), style = MaterialTheme.typography.bodySmall)
+        OutlinedButton(onClick = { onPage(current + 1) }, enabled = hasNext) {
+            Text(stringResource(R.string.next))
         }
     }
 }

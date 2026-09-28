@@ -1,0 +1,53 @@
+package com.qrcommunication.ploipanel
+
+import org.junit.Assert.assertTrue
+import org.junit.Test
+import java.io.File
+
+/** Source-level guardrails for navigation and sensitive operations; not a device UI test. */
+class UiWiringAuditContractTest {
+    private fun screen(name: String): String {
+        var root: File? = File(System.getProperty("user.dir") ?: ".")
+        while (root != null) {
+            val file = File(root, "app/src/main/java/com/qrcommunication/ploipanel/$name.kt")
+            if (file.isFile) return file.readText()
+            root = root.parentFile
+        }
+        error("Missing screen: $name")
+    }
+
+    @Test fun accountSectionsHaveIndependentPagination() {
+        val account = screen("AccountScreen")
+        listOf("backupPage", "channelsPage", "sourcePage").forEach { page ->
+            assertTrue("$page must drive a fresh API read", account.contains("$page, refresh)"))
+            assertTrue("$page must be wired to the pager", account.contains("$page = it"))
+        }
+    }
+
+    @Test fun remoteCommandExecutionRequiresFreshConfirmation() {
+        val scripts = screen("ScriptsScreen")
+        assertTrue(scripts.contains("pendingRun = script to serverIds"))
+        assertTrue(scripts.contains("pendingRun = content to user.trim()"))
+        assertTrue(scripts.contains("message = stringResource(R.string.confirm_one_off_script)"))
+        assertTrue(scripts.contains("message = pluralStringResource(R.plurals.confirm_run_script"))
+        assertTrue(screen("ServerScreen").contains("OneOffScriptScreen(token, server.id, lock, activity)"))
+        val services = screen("ServicesScreen")
+        assertTrue(services.contains("pendingWpCommand = command.trim()"))
+        assertTrue(services.contains("message = stringResource(R.string.confirm_wpcli_run)"))
+    }
+
+    @Test fun providerCreationPaginatesAndGuardsOneTimeSetupInstructions() {
+        val creation = screen("CreateServerScreen")
+        assertTrue(creation.contains("LaunchedEffect(token, providerPage)"))
+        assertTrue(creation.contains("page = providerPage, perPage = 50"))
+        assertTrue(creation.contains("BackHandler { if (customResultReady) confirmExit = true else onCancel() }"))
+        assertTrue(creation.contains("credential = null; plan = \"\"; region = \"\"; providerPage = page.currentPage + 1"))
+        assertTrue(screen("MainActivity").contains("if (!creating) LazyRow("))
+    }
+
+    @Test fun failedFormsRemainVisibleForRetry() {
+        assertTrue(screen("ProjectsScreen").contains("onSuccess = { creating = false; editing = null }"))
+        assertTrue(screen("StatusPagesScreen").contains("onSuccess = { creating = false }"))
+        assertTrue(screen("ScriptsScreen").contains("onSuccess = { editing = null }"))
+    }
+}

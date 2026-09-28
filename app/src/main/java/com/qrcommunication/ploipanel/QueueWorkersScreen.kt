@@ -52,6 +52,7 @@ internal fun QueueWorkersScreen(token: String, serverId: Long, siteId: Long, loc
 
     LaunchedEffect(token, serverId, siteId, refresh) {
         loading = true
+        result = null
         error = null
         try {
             result = withContext(Dispatchers.IO) { PloiApi.queueWorkers(token, serverId, siteId) }
@@ -68,6 +69,7 @@ internal fun QueueWorkersScreen(token: String, serverId: Long, siteId: Long, loc
     fun runAction(message: String, block: suspend () -> Unit) {
         busy = true
         error = null
+        feedback = ""
         scope.launch {
             try {
                 withContext(Dispatchers.IO) { block() }

@@ -7,6 +7,8 @@ import androidx.compose.foundation.layout.FlowRow
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.verticalScroll
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.material3.AlertDialog
@@ -53,6 +55,7 @@ internal fun StatusPagesScreen(token: String, lock: AppLock, activity: FragmentA
 
     LaunchedEffect(token, page, refresh) {
         loading = true
+        result = null
         error = null
         try {
             result = withContext(Dispatchers.IO) { PloiApi.statusPages(token, page) }
@@ -156,6 +159,7 @@ private fun StatusPageIncidentsDialog(
 
     LaunchedEffect(token, statusPage.id, page, refresh) {
         loading = true
+        result = null
         error = null
         try {
             result = withContext(Dispatchers.IO) { PloiApi.statusPageIncidents(token, statusPage.id, page) }
@@ -169,7 +173,7 @@ private fun StatusPageIncidentsDialog(
         }
     }
 
-    fun runAction(message: String, block: suspend () -> Unit) {
+    fun runAction(message: String, onSuccess: () -> Unit = {}, block: suspend () -> Unit) {
         busy = true
         error = null
         feedback = ""
@@ -178,6 +182,7 @@ private fun StatusPageIncidentsDialog(
                 withContext(Dispatchers.IO) { block() }
                 feedback = message
                 refresh++
+                onSuccess()
             } catch (cancelled: CancellationException) {
                 throw cancelled
             } catch (failure: Exception) {
@@ -256,9 +261,11 @@ private fun StatusPageIncidentsDialog(
     if (creating) {
         IncidentFormDialog(
             busy = busy,
+            submitError = error,
             onSubmit = { request ->
-                creating = false
-                runAction(createdMessage) { PloiApi.createStatusPageIncident(token, statusPage.id, request) }
+                runAction(createdMessage, onSuccess = { creating = false }) {
+                    PloiApi.createStatusPageIncident(token, statusPage.id, request)
+                }
             },
             onDismiss = { creating = false }
         )
@@ -282,6 +289,7 @@ private fun StatusPageIncidentsDialog(
 @Composable
 private fun IncidentFormDialog(
     busy: Boolean,
+    submitError: Throwable?,
     onSubmit: (CreateStatusPageIncidentRequest) -> Unit,
     onDismiss: () -> Unit
 ) {
@@ -290,10 +298,11 @@ private fun IncidentFormDialog(
     var severity by remember { mutableStateOf("normal") }
     var invalid by remember { mutableStateOf(false) }
     AlertDialog(
-        onDismissRequest = onDismiss,
+        onDismissRequest = { if (!busy) onDismiss() },
         title = { Text(stringResource(R.string.new_incident)) },
         text = {
-            Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
+            Column(Modifier.heightIn(max = 400.dp).verticalScroll(rememberScrollState()),
+                verticalArrangement = Arrangement.spacedBy(12.dp)) {
                 OutlinedTextField(
                     value = title, onValueChange = { title = it },
                     label = { Text(stringResource(R.string.incident_title_label)) },
@@ -314,6 +323,7 @@ private fun IncidentFormDialog(
                 if (invalid) {
                     Text(stringResource(R.string.invalid_form), color = MaterialTheme.colorScheme.error)
                 }
+                if (submitError != null) ApiErrorText(submitError)
             }
         },
         confirmButton = {
@@ -336,7 +346,7 @@ private fun IncidentFormDialog(
             ) { Text(stringResource(R.string.create_incident_submit)) }
         },
         dismissButton = {
-            OutlinedButton(onClick = onDismiss) { Text(stringResource(R.string.cancel)) }
+            OutlinedButton(onClick = onDismiss, enabled = !busy) { Text(stringResource(R.string.cancel)) }
         }
     )
 }

@@ -1,6 +1,8 @@
 package com.qrcommunication.ploipanel
 
 import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.FlowRow
@@ -47,7 +49,7 @@ import kotlinx.coroutines.withContext
 @Composable
 internal fun BackupsTab(token: String, serverId: Long, lock: AppLock, activity: FragmentActivity) {
     var section by remember(serverId, token) { mutableIntStateOf(0) }
-    Column(Modifier.fillMaxWidth()) {
+    Column(Modifier.fillMaxSize()) {
         Row(Modifier.padding(start = 16.dp, top = 8.dp), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
             OutlinedButton(onClick = { section = 0 }, enabled = section != 0) {
                 Text(stringResource(R.string.backups_databases_tab))
@@ -56,11 +58,11 @@ internal fun BackupsTab(token: String, serverId: Long, lock: AppLock, activity: 
                 Text(stringResource(R.string.backups_files_tab))
             }
         }
-        if (section == 0) {
+        Box(Modifier.weight(1f).fillMaxWidth()) { if (section == 0) {
             DatabaseBackupsScreen(token, serverId, lock, activity)
         } else {
             FileBackupsScreen(token, serverId, lock, activity)
-        }
+        } }
     }
 }
 
@@ -92,6 +94,7 @@ internal fun FileBackupsScreen(token: String, serverId: Long, lock: AppLock, act
     LaunchedEffect(token, serverId, page, refresh) {
         loading = true
         error = null
+        result = null
         try {
             result = withContext(Dispatchers.IO) {
                 PloiApi.fileBackups(token, serverId = serverId, page = page)
@@ -109,6 +112,7 @@ internal fun FileBackupsScreen(token: String, serverId: Long, lock: AppLock, act
     fun runAction(fallback: String, block: suspend () -> String) {
         busy = true
         error = null
+        feedback = ""
         scope.launch {
             try {
                 val message = withContext(Dispatchers.IO) { block() }
@@ -326,7 +330,7 @@ private fun CreateFileBackupDialog(
                 verticalArrangement = Arrangement.spacedBy(10.dp)
             ) {
                 if (optionsError != null) ApiErrorText(optionsError!!)
-                if (configurations == null || sites == null) {
+                if (optionsError == null && (configurations == null || sites == null)) {
                     FlowRow(horizontalArrangement = Arrangement.spacedBy(8.dp), verticalArrangement = Arrangement.spacedBy(4.dp)) {
                         CircularProgressIndicator()
                         Text(stringResource(R.string.backup_loading_options), Modifier.padding(top = 12.dp))

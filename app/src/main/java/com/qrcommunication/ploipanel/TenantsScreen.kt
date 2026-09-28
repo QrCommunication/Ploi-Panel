@@ -53,6 +53,7 @@ internal fun TenantsScreen(token: String, serverId: Long, siteId: Long, lock: Ap
     LaunchedEffect(token, serverId, siteId, refresh) {
         loading = true
         error = null
+        result = null
         try {
             result = withContext(Dispatchers.IO) { PloiApi.tenants(token, serverId, siteId) }
         } catch (cancelled: CancellationException) {
@@ -68,6 +69,7 @@ internal fun TenantsScreen(token: String, serverId: Long, siteId: Long, lock: Ap
     fun runAction(message: String, block: suspend () -> Unit) {
         busy = true
         error = null
+        feedback = ""
         scope.launch {
             try {
                 withContext(Dispatchers.IO) { block() }

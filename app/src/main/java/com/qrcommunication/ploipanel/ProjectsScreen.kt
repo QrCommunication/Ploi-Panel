@@ -5,7 +5,10 @@ import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.FlowRow
 import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.verticalScroll
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.material3.AlertDialog
@@ -52,6 +55,7 @@ internal fun ProjectsScreen(token: String, lock: AppLock, activity: FragmentActi
 
     LaunchedEffect(token, page, refresh) {
         loading = true
+        result = null
         error = null
         try {
             result = withContext(Dispatchers.IO) { PloiApi.projects(token, page) }
@@ -65,14 +69,16 @@ internal fun ProjectsScreen(token: String, lock: AppLock, activity: FragmentActi
         }
     }
 
-    fun runAction(message: String, block: suspend () -> Unit) {
+    fun runAction(message: String, onSuccess: () -> Unit = {}, block: suspend () -> Unit) {
         busy = true
         error = null
+        feedback = ""
         scope.launch {
             try {
                 withContext(Dispatchers.IO) { block() }
                 feedback = message
                 refresh++
+                onSuccess()
             } catch (cancelled: CancellationException) {
                 throw cancelled
             } catch (failure: Exception) {
@@ -146,11 +152,10 @@ internal fun ProjectsScreen(token: String, lock: AppLock, activity: FragmentActi
         ProjectDialog(
             initial = editing,
             busy = busy,
+            submitError = error,
             onSubmit = { request ->
                 val target = editing
-                creating = false
-                editing = null
-                runAction(doneMessage) {
+                runAction(doneMessage, onSuccess = { creating = false; editing = null }) {
                     if (target == null) PloiApi.createProject(token, request)
                     else PloiApi.updateProject(token, target.id, request)
                 }
@@ -176,7 +181,7 @@ internal fun ProjectsScreen(token: String, lock: AppLock, activity: FragmentActi
 /** Create/edit dialog of a project: title plus comma-separated server and site ids. */
 @Composable
 private fun ProjectDialog(
-    initial: PloiProject?, busy: Boolean,
+    initial: PloiProject?, busy: Boolean, submitError: Throwable?,
     onSubmit: (ProjectRequest) -> Unit, onDismiss: () -> Unit
 ) {
     var title by remember(initial?.id) { mutableStateOf(initial?.title.orEmpty()) }
@@ -188,10 +193,11 @@ private fun ProjectDialog(
     }
     var invalid by remember { mutableStateOf(false) }
     AlertDialog(
-        onDismissRequest = onDismiss,
+        onDismissRequest = { if (!busy) onDismiss() },
         title = { Text(stringResource(if (initial == null) R.string.new_project else R.string.project_edit)) },
         text = {
-            Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
+            Column(Modifier.heightIn(max = 360.dp).verticalScroll(rememberScrollState()),
+                verticalArrangement = Arrangement.spacedBy(12.dp)) {
                 OutlinedTextField(
                     value = title, onValueChange = { title = it },
                     label = { Text(stringResource(R.string.project_title_label)) },
@@ -208,6 +214,7 @@ private fun ProjectDialog(
                     singleLine = true, modifier = Modifier.fillMaxWidth()
                 )
                 if (invalid) Text(stringResource(R.string.invalid_form), color = MaterialTheme.colorScheme.error)
+                if (submitError != null) ApiErrorText(submitError)
             }
         },
         confirmButton = {
@@ -226,7 +233,7 @@ private fun ProjectDialog(
             ) { Text(stringResource(R.string.submit_action)) }
         },
         dismissButton = {
-            OutlinedButton(onClick = onDismiss) { Text(stringResource(R.string.cancel)) }
+            OutlinedButton(onClick = onDismiss, enabled = !busy) { Text(stringResource(R.string.cancel)) }
         }
     )
 }

@@ -3,6 +3,7 @@ package com.qrcommunication.ploipanel
 import android.content.Intent
 import androidx.core.net.toUri
 import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.BoxWithConstraints
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
@@ -13,6 +14,8 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.verticalScroll
 import androidx.compose.foundation.lazy.items
 import androidx.compose.material3.Button
 import androidx.compose.material3.Card
@@ -46,6 +49,7 @@ internal fun ProvidersScreen(token: String) {
 
     LaunchedEffect(token, page, refresh) {
         loading = true
+        result = null
         error = null
         try {
             result = withContext(Dispatchers.IO) { PloiApi.providers(token, page) }
@@ -74,8 +78,10 @@ internal fun ProvidersScreen(token: String) {
                 }
             }
         } else if (selectedId != null) {
-            OutlinedButton(onClick = { selectedId = null }) { Text(stringResource(R.string.back_providers)) }
-            ProviderDetail(token, selectedId!!)
+            Column(Modifier.fillMaxSize()) {
+                OutlinedButton(onClick = { selectedId = null }) { Text(stringResource(R.string.back_providers)) }
+                Box(Modifier.weight(1f).fillMaxWidth()) { ProviderDetail(token, selectedId!!) }
+            }
         } else {
             ProviderList(result, loading, error, page,
                 onPage = { page = it; selectedId = null }, onRefresh = { refresh++ }, onSelect = { selectedId = it })
@@ -126,6 +132,7 @@ private fun ProviderDetail(token: String, id: Long) {
     var error by remember(token, id) { mutableStateOf<Throwable?>(null) }
     LaunchedEffect(token, id) {
         loading = true
+        provider = null
         error = null
         try {
             provider = withContext(Dispatchers.IO) { PloiApi.provider(token, id) }
@@ -138,7 +145,8 @@ private fun ProviderDetail(token: String, id: Long) {
             loading = false
         }
     }
-    Column(Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
+    Column(Modifier.fillMaxSize().verticalScroll(rememberScrollState()).padding(16.dp),
+        verticalArrangement = Arrangement.spacedBy(12.dp)) {
         Text(stringResource(R.string.provider_detail), style = MaterialTheme.typography.titleLarge)
         if (loading) CircularProgressIndicator()
         if (error != null) ApiErrorText(error!!)

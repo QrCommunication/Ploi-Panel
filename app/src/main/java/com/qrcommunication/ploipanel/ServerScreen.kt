@@ -94,7 +94,7 @@ internal fun ServerDetailScreen(
                 7 -> DaemonsScreen(token, server.id, lock, activity)
                 8 -> NetworkRulesScreen(token, server.id, lock, activity)
                 9 -> SystemUsersScreen(token, server.id, lock, activity)
-                10 -> OneOffScriptScreen(token, server.id)
+                10 -> OneOffScriptScreen(token, server.id, lock, activity)
                 11 -> ServicesScreen(token, server, lock, activity)
                 12 -> SshKeysScreen(token, server.id, lock, activity)
                 13 -> LoadBalancerScreen(token, server, lock, activity)
@@ -115,6 +115,7 @@ internal fun MonitoringView(token: String, server: Server, refresh: Int) {
     LaunchedEffect(server.id, token, refresh) {
         loading = true
         error = null
+        samples = emptyList()
         try {
             samples = withContext(Dispatchers.IO) { PloiApi.monitoringHistory(token, server.id) }
         } catch (cancelled: CancellationException) {
@@ -174,6 +175,7 @@ private fun ServerInfoTab(
     LaunchedEffect(server.id, token, refresh) {
         loading = true
         error = null
+        detail = null
         try {
             detail = withContext(Dispatchers.IO) { PloiApi.server(token, server.id) }
         } catch (cancelled: CancellationException) {
@@ -235,6 +237,7 @@ private fun ServerInfoTab(
                 editing = false
                 busy = true
                 actionError = null
+                actionFeedback = ""
                 scope.launch {
                     try {
                         detail = withContext(Dispatchers.IO) { PloiApi.updateServer(token, server.id, name, ip, port) }
@@ -262,6 +265,7 @@ private fun ServerInfoTab(
                 confirmRestart = false
                 busy = true
                 actionError = null
+                actionFeedback = ""
                 scope.launch {
                     try {
                         actionFeedback = withContext(Dispatchers.IO) { PloiApi.restartServer(token, server.id) }
@@ -287,6 +291,7 @@ private fun ServerInfoTab(
                 confirmDelete = false
                 busy = true
                 actionError = null
+                actionFeedback = ""
                 scope.launch {
                     try {
                         withContext(Dispatchers.IO) { PloiApi.deleteServer(token, server.id) }
@@ -372,6 +377,7 @@ private fun ServerLogsTab(token: String, serverId: Long) {
     LaunchedEffect(token, serverId, page, refresh) {
         loading = true
         error = null
+        result = null
         try {
             result = withContext(Dispatchers.IO) { PloiApi.serverLogs(token, serverId, page) }
         } catch (cancelled: CancellationException) {
@@ -426,6 +432,7 @@ internal fun MonitoredServersScreen(token: String) {
     LaunchedEffect(token, refresh) {
         loading = true
         error = null
+        servers = null
         try {
             servers = withContext(Dispatchers.IO) { PloiApi.monitoredServers(token) }
         } catch (cancelled: CancellationException) {

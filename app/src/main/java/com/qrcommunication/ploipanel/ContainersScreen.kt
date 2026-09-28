@@ -58,6 +58,7 @@ internal fun ContainersScreen(token: String, serverId: Long, lock: AppLock, acti
 
     LaunchedEffect(token, serverId, page, refresh) {
         loading = true
+        result = null
         error = null
         try {
             result = withContext(Dispatchers.IO) { PloiApi.containers(token, serverId, page) }
@@ -74,6 +75,7 @@ internal fun ContainersScreen(token: String, serverId: Long, lock: AppLock, acti
     fun runAction(message: String, block: suspend () -> Unit) {
         busy = true
         error = null
+        feedback = ""
         scope.launch {
             try {
                 withContext(Dispatchers.IO) { block() }

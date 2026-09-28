@@ -799,4 +799,13 @@
     <string name="widget_route_unavailable">Impossible d’ouvrir ce serveur depuis le widget. Vérifiez le profil et réessayez.</string>
     <string name="settings_widgets">Widgets d’accueil</string>
     <string name="settings_widgets_hint">Depuis l’écran d’accueil, ouvrez « Widgets » puis choisissez Ploi · Serveur ou Ploi · Serveurs. Configurez le profil, les serveurs et les mesures après avoir saisi votre PIN. Les données s’affichent sur l’écran d’accueil déverrouillé et s’actualisent au mieux selon Android (minimum 15 min, non garanti).</string>
+    <plurals name="confirm_run_script">
+        <item quantity="one">Exécuter le script « %1$s » sur %2$d serveur ? Son contenu peut modifier ce serveur.</item>
+        <item quantity="other">Exécuter le script « %1$s » sur %2$d serveurs ? Son contenu peut modifier ces serveurs.</item>
+    </plurals>
+    <string name="confirm_wpcli_run">Exécuter cette commande WP-CLI sur le serveur ? Elle peut modifier le site et ses données.</string>
+    <string name="confirm_one_off_script">Exécuter cette commande sur le serveur ? Elle peut modifier le système et les sites.</string>
+    <string name="custom_leave_title">Quitter la configuration ?</string>
+    <string name="custom_leave_warning">Copiez la clé SSH publique et la commande d’installation avant de quitter. Cet écran ne les affichera plus.</string>
+    <string name="custom_leave_action">Quitter quand même</string>
 </resources>

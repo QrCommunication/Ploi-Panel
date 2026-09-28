@@ -53,6 +53,7 @@ internal fun LoadBalancerScreen(token: String, server: Server, lock: AppLock, ac
     fun runAction(block: suspend () -> Unit) {
         busy = true
         error = null
+        feedback = ""
         scope.launch {
             try {
                 withContext(Dispatchers.IO) { block() }

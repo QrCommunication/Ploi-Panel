@@ -1,6 +1,8 @@
 package com.qrcommunication.ploipanel
 
 import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.FlowRow
@@ -45,19 +47,19 @@ import kotlinx.coroutines.withContext
 @Composable
 internal fun WordPressScreen(token: String, serverId: Long, siteId: Long, lock: AppLock, activity: FragmentActivity) {
     var tab by remember(token, serverId, siteId) { mutableIntStateOf(0) }
-    Column(Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(10.dp)) {
+    Column(Modifier.fillMaxSize().padding(16.dp), verticalArrangement = Arrangement.spacedBy(10.dp)) {
         FlowRow(horizontalArrangement = Arrangement.spacedBy(8.dp), verticalArrangement = Arrangement.spacedBy(4.dp)) {
             OutlinedButton(onClick = { tab = 0 }, enabled = tab != 0) { Text(stringResource(R.string.wp_plugins_tab)) }
             OutlinedButton(onClick = { tab = 1 }, enabled = tab != 1) { Text(stringResource(R.string.wp_themes_tab)) }
             OutlinedButton(onClick = { tab = 2 }, enabled = tab != 2) { Text(stringResource(R.string.wp_tools_tab)) }
             OutlinedButton(onClick = { tab = 3 }, enabled = tab != 3) { Text(stringResource(R.string.wp_repositories_tab)) }
         }
-        when (tab) {
+        Box(Modifier.weight(1f).fillMaxWidth()) { when (tab) {
             0 -> WpExtensionsTab(token, serverId, siteId, themes = false, lock, activity)
             1 -> WpExtensionsTab(token, serverId, siteId, themes = true, lock, activity)
             2 -> WpToolsTab(token, serverId, siteId, lock, activity)
             else -> WpRepositoriesTab(token, serverId, siteId, lock, activity)
-        }
+        } }
     }
 }
 
@@ -80,6 +82,7 @@ private fun WpExtensionsTab(
     LaunchedEffect(token, serverId, siteId, themes, refresh) {
         loading = true
         error = null
+        result = null
         try {
             result = withContext(Dispatchers.IO) {
                 if (themes) PloiApi.wpThemes(token, serverId, siteId) else PloiApi.wpPlugins(token, serverId, siteId)
@@ -97,6 +100,7 @@ private fun WpExtensionsTab(
     fun runAction(message: String, block: suspend () -> Unit) {
         busy = true
         error = null
+        feedback = ""
         scope.launch {
             try {
                 withContext(Dispatchers.IO) { block() }
@@ -264,12 +268,16 @@ private fun WpToolsTab(token: String, serverId: Long, siteId: Long, lock: AppLoc
     var searchReplaceDialog by remember { mutableStateOf(false) }
     var completeInstallDialog by remember { mutableStateOf(false) }
     var confirmXmlrpc by remember { mutableStateOf<Boolean?>(null) }
+    var pendingCli by remember { mutableStateOf<String?>(null) }
+    var pendingReplace by remember { mutableStateOf<Pair<String, String>?>(null) }
 
     val doneMessage = stringResource(R.string.action_done)
 
     fun runAction(block: suspend () -> String) {
         busy = true
         error = null
+        feedback = ""
+        output = ""
         scope.launch {
             try {
                 output = withContext(Dispatchers.IO) { block() }
@@ -333,7 +341,7 @@ private fun WpToolsTab(token: String, serverId: Long, siteId: Long, lock: AppLoc
                 Button(
                     onClick = {
                         cliDialog = false
-                        runAction { PloiApi.runWpCli(token, serverId, siteId, command.trim()) }
+                        pendingCli = command.trim()
                     },
                     enabled = !busy && command.isNotBlank()
                 ) { Text(stringResource(R.string.submit_action)) }
@@ -372,7 +380,11 @@ private fun WpToolsTab(token: String, serverId: Long, siteId: Long, lock: AppLoc
                 Button(
                     onClick = {
                         searchReplaceDialog = false
-                        runAction { PloiApi.searchReplaceWp(token, serverId, siteId, search, replace, dryRun) }
+                        if (dryRun) {
+                            runAction { PloiApi.searchReplaceWp(token, serverId, siteId, search, replace, true) }
+                        } else {
+                            pendingReplace = search to replace
+                        }
                     },
                     enabled = !busy && search.isNotBlank()
                 ) { Text(stringResource(R.string.submit_action)) }
@@ -383,6 +395,22 @@ private fun WpToolsTab(token: String, serverId: Long, siteId: Long, lock: AppLoc
         )
     }
 
+    pendingCli?.let { command ->
+        SensitiveConfirmDialog(lock = lock, activity = activity,
+            message = stringResource(R.string.audit_confirm_wp_cli), confirmLabel = R.string.wp_cli_run,
+            onConfirmed = {
+                pendingCli = null
+                runAction { PloiApi.runWpCli(token, serverId, siteId, command) }
+            }, onDismiss = { pendingCli = null })
+    }
+    pendingReplace?.let { (search, replace) ->
+        SensitiveConfirmDialog(lock = lock, activity = activity,
+            message = stringResource(R.string.audit_confirm_wp_replace), confirmLabel = R.string.wp_search_replace,
+            onConfirmed = {
+                pendingReplace = null
+                runAction { PloiApi.searchReplaceWp(token, serverId, siteId, search, replace, false) }
+            }, onDismiss = { pendingReplace = null })
+    }
     if (completeInstallDialog) {
         var siteTitle by remember { mutableStateOf("") }
         var adminUsername by remember { mutableStateOf("") }
@@ -427,6 +455,7 @@ private fun WpToolsTab(token: String, serverId: Long, siteId: Long, lock: AppLoc
                             completeInstallDialog = false
                             busy = true
                             error = null
+                            feedback = ""
                             scope.launch {
                                 try {
                                     withContext(Dispatchers.IO) {
@@ -468,6 +497,7 @@ private fun WpToolsTab(token: String, serverId: Long, siteId: Long, lock: AppLoc
                 confirmXmlrpc = null
                 busy = true
                 error = null
+                feedback = ""
                 scope.launch {
                     try {
                         val ack = withContext(Dispatchers.IO) { PloiApi.toggleWpXmlrpc(token, serverId, siteId, block) }
@@ -507,6 +537,7 @@ private fun WpRepositoriesTab(token: String, serverId: Long, siteId: Long, lock:
     LaunchedEffect(token, serverId, siteId, refresh) {
         loading = true
         error = null
+        result = null
         try {
             result = withContext(Dispatchers.IO) { PloiApi.wpRepositories(token, serverId, siteId) }
         } catch (cancelled: CancellationException) {
@@ -522,6 +553,7 @@ private fun WpRepositoriesTab(token: String, serverId: Long, siteId: Long, lock:
     fun runAction(message: String, block: suspend () -> Unit) {
         busy = true
         error = null
+        feedback = ""
         scope.launch {
             try {
                 withContext(Dispatchers.IO) { block() }
