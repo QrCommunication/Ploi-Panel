@@ -1,0 +1,42 @@
+<resources>
+    <string name="local_checks_tab">Supervision</string>
+    <string name="local_checks_hint">Contrôles HTTP(S) exécutés par ce téléphone, indépendants de l’API Ploi. Vérifications en arrière-plan au mieux : aucune alerte ne peut partir si l’appareil est hors ligne, éteint ou restreint. Intervalle minimal Android : 15 minutes, sans garantie.</string>
+    <string name="local_checks_empty">Aucune cible configurée. Ajoutez une URL à surveiller.</string>
+    <string name="local_checks_add">Ajouter une cible</string>
+    <string name="local_checks_edit">Modifier la cible</string>
+    <string name="local_checks_check">Vérifier</string>
+    <string name="local_checks_check_all">Tout vérifier</string>
+    <string name="local_checks_checking">Vérification…</string>
+    <string name="local_checks_delete">Supprimer</string>
+    <string name="local_checks_delete_confirm">Supprimer la cible « %1$s » et son historique local ?</string>
+    <string name="local_checks_alerts">Alertes panne / rétablissement</string>
+    <string name="local_checks_alerts_denied">Notifications refusées par le système : les alertes restent désactivées.</string>
+    <string name="local_checks_state_up">En ligne</string>
+    <string name="local_checks_state_down">Hors ligne</string>
+    <string name="local_checks_state_unknown">Inconnu</string>
+    <string name="local_checks_never_checked">Jamais vérifié</string>
+    <string name="local_checks_last_checked">Vérifié le %1$s</string>
+    <string name="local_checks_stale">Données potentiellement périmées</string>
+    <string name="local_checks_latency">%1$d ms</string>
+    <string name="local_checks_http_status">HTTP %1$d</string>
+    <plurals name="local_checks_failures">
+        <item quantity="one">1 échec consécutif</item>
+        <item quantity="other">%1$d échecs consécutifs</item>
+    </plurals>
+    <string name="local_checks_label_field">Libellé</string>
+    <string name="local_checks_url_field">URL (http ou https)</string>
+    <string name="local_checks_method_field">Méthode</string>
+    <string name="local_checks_timeout_field">Délai (ms, 1000–30000)</string>
+    <string name="local_checks_statuses_field">Codes acceptés (ex. 200, 204)</string>
+    <string name="local_checks_debounce_field">Échecs avant alerte (1–10)</string>
+    <string name="local_checks_error_invalid">Définition de cible invalide.</string>
+    <string name="local_checks_error_duplicate">Une cible porte déjà ce libellé.</string>
+    <string name="local_checks_error_limit">Nombre maximal de cibles atteint.</string>
+    <string name="local_checks_error_statuses">Codes HTTP acceptés invalides.</string>
+    <string name="local_checks_channel">Supervision locale des sites</string>
+    <string name="local_checks_down_title">%1$s hors ligne</string>
+    <string name="local_checks_down_http">Échecs répétés ; code HTTP inattendu : %1$d.</string>
+    <string name="local_checks_down_unreachable">Cible injoignable après plusieurs échecs.</string>
+    <string name="local_checks_up_title">%1$s rétabli</string>
+    <string name="local_checks_up_text">Réponse de nouveau conforme (%1$d ms).</string>
+</resources>

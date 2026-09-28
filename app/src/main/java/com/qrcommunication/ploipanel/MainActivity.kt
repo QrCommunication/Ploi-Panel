@@ -445,6 +445,7 @@ private fun PanelHome(
                                     6 -> stringResource(R.string.projects_tab)
                                     7 -> stringResource(R.string.settings_tab)
                                     8 -> stringResource(R.string.deploy_global_tab)
+                                    9 -> stringResource(R.string.local_checks_tab)
                                     else -> stringResource(if (creating) R.string.new_server else R.string.servers)
                                 },
                                 style = MaterialTheme.typography.titleLarge, fontWeight = FontWeight.Bold
@@ -477,6 +478,7 @@ private fun PanelHome(
                 }
                 val sections = listOf(
                     0 to R.string.servers, 8 to R.string.deploy_global_tab,
+                    9 to R.string.local_checks_tab,
                     1 to R.string.providers, 2 to R.string.account, 3 to R.string.scripts_tab,
                     4 to R.string.status_pages_tab, 5 to R.string.webserver_templates_tab,
                     6 to R.string.projects_tab, 7 to R.string.settings_tab
@@ -512,6 +514,7 @@ private fun PanelHome(
                         GlobalDeployScriptsScreen(token, profileId, lock, activity,
                             onRunningChange = { globalBatchRunning = it })
                     }
+                    9 -> LocalChecksScreen()
                     7 -> SettingsScreen(
                         store = store, profiles = profiles, active = activeProfile?.first,
                         lock = lock, activity = activity, theme = theme, language = language,
