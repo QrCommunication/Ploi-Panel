@@ -59,6 +59,7 @@ import androidx.compose.ui.unit.dp
 import com.qrcommunication.ploipanel.AppLanguage
 import com.qrcommunication.ploipanel.AppLock
 import com.qrcommunication.ploipanel.AppTheme
+import com.qrcommunication.ploipanel.LocalCheckStore
 import com.qrcommunication.ploipanel.PloiApi
 import com.qrcommunication.ploipanel.PloiProfile
 import com.qrcommunication.ploipanel.R
@@ -95,7 +96,8 @@ class WidgetConfigureActivity : ComponentActivity() {
         val provider = manager.getAppWidgetInfo(id)?.provider
         val single = provider?.className == SingleServerWidget::class.java.name
         val multi = provider?.className == MultiServerWidget::class.java.name
-        if (provider?.packageName != packageName || (!single && !multi)) { finish(); return }
+        val checks = provider?.className == SiteChecksWidget::class.java.name
+        if (provider?.packageName != packageName || (!single && !multi && !checks)) { finish(); return }
         window.setFlags(android.view.WindowManager.LayoutParams.FLAG_SECURE, android.view.WindowManager.LayoutParams.FLAG_SECURE)
         setContent {
             val preferences = remember { UiPreferences(SharedPreferencesProfilePrefs(this)) }
@@ -126,12 +128,21 @@ class WidgetConfigureActivity : ComponentActivity() {
             CompositionLocalProvider(LocalContext provides localizedContext, LocalConfiguration provides configuration) {
                 MaterialTheme(colorScheme = colors, typography = panelTypography, shapes = panelShapes) {
                     Surface(Modifier.fillMaxSize(), color = colors.background) {
-                        ConfigureWidget(id, single) {
-                            WidgetData(this).save(id, it)
-                            WidgetRefresh.render(this, id)
-                            WidgetRefresh.request(this)
-                            setResult(Activity.RESULT_OK, Intent().putExtra(AppWidgetManager.EXTRA_APPWIDGET_ID, id))
-                            finish()
+                        if (checks) {
+                            ConfigureSiteChecks(id) {
+                                SiteChecksData(this).save(id, it)
+                                SiteChecksWidgetRefresh.render(this, id)
+                                setResult(Activity.RESULT_OK, Intent().putExtra(AppWidgetManager.EXTRA_APPWIDGET_ID, id))
+                                finish()
+                            }
+                        } else {
+                            ConfigureWidget(id, single) {
+                                WidgetData(this).save(id, it)
+                                WidgetRefresh.render(this, id)
+                                WidgetRefresh.request(this)
+                                setResult(Activity.RESULT_OK, Intent().putExtra(AppWidgetManager.EXTRA_APPWIDGET_ID, id))
+                                finish()
+                            }
                         }
                     }
                 }
@@ -143,16 +154,6 @@ class WidgetConfigureActivity : ComponentActivity() {
     private fun ConfigureWidget(id: Int, single: Boolean, onSave: (WidgetConfig) -> Unit) {
         val data = remember { WidgetData(this) }
         val existing = remember(id) { data.config(id) }
-        val lock = remember { AppLock(SharedPreferencesProfilePrefs(this)) }
-        var pinError by remember { mutableStateOf(false) }
-        var lockedMs by remember { mutableLongStateOf(lock.remainingLockMs()) }
-        LaunchedEffect(lockedMs > 0L) {
-            while (lock.remainingLockMs() > 0L) {
-                lockedMs = lock.remainingLockMs()
-                delay(1_000L)
-            }
-            lockedMs = 0L
-        }
         var profile by remember { mutableStateOf(existing?.profileId) }
         var selected by remember {
             mutableStateOf(existing?.serverIds?.take(if (single) 1 else WidgetConfig.MAX_MULTI_SERVERS)?.toSet() ?: emptySet())
@@ -204,34 +205,7 @@ class WidgetConfigureActivity : ComponentActivity() {
                 item { Text(stringResource(if (single) R.string.widget_single else R.string.widget_multi),
                     style = MaterialTheme.typography.headlineMedium) }
                 if (!authorized) {
-                    item { Text(stringResource(R.string.widget_pin_prompt)) }
-                    if (!lock.hasPin()) item {
-                        Text(stringResource(R.string.widget_no_pin), color = MaterialTheme.colorScheme.error)
-                    }
-                    item {
-                        OutlinedTextField(pin, { pin = it.filter(Char::isDigit).take(AppLock.MAX_PIN_LENGTH) },
-                            label = { Text(stringResource(R.string.widget_pin)) },
-                            visualTransformation = PasswordVisualTransformation(), modifier = Modifier.fillMaxWidth(),
-                            keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.NumberPassword))
-                    }
-                    if (pinError) item { Text(stringResource(R.string.widget_pin_error), color = MaterialTheme.colorScheme.error) }
-                    if (lockedMs > 0L) item {
-                        val seconds = ((lockedMs + 999L) / 1_000L).toInt()
-                        Text(pluralStringResource(R.plurals.widget_pin_wait, seconds, seconds),
-                            color = MaterialTheme.colorScheme.error)
-                    }
-                    item {
-                        Button(onClick = {
-                            when (val result = lock.verify(pin)) {
-                                AppLock.UnlockResult.Unlocked -> { authorized = true; pinError = false }
-                                is AppLock.UnlockResult.Locked -> { lockedMs = result.remainingMs; pinError = true }
-                                is AppLock.UnlockResult.WrongPin -> pinError = true
-                            }
-                            pin = ""
-                        }, enabled = pin.isNotBlank() && lockedMs <= 0L && lock.hasPin()) {
-                            Text(stringResource(R.string.widget_unlock))
-                        }
-                    }
+                    item { PinGate() }
                 } else {
                     item { Text(stringResource(R.string.widget_public_notice),
                         style = MaterialTheme.typography.bodySmall) }
@@ -362,6 +336,122 @@ class WidgetConfigureActivity : ComponentActivity() {
                     contentAlignment = Alignment.Center) {
                     Button(onClick = { profile?.let { onSave(WidgetConfig(it, selected.toList(), metrics)) } },
                         enabled = canSave, modifier = Modifier.widthIn(max = 720.dp).fillMaxWidth()) {
+                        Text(stringResource(R.string.widget_save))
+                    }
+                }
+            }
+        }
+    }
+
+    /** Shared launcher PIN gate: identical unlock behavior for every configurable widget. */
+    @Composable
+    private fun PinGate() {
+        val lock = remember { AppLock(SharedPreferencesProfilePrefs(this)) }
+        var pinError by remember { mutableStateOf(false) }
+        var lockedMs by remember { mutableLongStateOf(lock.remainingLockMs()) }
+        LaunchedEffect(lockedMs > 0L) {
+            while (lock.remainingLockMs() > 0L) {
+                lockedMs = lock.remainingLockMs()
+                delay(1_000L)
+            }
+            lockedMs = 0L
+        }
+        Column(verticalArrangement = Arrangement.spacedBy(16.dp)) {
+            Text(stringResource(R.string.widget_pin_prompt))
+            if (!lock.hasPin()) {
+                Text(stringResource(R.string.widget_no_pin), color = MaterialTheme.colorScheme.error)
+            }
+            OutlinedTextField(pin, { pin = it.filter(Char::isDigit).take(AppLock.MAX_PIN_LENGTH) },
+                label = { Text(stringResource(R.string.widget_pin)) },
+                visualTransformation = PasswordVisualTransformation(), modifier = Modifier.fillMaxWidth(),
+                keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.NumberPassword))
+            if (pinError) Text(stringResource(R.string.widget_pin_error), color = MaterialTheme.colorScheme.error)
+            if (lockedMs > 0L) {
+                val seconds = ((lockedMs + 999L) / 1_000L).toInt()
+                Text(pluralStringResource(R.plurals.widget_pin_wait, seconds, seconds),
+                    color = MaterialTheme.colorScheme.error)
+            }
+            Button(onClick = {
+                when (val result = lock.verify(pin)) {
+                    AppLock.UnlockResult.Unlocked -> { authorized = true; pinError = false }
+                    is AppLock.UnlockResult.Locked -> { lockedMs = result.remainingMs; pinError = true }
+                    is AppLock.UnlockResult.WrongPin -> pinError = true
+                }
+                pin = ""
+            }, enabled = pin.isNotBlank() && lockedMs <= 0L && lock.hasPin()) {
+                Text(stringResource(R.string.widget_unlock))
+            }
+        }
+    }
+
+    /** Watchdog widget configuration: local targets only, no profile or API access involved. */
+    @Composable
+    private fun ConfigureSiteChecks(id: Int, onSave: (SiteCheckWidgetConfig) -> Unit) {
+        val data = remember { SiteChecksData(this) }
+        val store = remember { LocalCheckStore(SharedPreferencesProfilePrefs(this)) }
+        val existing = remember(id) { data.config(id) }
+        val targets = remember { store.targets() }
+        val maxChecks = SiteCheckWidgetConfig.MAX_WIDGET_CHECKS
+        var selected by remember {
+            mutableStateOf(existing?.targetIds?.filter { targetId -> targets.any { it.id == targetId } }?.toSet()
+                ?: targets.map { it.id }.take(maxChecks).toSet())
+        }
+        var limitReached by remember { mutableStateOf(false) }
+        val canSave = authorized && selected.isNotEmpty() && selected.size <= maxChecks
+        Column(Modifier.fillMaxSize().safeDrawingPadding().imePadding(),
+            horizontalAlignment = Alignment.CenterHorizontally) {
+            LazyColumn(Modifier.widthIn(max = 720.dp).fillMaxWidth().weight(1f),
+                contentPadding = PaddingValues(horizontal = 20.dp, vertical = 24.dp),
+                verticalArrangement = Arrangement.spacedBy(16.dp)) {
+                item { Text(stringResource(R.string.widget_checks), style = MaterialTheme.typography.headlineMedium) }
+                if (!authorized) {
+                    item { PinGate() }
+                } else {
+                    item { Text(stringResource(R.string.widget_checks_notice),
+                        style = MaterialTheme.typography.bodySmall) }
+                    item {
+                        Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween,
+                            verticalAlignment = Alignment.CenterVertically) {
+                            Text(stringResource(R.string.widget_config_checks), style = MaterialTheme.typography.titleMedium)
+                            Text(stringResource(R.string.widget_config_count, selected.size, maxChecks))
+                        }
+                    }
+                    if (targets.isEmpty()) item { Text(stringResource(R.string.widget_config_no_checks)) }
+                    items(targets, key = { "check.${it.id}" }) { target ->
+                        val checked = target.id in selected
+                        Card(Modifier.fillMaxWidth()) {
+                            Column(Modifier.fillMaxWidth().heightIn(min = 56.dp)
+                                .toggleable(value = checked, role = Role.Checkbox, onValueChange = { wanted ->
+                                    if (!wanted) {
+                                        selected = selected - target.id
+                                        limitReached = false
+                                    } else if (selected.size < maxChecks) {
+                                        selected = selected + target.id
+                                        limitReached = false
+                                    } else limitReached = true
+                                }).padding(horizontal = 12.dp, vertical = 8.dp)) {
+                                Row(verticalAlignment = Alignment.CenterVertically) {
+                                    Checkbox(checked = checked, onCheckedChange = null)
+                                    Text(target.label, Modifier.padding(start = 12.dp))
+                                }
+                                Text(target.url, Modifier.padding(start = 48.dp),
+                                    style = MaterialTheme.typography.bodySmall)
+                            }
+                        }
+                    }
+                    if (limitReached) item {
+                        Text(stringResource(R.string.widget_config_checks_limit, maxChecks),
+                            color = MaterialTheme.colorScheme.error)
+                    }
+                }
+            }
+            if (authorized) {
+                HorizontalDivider()
+                Box(Modifier.fillMaxWidth().padding(horizontal = 20.dp, vertical = 12.dp),
+                    contentAlignment = Alignment.Center) {
+                    Button(onClick = {
+                        onSave(SiteCheckWidgetConfig(targets.map { it.id }.filter { it in selected }))
+                    }, enabled = canSave, modifier = Modifier.widthIn(max = 720.dp).fillMaxWidth()) {
                         Text(stringResource(R.string.widget_save))
                     }
                 }

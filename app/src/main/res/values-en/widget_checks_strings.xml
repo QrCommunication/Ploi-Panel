@@ -1,0 +1,9 @@
+<resources>
+    <string name="widget_checks">Ploi · Watchdog</string>
+    <string name="widget_checks_empty">No target to display · open the app</string>
+    <string name="widget_checks_updated">Checked %1$s · best effort</string>
+    <string name="widget_checks_notice">Target states appear on your home screen while the device is unlocked. Local checks are best effort, with no guaranteed frequency.</string>
+    <string name="widget_config_checks">Targets to show</string>
+    <string name="widget_config_no_checks">No targets configured. Add targets in the app\'s Watchdog tab.</string>
+    <string name="widget_config_checks_limit">Limit reached (%1$d). Deselect a target to continue.</string>
+</resources>

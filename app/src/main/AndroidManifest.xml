@@ -31,6 +31,10 @@
             android:name=".widget.MultiServerRowsService"
             android:permission="android.permission.BIND_REMOTEVIEWS"
             android:exported="false" />
+        <service
+            android:name=".widget.SiteCheckRowsService"
+            android:permission="android.permission.BIND_REMOTEVIEWS"
+            android:exported="false" />
         <receiver android:name=".widget.SingleServerWidget" android:exported="true">
             <intent-filter><action android:name="android.appwidget.action.APPWIDGET_UPDATE" /></intent-filter>
             <meta-data android:name="android.appwidget.provider" android:resource="@xml/widget_single_info" />
@@ -38,6 +42,10 @@
         <receiver android:name=".widget.MultiServerWidget" android:exported="true">
             <intent-filter><action android:name="android.appwidget.action.APPWIDGET_UPDATE" /></intent-filter>
             <meta-data android:name="android.appwidget.provider" android:resource="@xml/widget_multi_info" />
+        </receiver>
+        <receiver android:name=".widget.SiteChecksWidget" android:exported="true">
+            <intent-filter><action android:name="android.appwidget.action.APPWIDGET_UPDATE" /></intent-filter>
+            <meta-data android:name="android.appwidget.provider" android:resource="@xml/widget_checks_info" />
         </receiver>
     </application>
 </manifest>

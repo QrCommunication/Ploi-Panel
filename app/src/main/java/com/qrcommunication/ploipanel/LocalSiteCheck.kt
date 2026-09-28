@@ -39,6 +39,8 @@ internal object LocalCheckRules {
     const val DEFAULT_EXPECTED_STATUS = 200
     const val DEFAULT_DEBOUNCE = 2
     const val MAX_DEBOUNCE = 10
+    /** A recorded check older than this is shown as stale: best-effort cadence cannot be trusted. */
+    const val STALE_MS = 30 * 60_000L
 
     /** Validates and normalizes a target definition; throws IllegalArgumentException when invalid. */
     fun validate(
@@ -81,6 +83,10 @@ internal fun transitionFor(previous: TargetStatus, next: TargetStatus): CheckTra
     next.state == CheckState.UP && previous.state == CheckState.DOWN -> CheckTransition.RECOVERED
     else -> CheckTransition.NONE
 }
+
+/** Shared staleness rule for the watchdog screen and launcher widgets; never-checked is not stale. */
+internal fun isLocalCheckStale(checkedAt: Long?, now: Long): Boolean =
+    checkedAt != null && now - checkedAt > LocalCheckRules.STALE_MS
 
 /** Parses a comma/space separated list of HTTP statuses; throws IllegalArgumentException on junk. */
 internal fun parseExpectedStatuses(text: String): Set<Int> {

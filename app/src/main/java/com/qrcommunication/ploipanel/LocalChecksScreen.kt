@@ -47,6 +47,7 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.unit.dp
 import androidx.core.content.ContextCompat
+import com.qrcommunication.ploipanel.widget.SiteChecksWidgetRefresh
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
@@ -90,6 +91,7 @@ internal fun LocalChecksScreen() {
             } finally {
                 checking = false
                 version++
+                SiteChecksWidgetRefresh.refreshAll(context)
             }
         }
     }
@@ -202,7 +204,7 @@ internal fun LocalChecksScreen() {
                         }
                     }.joinToString(" · ")
                     Text(detail, style = MaterialTheme.typography.bodySmall)
-                    val stale = status.lastCheckedAt?.let { System.currentTimeMillis() - it > 30 * 60_000L } == true
+                    val stale = isLocalCheckStale(status.lastCheckedAt, System.currentTimeMillis())
                     if (stale) Text(
                         stringResource(R.string.local_checks_stale),
                         color = MaterialTheme.colorScheme.tertiary, style = MaterialTheme.typography.bodySmall
@@ -241,6 +243,7 @@ internal fun LocalChecksScreen() {
             }
             editorOpen = false
             version++
+            SiteChecksWidgetRefresh.refreshAll(context)
         }
     )
 
@@ -255,6 +258,7 @@ internal fun LocalChecksScreen() {
                     pendingRemoval = null
                     LocalCheckRefresh.sync(context)
                     version++
+                    SiteChecksWidgetRefresh.refreshAll(context)
                 }) { Text(stringResource(R.string.local_checks_delete)) }
             },
             dismissButton = {

@@ -26,10 +26,24 @@ dernier état connu vivent dans les préférences locales, sans secret.
   unitaire ou globale ; ajout/édition avec le formulaire conservé ouvert en cas d'erreur ;
   suppression avec confirmation. L'onglet est actuellement placé derrière la sélection d'un
   profil actif comme les autres onglets, bien que les contrôles n'utilisent pas l'API Ploi.
+- **Widget lanceur** (`SiteChecksWidget`) : liste défilante des cibles choisies (10 maximum,
+  ordre de sélection conservé), alimentée uniquement par le magasin local — aucun appel API
+  Ploi, aucun jeton ne transite par le lanceur. Chaque ligne affiche libellé, état
+  (en ligne / hors ligne / inconnu), code HTTP, latence et date de vérification, avec le même
+  marqueur « périmé » que l'écran (règle partagée `isLocalCheckStale`, 30 minutes). Les lignes
+  sont masquées tant que l'appareil est verrouillé. La configuration passe par le même code PIN
+  que les autres widgets et se verrouille à nouveau en arrière-plan. Le rafraîchissement est
+  poussé par le worker périodique et les vérifications manuelles ; il reste *au mieux*, sans
+  garantie de fréquence. Une cible supprimée disparaît simplement du widget ; une sélection
+  devenue vide affiche un message d'invite.
 
 ## Tests
 
 `LocalSiteCheckTest` (JVM) couvre validation, limites, doublons, persistance/corruption,
 transitions du moteur, parsing des codes acceptés, préférence d'alertes et fronts de
-notification. L'affichage réel (canal de notification, permission, planification WorkManager)
-n'est pas validé ici faute d'émulateur : lint + tests unitaires + build seulement.
+notification. `SiteChecksWidgetTest` couvre la configuration du widget (bornes, doublons),
+l'ordre et le filtrage des lignes, l'absence de données inventées et la règle de péremption
+partagée ; `SiteChecksWidgetContractTest` verrouille les déclarations hôte, le masquage sous
+verrou, le rafraîchissement par le worker/l'écran et les libellés FR/EN. L'affichage réel
+(canal de notification, permission, planification WorkManager, rendu des widgets) n'est pas
+validé ici faute d'émulateur : lint + tests unitaires + build seulement.

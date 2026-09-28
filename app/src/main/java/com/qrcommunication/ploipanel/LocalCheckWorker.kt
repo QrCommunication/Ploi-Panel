@@ -19,6 +19,7 @@ import androidx.work.OneTimeWorkRequestBuilder
 import androidx.work.PeriodicWorkRequestBuilder
 import androidx.work.WorkManager
 import androidx.work.WorkerParameters
+import com.qrcommunication.ploipanel.widget.SiteChecksWidgetRefresh
 import com.qrcommunication.ploipanel.widget.WidgetRefresh
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
@@ -136,6 +137,8 @@ class LocalCheckWorker(context: Context, params: WorkerParameters) : CoroutineWo
             val next = engine.check(target.id)
             if (alerts) LocalCheckRefresh.notify(context, target, transitionFor(previous, next), next)
         }
+        // Keep launcher watchdog widgets in sync with the freshly recorded statuses.
+        SiteChecksWidgetRefresh.refreshAll(context)
         Result.success() // Offline/rate issues are per-target failures, never a worker retry storm.
     }
 }

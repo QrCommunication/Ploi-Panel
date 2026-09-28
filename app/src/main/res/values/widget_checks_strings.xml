@@ -1,0 +1,9 @@
+<resources>
+    <string name="widget_checks">Ploi · Supervision</string>
+    <string name="widget_checks_empty">Aucune cible à afficher · ouvrez l’application</string>
+    <string name="widget_checks_updated">Vérifié le %1$s · au mieux</string>
+    <string name="widget_checks_notice">Les états des cibles s’affichent sur l’écran d’accueil lorsque l’appareil est déverrouillé. Vérifications locales au mieux, sans garantie de fréquence.</string>
+    <string name="widget_config_checks">Cibles affichées</string>
+    <string name="widget_config_no_checks">Aucune cible configurée. Ajoutez des cibles dans l’onglet Supervision de l’application.</string>
+    <string name="widget_config_checks_limit">Limite atteinte (%1$d). Désélectionnez une cible pour continuer.</string>
+</resources>
