@@ -9,9 +9,17 @@ class WidgetDataTest {
 
     @Test fun `widget configuration rejects invalid ids and metrics`() {
         assertThrows(IllegalArgumentException::class.java) { WidgetConfig("", listOf(1), setOf("cpu")) }
+        assertThrows(IllegalArgumentException::class.java) { WidgetConfig("profile", listOf(1, 2, 3, 4, 5), setOf("cpu")) }
+        assertEquals(4, WidgetConfig.MAX_MULTI_SERVERS)
         assertThrows(IllegalArgumentException::class.java) { WidgetConfig("profile", listOf(1, 1), setOf("cpu")) }
         assertThrows(IllegalArgumentException::class.java) { WidgetConfig("profile", listOf(0), setOf("cpu")) }
         assertThrows(IllegalArgumentException::class.java) { WidgetConfig("profile", listOf(1), setOf("token")) }
+    }
+
+    @Test fun `widget modes expose one or up to four distinct server ids`() {
+        val ids = listOf(11L, 12L, 13L, 14L, 15L)
+        assertEquals(listOf(11L), widgetServerIds(ids, single = true))
+        assertEquals(ids.take(4), widgetServerIds(ids, single = false))
     }
 
     @Test fun `invalid and future timestamp are stale`() {

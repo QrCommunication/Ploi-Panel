@@ -7,6 +7,7 @@ import android.content.ComponentName
 import android.content.Context
 import android.content.Intent
 import android.content.res.Configuration
+import androidx.core.net.toUri
 import android.app.KeyguardManager
 import android.view.View
 import android.widget.RemoteViews
@@ -34,11 +35,28 @@ import java.util.Date
 import java.util.Locale
 import java.util.concurrent.TimeUnit
 
+internal fun widgetGaugeLabels(context: Context): Map<String, String> = mapOf(
+    "cpu" to context.getString(R.string.metric_cpu),
+    "ram" to context.getString(R.string.metric_ram),
+    "disk" to context.getString(R.string.metric_disk)
+)
+
+internal fun widgetMetrics(context: Context, reading: WidgetReading, metrics: Set<String>): String =
+    metrics.sorted().joinToString(" · ") { metric ->
+        val label = when (metric) {
+            "cpu" -> R.string.metric_cpu
+            "ram" -> R.string.metric_ram
+            "disk" -> R.string.metric_disk
+            else -> R.string.metric_load
+        }
+        "${context.getString(label)}: ${metricValue(reading.sample, metric)}"
+    }
+
 internal object WidgetRefresh {
     private const val PERIODIC = "ploi-widget-periodic"
     private const val NOW = "ploi-widget-now"
 
-    private fun localizedContext(context: Context): Context {
+    internal fun localizedContext(context: Context): Context {
         val language = UiPreferences(SharedPreferencesProfilePrefs(context)).language()
         val configuration = Configuration(context.resources.configuration)
         when (language) {
@@ -78,58 +96,76 @@ internal object WidgetRefresh {
             .flatMap { manager.getAppWidgetIds(ComponentName(context, it)).toList() }.distinct()
     }
 
+    internal fun isSingle(context: Context, id: Int): Boolean =
+        AppWidgetManager.getInstance(context).getAppWidgetInfo(id)?.provider?.className ==
+            SingleServerWidget::class.java.name
+
+    // The Intent adapter remains required on API 29-30; deprecation points to API 31-only
+    // RemoteCollectionItems, which cannot serve the app's supported older devices.
+    @Suppress("DEPRECATION")
+    private fun attachRows(view: RemoteViews, adapter: Intent) {
+        view.setRemoteAdapter(R.id.widget_server_list, adapter)
+    }
+
+    @Suppress("DEPRECATION")
+    private fun refreshRows(manager: AppWidgetManager, id: Int) {
+        manager.notifyAppWidgetViewDataChanged(id, R.id.widget_server_list)
+    }
+
     fun render(context: Context, id: Int, error: Boolean = false) {
         val displayContext = localizedContext(context)
         val store = WidgetData(context)
-        val config = store.config(id)
-        val locked = (context.getSystemService(Context.KEYGUARD_SERVICE) as KeyguardManager).isDeviceLocked
         val manager = AppWidgetManager.getInstance(context)
-        val view = RemoteViews(context.packageName, R.layout.widget_monitoring)
+        val single = isSingle(context, id)
+        val config = store.config(id)?.let { saved ->
+            saved.copy(serverIds = widgetServerIds(saved.serverIds, single))
+        }
+        val locked = (context.getSystemService(Context.KEYGUARD_SERVICE) as KeyguardManager).isDeviceLocked
+        val view = RemoteViews(context.packageName, if (single) R.layout.widget_monitoring else R.layout.widget_multi)
         val validProfile = config != null && store.profiles.profiles().any { it.id == config.profileId }
         val rows = if (config != null && !locked && validProfile) store.readings(id, config) else emptyMap()
-        val single = manager.getAppWidgetInfo(id)?.provider?.className == SingleServerWidget::class.java.name
         val title = if (single) R.string.widget_single else R.string.widget_multi
         view.setTextViewText(R.id.widget_title, displayContext.getString(title))
-        val content = when {
-            config == null -> displayContext.getString(R.string.widget_setup)
-            locked -> displayContext.getString(R.string.widget_locked)
-            !validProfile -> displayContext.getString(R.string.widget_profile_missing)
-            else -> {
-                config.serverIds.map { server ->
+        if (single) {
+            val content = when {
+                config == null -> displayContext.getString(R.string.widget_setup)
+                locked -> displayContext.getString(R.string.widget_locked)
+                !validProfile -> displayContext.getString(R.string.widget_profile_missing)
+                else -> config.serverIds.joinToString("\n") { server ->
                     val reading = rows[server]
                     if (reading == null) displayContext.getString(R.string.widget_no_data)
-                    else {
-                        val values = config.metrics.sorted().joinToString(" · ") { metric ->
-                            val label = when (metric) {
-                                "cpu" -> R.string.metric_cpu
-                                "ram" -> R.string.metric_ram
-                                "disk" -> R.string.metric_disk
-                                else -> R.string.metric_load
-                            }
-                            "${displayContext.getString(label)}: ${metricValue(reading.sample, metric)}"
-                        }
-                        "${reading.name}: $values${if (isStale(reading.sample, System.currentTimeMillis()) || error) " · ${displayContext.getString(R.string.widget_stale)}" else ""}"
-                    }
-                }.joinToString("\n")
+                    else "${reading.name}: ${widgetMetrics(displayContext, reading, config.metrics)}" +
+                        if (isStale(reading.sample, System.currentTimeMillis()) || error)
+                            " · ${displayContext.getString(R.string.widget_stale)}" else ""
+                }
+            }
+            view.setTextViewText(R.id.widget_content, content)
+            val chart = config?.serverIds?.singleOrNull()?.let { rows[it] }?.let { reading ->
+                gaugeBitmap(gaugeValues(reading.sample, config.metrics), widgetGaugeLabels(displayContext))
+            }
+            if (chart != null) {
+                view.setImageViewBitmap(R.id.widget_chart, chart)
+                view.setViewVisibility(R.id.widget_chart, View.VISIBLE)
+            } else view.setViewVisibility(R.id.widget_chart, View.GONE)
+        } else {
+            val state = when {
+                config == null -> displayContext.getString(R.string.widget_setup)
+                locked -> displayContext.getString(R.string.widget_locked)
+                !validProfile -> displayContext.getString(R.string.widget_profile_missing)
+                else -> null
+            }
+            view.setTextViewText(R.id.widget_state, state ?: "")
+            view.setViewVisibility(R.id.widget_state, if (state == null) View.GONE else View.VISIBLE)
+            view.setViewVisibility(R.id.widget_server_list, if (state == null) View.VISIBLE else View.GONE)
+            if (state == null) {
+                // A distinct URI makes Android bind a separate, correctly invalidated list per widget.
+                val adapter = Intent(context, MultiServerRowsService::class.java).apply {
+                    putExtra(AppWidgetManager.EXTRA_APPWIDGET_ID, id)
+                    data = "ploipanel-widget://rows/$id".toUri()
+                }
+                attachRows(view, adapter)
             }
         }
-        view.setTextViewText(R.id.widget_content, content)
-        val chart = if (single) config?.let { configured ->
-            configured.serverIds.singleOrNull()?.let { rows[it] }?.let { reading ->
-                gaugeBitmap(
-                    gaugeValues(reading.sample, configured.metrics),
-                    mapOf(
-                        "cpu" to displayContext.getString(R.string.metric_cpu),
-                        "ram" to displayContext.getString(R.string.metric_ram),
-                        "disk" to displayContext.getString(R.string.metric_disk)
-                    )
-                )
-            }
-        } else null
-        if (chart != null) {
-            view.setImageViewBitmap(R.id.widget_chart, chart)
-            view.setViewVisibility(R.id.widget_chart, View.VISIBLE)
-        } else view.setViewVisibility(R.id.widget_chart, View.GONE)
         val newest = rows.values.maxOfOrNull { reading -> reading.fetchedAt }
         view.setTextViewText(R.id.widget_time, when {
             locked -> displayContext.getString(R.string.widget_unlock)
@@ -152,6 +188,7 @@ internal object WidgetRefresh {
             context, id, launch, PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE
         ))
         manager.updateAppWidget(id, view)
+        if (!single) refreshRows(manager, id)
     }
 }
 
@@ -189,7 +226,9 @@ class WidgetWorker(context: Context, params: WorkerParameters) : CoroutineWorker
         val results = mutableMapOf<Pair<String, Long>, WidgetReading?>()
         var rateLimited = false
         ids.forEach { id ->
-            val config = store.config(id) ?: return@forEach
+            val config = store.config(id)?.let { saved ->
+                saved.copy(serverIds = widgetServerIds(saved.serverIds, WidgetRefresh.isSingle(context, id)))
+            } ?: return@forEach
             val token = store.profiles.tokenFor(config.profileId)
             if (token == null) { WidgetRefresh.render(context, id, true); return@forEach }
             val cached = store.readings(id, config).toMutableMap()

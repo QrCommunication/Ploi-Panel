@@ -1,0 +1,47 @@
+<?xml version="1.0" encoding="utf-8"?>
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    android:id="@+id/widget_server_row"
+    android:layout_width="match_parent"
+    android:layout_height="wrap_content"
+    android:minHeight="72dp"
+    android:orientation="vertical"
+    android:paddingHorizontal="8dp"
+    android:paddingVertical="5dp"
+    android:background="@drawable/widget_row_background">
+
+    <TextView
+        android:id="@+id/widget_row_name"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:maxLines="1"
+        android:ellipsize="end"
+        android:textStyle="bold"
+        android:textColor="#FFFFFF"
+        android:textSize="13sp" />
+
+    <TextView
+        android:id="@+id/widget_row_metrics"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:maxLines="2"
+        android:ellipsize="end"
+        android:textColor="#D3EDE6"
+        android:textSize="11sp" />
+
+    <ImageView
+        android:id="@+id/widget_row_chart"
+        android:layout_width="match_parent"
+        android:layout_height="48dp"
+        android:contentDescription="@string/widget_multi_chart_description"
+        android:scaleType="fitXY"
+        android:visibility="gone" />
+
+    <TextView
+        android:id="@+id/widget_row_status"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:maxLines="1"
+        android:ellipsize="end"
+        android:textColor="#AEEAD9"
+        android:textSize="11sp" />
+</LinearLayout>

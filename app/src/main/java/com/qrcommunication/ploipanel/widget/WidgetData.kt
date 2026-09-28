@@ -17,12 +17,18 @@ import java.util.Base64
 
 internal data class WidgetConfig(val profileId: String, val serverIds: List<Long>, val metrics: Set<String>) {
     init {
-        require(profileId.isNotBlank() && serverIds.isNotEmpty() && serverIds.size <= 6)
+        require(profileId.isNotBlank() && serverIds.isNotEmpty() && serverIds.size <= MAX_MULTI_SERVERS)
         require(serverIds.all { it > 0 } && serverIds.distinct().size == serverIds.size)
         require(metrics.isNotEmpty() && metrics.all { it in METRICS })
     }
-    companion object { val METRICS = setOf("cpu", "ram", "disk", "load") }
+    companion object {
+        const val MAX_MULTI_SERVERS = 4
+        val METRICS = setOf("cpu", "ram", "disk", "load")
+    }
 }
+
+internal fun widgetServerIds(ids: List<Long>, single: Boolean): List<Long> =
+    ids.take(if (single) 1 else WidgetConfig.MAX_MULTI_SERVERS)
 
 internal data class WidgetReading(val name: String, val sample: MonitorSample, val fetchedAt: Long)
 
@@ -55,7 +61,9 @@ internal class WidgetData(context: Context) {
         val obj = JSONObject(prefs.getString("config.$id", null) ?: return null)
         val ids = obj.getJSONArray("servers")
         val metrics = obj.getJSONArray("metrics")
-        WidgetConfig(obj.getString("profile"), (0 until ids.length()).map { ids.getLong(it) },
+        // Previous app versions allowed six servers; preserve the first four on upgrade.
+        WidgetConfig(obj.getString("profile"), (0 until ids.length()).map { ids.getLong(it) }
+            .take(WidgetConfig.MAX_MULTI_SERVERS),
             (0 until metrics.length()).map { metrics.getString(it) }.toSet())
     } catch (_: Exception) { null }
 
