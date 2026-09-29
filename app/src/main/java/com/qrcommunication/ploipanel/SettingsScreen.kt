@@ -3,24 +3,44 @@ package com.qrcommunication.ploipanel
 import android.net.Uri
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.FlowRow
+import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.widthIn
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.foundation.verticalScroll
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.outlined.Check
+import androidx.compose.material.icons.outlined.CheckCircle
+import androidx.compose.material.icons.outlined.CloudSync
+import androidx.compose.material.icons.outlined.Info
+import androidx.compose.material.icons.outlined.Lock
+import androidx.compose.material.icons.outlined.ManageAccounts
+import androidx.compose.material.icons.outlined.Palette
+import androidx.compose.material.icons.outlined.Password
+import androidx.compose.material.icons.outlined.Person
+import androidx.compose.material.icons.outlined.PersonAdd
+import androidx.compose.material.icons.outlined.Security
+import androidx.compose.material.icons.outlined.Terminal
+import androidx.compose.material.icons.outlined.Widgets
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Button
-import androidx.compose.material3.Card
-import androidx.compose.material3.CardDefaults
+import androidx.compose.material3.ButtonDefaults
+import androidx.compose.material3.FilledTonalButton
 import androidx.compose.material3.FilterChip
 import androidx.compose.material3.HorizontalDivider
+import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.OutlinedTextField
+import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
@@ -30,10 +50,12 @@ import androidx.compose.runtime.mutableLongStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
+import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.pluralStringResource
 import androidx.compose.ui.res.stringResource
-import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.text.input.PasswordVisualTransformation
 import androidx.compose.ui.unit.dp
@@ -61,121 +83,165 @@ internal fun SettingsScreen(
     var profileError by remember { mutableIntStateOf(0) }
     var pinChanged by remember { mutableStateOf(false) }
 
+    Box(Modifier.fillMaxSize(), contentAlignment = Alignment.TopCenter) {
     Column(
-        Modifier.fillMaxSize().verticalScroll(rememberScrollState()).padding(16.dp),
-        verticalArrangement = Arrangement.spacedBy(18.dp)
+        Modifier.fillMaxSize().widthIn(max = PanelSpacing.maxContentWidth)
+            .verticalScroll(rememberScrollState()).padding(vertical = PanelSpacing.sm),
+        verticalArrangement = Arrangement.spacedBy(PanelSpacing.lg)
     ) {
-        SettingsSectionHeading(R.string.settings_profiles)
-        if (profileError != 0) Text(stringResource(profileError), color = MaterialTheme.colorScheme.error)
-        profiles.forEach { profile ->
-            val isActive = profile.id == active?.id
-            Card(
-                modifier = Modifier.fillMaxWidth(),
-                colors = CardDefaults.cardColors(
-                    containerColor = if (isActive) MaterialTheme.colorScheme.primaryContainer else MaterialTheme.colorScheme.surface
-                ),
-                border = BorderStroke(
-                    1.dp, if (isActive) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.outlineVariant
-                )
-            ) {
-                Column(Modifier.fillMaxWidth().padding(16.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
-                    Text(profile.label, style = MaterialTheme.typography.titleMedium)
-                    if (isActive) Text(
-                        stringResource(R.string.settings_profile_active), color = MaterialTheme.colorScheme.primary
-                    )
-                    FlowRow(
-                        horizontalArrangement = Arrangement.spacedBy(8.dp),
-                        verticalArrangement = Arrangement.spacedBy(4.dp)
-                    ) {
-                        if (profile.id != active?.id) OutlinedButton(onClick = {
-                            val token = store.tokenFor(profile.id)
-                            if (token == null) profileError = R.string.settings_profile_token_invalid
-                            else {
-                                store.activate(profile.id)
-                                profileError = 0
-                                onActiveChanged(profile)
+        SectionCard(
+            title = stringResource(R.string.settings_profiles),
+            description = stringResource(R.string.settings_profiles_description),
+            icon = Icons.Outlined.ManageAccounts
+        ) {
+            if (profileError != 0) ApiLikeMessage(stringResource(profileError))
+            profiles.forEach { profile ->
+                val isActive = profile.id == active?.id
+                Surface(
+                    shape = MaterialTheme.shapes.medium,
+                    color = if (isActive) MaterialTheme.colorScheme.primaryContainer else MaterialTheme.colorScheme.surfaceContainerLowest,
+                    border = BorderStroke(
+                        1.dp, if (isActive) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.outlineVariant
+                    ),
+                    modifier = Modifier.fillMaxWidth()
+                ) {
+                    Column(Modifier.fillMaxWidth().padding(PanelSpacing.md), verticalArrangement = Arrangement.spacedBy(PanelSpacing.sm)) {
+                        Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(PanelSpacing.md)) {
+                            IconBadge(Icons.Outlined.Person, size = 36)
+                            Column(Modifier.weight(1f)) {
+                                Text(profile.label, style = MaterialTheme.typography.titleMedium)
+                                if (isActive) Row(verticalAlignment = Alignment.CenterVertically,
+                                    horizontalArrangement = Arrangement.spacedBy(PanelSpacing.xs)) {
+                                    Icon(Icons.Outlined.CheckCircle, contentDescription = null, modifier = Modifier.size(14.dp),
+                                        tint = MaterialTheme.colorScheme.primary)
+                                    Text(stringResource(R.string.settings_profile_active), color = MaterialTheme.colorScheme.primary,
+                                        style = MaterialTheme.typography.labelMedium)
+                                }
                             }
-                        }) { Text(stringResource(R.string.settings_profile_switch)) }
-                        OutlinedButton(onClick = { renameProfile = profile }) {
-                            Text(stringResource(R.string.settings_profile_rename))
                         }
-                        OutlinedButton(onClick = { deleteProfile = profile }) {
-                            Text(stringResource(R.string.settings_profile_delete))
+                        FlowRow(
+                            horizontalArrangement = Arrangement.spacedBy(PanelSpacing.sm),
+                            verticalArrangement = Arrangement.spacedBy(PanelSpacing.xs)
+                        ) {
+                            if (profile.id != active?.id) FilledTonalButton(onClick = {
+                                val token = store.tokenFor(profile.id)
+                                if (token == null) profileError = R.string.settings_profile_token_invalid
+                                else {
+                                    store.activate(profile.id)
+                                    profileError = 0
+                                    onActiveChanged(profile)
+                                }
+                            }) { Text(stringResource(R.string.settings_profile_switch)) }
+                            OutlinedButton(onClick = { renameProfile = profile }) {
+                                Text(stringResource(R.string.settings_profile_rename))
+                            }
+                            OutlinedButton(
+                                onClick = { deleteProfile = profile },
+                                colors = ButtonDefaults.outlinedButtonColors(contentColor = MaterialTheme.colorScheme.error)
+                            ) {
+                                Text(stringResource(R.string.settings_profile_delete))
+                            }
                         }
                     }
                 }
             }
-        }
-        OutlinedButton(onClick = { addProfile = true }, enabled = profiles.size < ProfileStore.MAX_PROFILES) {
-            Text(stringResource(R.string.settings_profile_add))
-        }
-
-        SettingsSectionHeading(R.string.settings_appearance)
-        Text(stringResource(R.string.settings_theme), style = MaterialTheme.typography.titleMedium)
-        FlowRow(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-            listOf(AppTheme.SYSTEM, AppTheme.LIGHT, AppTheme.DARK).forEach { option ->
-                val label = when (option) {
-                    AppTheme.SYSTEM -> R.string.settings_theme_system
-                    AppTheme.LIGHT -> R.string.settings_theme_light
-                    AppTheme.DARK -> R.string.settings_theme_dark
-                }
-                FilterChip(selected = theme == option, onClick = { onThemeChanged(option) }, label = { Text(stringResource(label)) })
-            }
-        }
-        Text(stringResource(R.string.settings_language), style = MaterialTheme.typography.titleMedium)
-        FlowRow(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-            listOf(AppLanguage.SYSTEM, AppLanguage.FRENCH, AppLanguage.ENGLISH).forEach { option ->
-                val label = when (option) {
-                    AppLanguage.SYSTEM -> R.string.settings_language_system
-                    AppLanguage.FRENCH -> R.string.settings_language_french
-                    AppLanguage.ENGLISH -> R.string.settings_language_english
-                }
-                FilterChip(selected = language == option, onClick = { onLanguageChanged(option) }, label = { Text(stringResource(label)) })
+            Button(onClick = { addProfile = true }, enabled = profiles.size < ProfileStore.MAX_PROFILES) {
+                Icon(Icons.Outlined.PersonAdd, contentDescription = null, modifier = Modifier.size(18.dp))
+                Text(stringResource(R.string.settings_profile_add), Modifier.padding(start = PanelSpacing.sm))
             }
         }
 
-        SettingsSectionHeading(R.string.settings_widgets)
-        Card(
-            colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.secondaryContainer),
-            modifier = Modifier.fillMaxWidth()
+        SectionCard(title = stringResource(R.string.settings_appearance), icon = Icons.Outlined.Palette) {
+            Text(stringResource(R.string.settings_theme), style = MaterialTheme.typography.titleSmall)
+            FlowRow(horizontalArrangement = Arrangement.spacedBy(PanelSpacing.sm)) {
+                listOf(AppTheme.SYSTEM, AppTheme.LIGHT, AppTheme.DARK).forEach { option ->
+                    val label = when (option) {
+                        AppTheme.SYSTEM -> R.string.settings_theme_system
+                        AppTheme.LIGHT -> R.string.settings_theme_light
+                        AppTheme.DARK -> R.string.settings_theme_dark
+                    }
+                    FilterChip(
+                        selected = theme == option, onClick = { onThemeChanged(option) },
+                        label = { Text(stringResource(label)) },
+                        leadingIcon = if (theme == option) {
+                            { Icon(Icons.Outlined.Check, contentDescription = null, modifier = Modifier.size(18.dp)) }
+                        } else null
+                    )
+                }
+            }
+            Text(stringResource(R.string.settings_language), style = MaterialTheme.typography.titleSmall)
+            FlowRow(horizontalArrangement = Arrangement.spacedBy(PanelSpacing.sm)) {
+                listOf(AppLanguage.SYSTEM, AppLanguage.FRENCH, AppLanguage.ENGLISH).forEach { option ->
+                    val label = when (option) {
+                        AppLanguage.SYSTEM -> R.string.settings_language_system
+                        AppLanguage.FRENCH -> R.string.settings_language_french
+                        AppLanguage.ENGLISH -> R.string.settings_language_english
+                    }
+                    FilterChip(
+                        selected = language == option, onClick = { onLanguageChanged(option) },
+                        label = { Text(stringResource(label)) },
+                        leadingIcon = if (language == option) {
+                            { Icon(Icons.Outlined.Check, contentDescription = null, modifier = Modifier.size(18.dp)) }
+                        } else null
+                    )
+                }
+            }
+        }
+
+        SectionCard(
+            title = stringResource(R.string.settings_security),
+            description = stringResource(R.string.settings_security_description),
+            icon = Icons.Outlined.Security
         ) {
-            Text(
-                stringResource(R.string.settings_widgets_hint),
-                Modifier.padding(16.dp), style = MaterialTheme.typography.bodyMedium,
-                color = MaterialTheme.colorScheme.onSecondaryContainer
+            BiometricToggle(lock, activity)
+            Text(stringResource(R.string.settings_biometric_hint), style = MaterialTheme.typography.bodySmall,
+                color = MaterialTheme.colorScheme.onSurfaceVariant)
+            HorizontalDivider(color = MaterialTheme.colorScheme.outlineVariant)
+            AutoLockSetting()
+            HorizontalDivider(color = MaterialTheme.colorScheme.outlineVariant)
+            if (pinChanged) Text(stringResource(R.string.settings_pin_changed), color = PanelTheme.status.success)
+            FlowRow(horizontalArrangement = Arrangement.spacedBy(PanelSpacing.sm), verticalArrangement = Arrangement.spacedBy(PanelSpacing.xs)) {
+                OutlinedButton(onClick = { changePin = true }) {
+                    Icon(Icons.Outlined.Password, contentDescription = null, modifier = Modifier.size(18.dp))
+                    Text(stringResource(R.string.settings_change_pin), Modifier.padding(start = PanelSpacing.sm))
+                }
+                OutlinedButton(onClick = onLock) {
+                    Icon(Icons.Outlined.Lock, contentDescription = null, modifier = Modifier.size(18.dp))
+                    Text(stringResource(R.string.lock_now), Modifier.padding(start = PanelSpacing.sm))
+                }
+            }
+        }
+
+        SectionCard(title = stringResource(R.string.settings_widgets), icon = Icons.Outlined.Widgets) {
+            Text(stringResource(R.string.settings_widgets_hint), style = MaterialTheme.typography.bodyMedium,
+                color = MaterialTheme.colorScheme.onSurfaceVariant)
+        }
+
+        SectionCard(title = stringResource(R.string.ssh_device_title), icon = Icons.Outlined.Terminal) {
+            SshDeviceSection(active?.id, lock, activity)
+        }
+
+        SectionCard(title = stringResource(R.string.config_transfer_title), icon = Icons.Outlined.CloudSync) {
+            ConfigurationTransferSection(
+                configurationManager, lock, activity, importUri, onImportUriConsumed,
+                onChooseImport, onSaveEncryptedArchive, transferStatus, onImported
             )
         }
 
-        SettingsSectionHeading(R.string.config_transfer_title)
-        ConfigurationTransferSection(
-            configurationManager, lock, activity, importUri, onImportUriConsumed,
-            onChooseImport, onSaveEncryptedArchive, transferStatus, onImported
-        )
-
-        SettingsSectionHeading(R.string.settings_security)
-        BiometricToggle(lock, activity)
-        AutoLockSetting()
-        Text(stringResource(R.string.settings_biometric_hint), style = MaterialTheme.typography.bodySmall)
-        if (pinChanged) Text(stringResource(R.string.settings_pin_changed), color = MaterialTheme.colorScheme.primary)
-        FlowRow(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-            OutlinedButton(onClick = { changePin = true }) { Text(stringResource(R.string.settings_change_pin)) }
-            OutlinedButton(onClick = onLock) { Text(stringResource(R.string.lock_now)) }
+        SectionCard(title = stringResource(R.string.settings_about), icon = Icons.Outlined.Info) {
+            Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(PanelSpacing.md)) {
+                Icon(painterResource(R.drawable.ic_app), contentDescription = null, tint = Color.Unspecified,
+                    modifier = Modifier.size(40.dp))
+                Column {
+                    Text(stringResource(R.string.app_name), style = MaterialTheme.typography.titleMedium)
+                    Text(stringResource(R.string.settings_version, BuildConfig.VERSION_NAME),
+                        style = panelMonoStyle, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                }
+            }
+            Text(stringResource(R.string.settings_about_body), style = MaterialTheme.typography.bodySmall,
+                color = MaterialTheme.colorScheme.onSurfaceVariant)
         }
-
-        SettingsSectionHeading(R.string.ssh_device_title)
-        SshDeviceSection(active?.id, lock, activity)
-
-        SettingsSectionHeading(R.string.settings_about)
-        Card(
-            colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.secondaryContainer),
-            modifier = Modifier.fillMaxWidth()
-        ) {
-            Text(
-                stringResource(R.string.settings_version, BuildConfig.VERSION_NAME),
-                Modifier.padding(18.dp), color = MaterialTheme.colorScheme.onSecondaryContainer,
-                style = MaterialTheme.typography.titleMedium
-            )
-        }
+    }
     }
 
     if (addProfile) ProfileEditorDialog(
@@ -223,10 +289,12 @@ internal fun SettingsScreen(
 
 @Composable
 internal fun SettingsSectionHeading(title: Int) {
-    Column(Modifier.fillMaxWidth(), verticalArrangement = Arrangement.spacedBy(8.dp)) {
-        Text(stringResource(title), style = MaterialTheme.typography.titleLarge, fontWeight = FontWeight.Bold)
-        HorizontalDivider(color = MaterialTheme.colorScheme.outlineVariant)
-    }
+    SectionHeader(stringResource(title))
+}
+
+@Composable
+private fun ApiLikeMessage(message: String) {
+    Text(message, color = MaterialTheme.colorScheme.error, style = MaterialTheme.typography.bodyMedium)
 }
 
 @Composable
