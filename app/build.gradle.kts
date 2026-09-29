@@ -61,6 +61,10 @@ android {
             enableSplit = false
         }
     }
+    testOptions {
+        // Robolectric Compose tests render real screens on the JVM (resources, locales, dialogs).
+        unitTests.isIncludeAndroidResources = true
+    }
     packaging {
         jniLibs {
             // Upstream AndroidX binary is already packaged without strippable symbols.
@@ -101,10 +105,15 @@ dependencies {
     implementation("androidx.compose.material:material-icons-extended")
     implementation("androidx.compose.ui:ui-tooling-preview")
     debugImplementation("androidx.compose.ui:ui-tooling")
+    // Hosts ComponentActivity for Compose UI tests; debug-only, never in release.
+    debugImplementation("androidx.compose.ui:ui-test-manifest")
     testImplementation("junit:junit:4.13.2")
     testImplementation("org.json:json:20260814")
     // In-process SSH server: end-to-end tests of host key checks, auth and PTY shell.
     testImplementation("org.apache.sshd:sshd-core:2.20.0")
     testImplementation("net.i2p.crypto:eddsa:0.3.0")
     testImplementation("org.slf4j:slf4j-nop:2.0.17")
+    // JVM Compose UI tests: reproduce crashes and input limits without a device.
+    testImplementation("org.robolectric:robolectric:4.17")
+    testImplementation("androidx.compose.ui:ui-test-junit4")
 }

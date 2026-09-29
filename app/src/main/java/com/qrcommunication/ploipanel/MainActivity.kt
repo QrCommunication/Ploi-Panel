@@ -1,12 +1,16 @@
 package com.qrcommunication.ploipanel
 
+import android.content.Context
 import android.content.Intent
 import android.content.res.Configuration
 import android.net.Uri
 import android.os.Bundle
 import android.os.SystemClock
 import android.view.WindowManager
+import androidx.activity.ComponentActivity
 import androidx.activity.compose.BackHandler
+import androidx.activity.compose.LocalActivityResultRegistryOwner
+import androidx.activity.compose.LocalOnBackPressedDispatcherOwner
 import androidx.activity.compose.LocalActivity
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.compose.setContent
@@ -181,7 +185,7 @@ private fun PloiPanel(widgetRoute: WidgetRoute?, onWidgetRouteConsumed: () -> Un
         controller.isAppearanceLightStatusBars = !dark
         controller.isAppearanceLightNavigationBars = !dark
     }
-    CompositionLocalProvider(LocalContext provides localizedContext, LocalConfiguration provides configuration) {
+    LocalizedActivityScope(activity, localizedContext, configuration) {
     PloiPanelTheme(dark) {
         // API 35+ draws edge-to-edge even without an explicit enableEdgeToEdge call.
         // Consume system bars once at the root; the IME then reduces the usable viewport.
@@ -259,6 +263,28 @@ private fun PloiPanel(widgetRoute: WidgetRoute?, onWidgetRouteConsumed: () -> Un
     }
 }
 
+/**
+ * Supplies the in-app language to `stringResource` (context + configuration) while keeping the
+ * Activity reachable for Compose APIs that look it up through LocalContext. A configuration
+ * context is a bare ContextImpl, not a wrapper of the Activity: without the explicit owners below,
+ * `rememberLauncherForActivityResult` (notification permission in Monitoring alerts and in
+ * Surveillance) throws "No ActivityResultRegistryOwner was provided" and closes the app.
+ */
+@Composable
+internal fun LocalizedActivityScope(
+    activity: ComponentActivity, localizedContext: Context, configuration: Configuration,
+    content: @Composable () -> Unit
+) {
+    CompositionLocalProvider(
+        LocalContext provides localizedContext,
+        LocalConfiguration provides configuration,
+        LocalActivityResultRegistryOwner provides activity,
+        LocalOnBackPressedDispatcherOwner provides activity,
+        LocalActivity provides activity,
+        content = content
+    )
+}
+
 /** Authenticated content. Leaves composition entirely while locked, dropping in-memory tokens. */
 @Composable
 private fun PanelHome(
@@ -304,6 +330,10 @@ private fun PanelHome(
     var loading by remember { mutableStateOf(false) }
     var deepLinkError by remember { mutableStateOf(false) }
     var serverQuery by remember { mutableStateOf("") }
+    // Rechecks of servers Ploi reports as unreachable: fresh Ploi status + device TCP test.
+    var rechecks by remember { mutableStateOf<Map<Long, Recheck>>(emptyMap()) }
+    var rechecking by remember { mutableStateOf<Set<Long>>(emptySet()) }
+    val recheckScope = rememberCoroutineScope()
 
     fun onConfigurationImported() {
         profilesVersion++
@@ -374,6 +404,7 @@ private fun PanelHome(
         try {
             val fresh = withContext(Dispatchers.IO) { PloiApi.servers(active, page) }
             servers = fresh
+            rechecks = emptyMap()
             if (profileId != null) {
                 // Best effort: a cache write failure must never break a successful read.
                 withContext(Dispatchers.IO) {
@@ -394,6 +425,27 @@ private fun PanelHome(
         } finally {
             loading = false
         }
+    }
+
+    // Opening the list re-tests every server Ploi reports as unreachable (bounded per page), so
+    // a stale "unreachable" is replaced by Ploi's current status and this phone's own TCP test.
+    fun recheck(server: Server) {
+        val active = token ?: return
+        if (server.id in rechecking) return
+        rechecking = rechecking + server.id
+        recheckScope.launch {
+            try {
+                val result = withContext(Dispatchers.IO) { recheckServer(active, server) }
+                if (token == active) rechecks = rechecks + (server.id to result)
+            } finally {
+                rechecking = rechecking - server.id
+            }
+        }
+    }
+    LaunchedEffect(servers, serversCachedAt) {
+        val loaded = servers ?: return@LaunchedEffect
+        if (serversCachedAt != null) return@LaunchedEffect // cached rows: no live calls
+        loaded.servers.filter { needsRecheck(it.status) }.take(MAX_AUTO_RECHECKS_PER_PAGE).forEach { recheck(it) }
     }
 
     // Shared by Settings and the top-bar profile switcher: one code path to change the active profile.
@@ -570,6 +622,7 @@ private fun PanelHome(
                                     expanded -> Row(horizontalArrangement = Arrangement.spacedBy(PanelSpacing.lg)) {
                                         Column(Modifier.weight(1f)) {
                                             ServerList(servers, loading, error, page, serversCachedAt, serverQuery, { serverQuery = it },
+                                                rechecks, rechecking, ::recheck,
                                                 onPage = { page = it; selected = null }, onRefresh = { refresh++ },
                                                 onSelect = { selected = it }, onCreate = { creating = true }, onMonitored = { showMonitored = true })
                                         }
@@ -598,6 +651,7 @@ private fun PanelHome(
                                         }
                                     }
                                     else -> ServerList(servers, loading, error, page, serversCachedAt, serverQuery, { serverQuery = it },
+                                        rechecks, rechecking, ::recheck,
                                         onPage = { page = it; selected = null }, onRefresh = { refresh++ },
                                         onSelect = { selected = it }, onCreate = { creating = true }, onMonitored = { showMonitored = true })
                                 }
@@ -679,6 +733,7 @@ internal fun filterLoadedServers(servers: List<Server>, query: String): List<Ser
 private fun ServerList(
     pageData: ServerPage?, loading: Boolean, error: Throwable?, page: Int, cachedAt: Long?,
     query: String, onQuery: (String) -> Unit,
+    rechecks: Map<Long, Recheck>, rechecking: Set<Long>, onRecheck: (Server) -> Unit,
     onPage: (Int) -> Unit, onRefresh: () -> Unit, onSelect: (Server) -> Unit,
     onCreate: () -> Unit, onMonitored: () -> Unit
 ) {
@@ -745,7 +800,9 @@ private fun ServerList(
                 )
             }
             items(visible, key = { it.id }) { server ->
-                ServerItemCard(server, enabled = !offline) { onSelect(server) }
+                ServerItemCard(server, enabled = !offline,
+                    recheck = rechecks[server.id], rechecking = server.id in rechecking,
+                    onRecheck = { onRecheck(server) }) { onSelect(server) }
             }
             item {
                 Row(
