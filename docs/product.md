@@ -1,6 +1,6 @@
 # Cahier produit — Ploi Panel
 
-> Cahier d'intentions historique, **non** liste des fonctionnalités livrées. Pour l'état 0.1.0, voir [README](../README.md), [couverture API](api-coverage.md), [SSH](ssh.md), [contrôles locaux](local-checks.md) et [archive portable](portable-configuration.md). La licence actuelle du dépôt est [LGPL-3.0-only](../LICENSE), non GPL-3.0. Les objectifs OCR, terminal SSH et agent optionnel ne sont pas livrés ; les contrôles locaux, widgets de sites et export/import chiffré sont présents avec les limites indiquées dans leurs documents. Le minimum Android retenu est API 29. Ce cahier ne prouve aucun test sur compte Ploi réel.
+> Cahier d'intentions historique, **non** liste des fonctionnalités livrées. Pour l'état 0.2.0, voir [README](../README.md), [couverture API](api-coverage.md), [SSH](ssh.md), [contrôles locaux](local-checks.md) et [archive portable](portable-configuration.md). La licence actuelle du dépôt est [LGPL-3.0-only](../LICENSE), non GPL-3.0. Le terminal SSH est livré en 0.2.0 ([SSH](ssh.md)) ; les objectifs OCR et agent optionnel ne sont pas livrés ; les contrôles locaux, widgets de sites et export/import chiffré sont présents avec les limites indiquées dans leurs documents. Le minimum Android retenu est API 29. Ce cahier ne prouve aucun test sur compte Ploi réel.
 
 ## Décisions validées dans le thread Telegram 5929
 

@@ -4,6 +4,7 @@ import android.content.Intent
 import android.content.res.Configuration
 import android.net.Uri
 import android.os.Bundle
+import android.os.SystemClock
 import android.view.WindowManager
 import androidx.activity.compose.LocalActivity
 import androidx.activity.compose.rememberLauncherForActivityResult
@@ -175,12 +176,28 @@ private fun PloiPanel(widgetRoute: WidgetRoute?, onWidgetRouteConsumed: () -> Un
             val hasPin = remember(lockVersion) { lock.hasPin() }
             var unlocked by remember { mutableStateOf(!lock.hasPin()) }
 
-            // Auto-lock as soon as the app leaves the foreground; unlock state never survives
-            // backgrounding or process death, so secrets are re-gated by PIN/biometrics.
+            // Auto-lock when the app leaves the foreground, after the optional grace delay chosen in
+            // settings (monotonic clock). Unlock state never survives process death, so secrets are
+            // re-gated by PIN/biometrics.
             val lifecycleOwner = LocalLifecycleOwner.current
+            val lockPrefs = remember { SharedPreferencesProfilePrefs(context) }
+            var stoppedAt by remember { mutableStateOf<Long?>(null) }
             DisposableEffect(lifecycleOwner) {
                 val observer = LifecycleEventObserver { _, event ->
-                    if (event == Lifecycle.Event.ON_STOP && lock.hasPin()) unlocked = false
+                    if (!lock.hasPin()) return@LifecycleEventObserver
+                    when (event) {
+                        Lifecycle.Event.ON_STOP -> {
+                            val grace = AutoLockPolicy.graceSeconds(lockPrefs)
+                            if (grace == 0) unlocked = false else stoppedAt = SystemClock.elapsedRealtime()
+                        }
+                        Lifecycle.Event.ON_START -> {
+                            if (AutoLockPolicy.mustRelock(stoppedAt, SystemClock.elapsedRealtime(), AutoLockPolicy.graceSeconds(lockPrefs))) {
+                                unlocked = false
+                            }
+                            stoppedAt = null
+                        }
+                        else -> Unit
+                    }
                 }
                 lifecycleOwner.lifecycle.addObserver(observer)
                 onDispose { lifecycleOwner.lifecycle.removeObserver(observer) }
@@ -589,6 +606,7 @@ private fun PanelHome(
                                     if (server == null) Text(stringResource(R.string.select_server))
                                     else ServerDetailScreen(
                                         token, server, lock, activity, refresh,
+                                        profileId = activeProfile?.first?.id,
                                         onChanged = { refresh++ },
                                         onDeleted = { selected = null; refresh++ }
                                     )
@@ -599,6 +617,7 @@ private fun PanelHome(
                                 Box(Modifier.weight(1f).fillMaxWidth()) {
                                     ServerDetailScreen(
                                         token, selected!!, lock, activity, refresh,
+                                        profileId = activeProfile?.first?.id,
                                         onChanged = { refresh++ },
                                         onDeleted = { selected = null; refresh++ }
                                     )

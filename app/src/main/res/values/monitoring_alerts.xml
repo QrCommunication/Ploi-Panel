@@ -1,0 +1,23 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="threshold_channel">Seuils de monitoring</string>
+    <string name="threshold_title">Alertes de seuil</string>
+    <string name="threshold_hint">Notification quand CPU, RAM ou disque (Ploi Monitoring) dépasse le seuil, puis au retour sous le seuil. Vérification au mieux toutes les 15 minutes minimum, téléphone connecté ; les mesures Ploi peuvent être différées. Laissez un champ vide pour ignorer une métrique.</string>
+    <string name="threshold_sustained">Mesures consécutives au-dessus du seuil avant d’alerter :</string>
+    <string name="threshold_save">Enregistrer les seuils</string>
+    <string name="threshold_remove">Supprimer les alertes</string>
+    <string name="threshold_saved">Seuils enregistrés pour ce serveur.</string>
+    <string name="threshold_removed">Alertes supprimées pour ce serveur.</string>
+    <string name="threshold_invalid">Indiquez au moins un seuil entre 1 et 100 %.</string>
+    <string name="threshold_limit">Nombre maximal de serveurs surveillés atteint (50).</string>
+    <string name="threshold_permission_denied">Notifications refusées : les seuils sont enregistrés mais aucune alerte ne s’affichera.</string>
+    <string name="threshold_breached_title">%1$s : %2$s élevé</string>
+    <string name="threshold_breached_text">%1$s à %2$d %% (seuil %3$d %%).</string>
+    <string name="threshold_recovered_title">%1$s : %2$s rétabli</string>
+    <string name="threshold_recovered_text">%1$s revenu à %2$d %%.</string>
+    <string name="autolock_title">Verrouillage automatique après sortie de l’application</string>
+    <string name="autolock_immediate">Immédiat</string>
+    <string name="autolock_seconds">%1$d s</string>
+    <string name="autolock_minutes">%1$d min</string>
+    <string name="autolock_hint">Délai de grâce avant de redemander le code quand vous revenez dans l’application. Le bouton « Verrouiller » reste immédiat ; un redémarrage de l’application verrouille toujours.</string>
+</resources>

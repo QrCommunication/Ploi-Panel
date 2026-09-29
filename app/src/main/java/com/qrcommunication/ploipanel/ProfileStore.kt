@@ -99,6 +99,7 @@ internal class ProfileStore(private val prefs: ProfilePrefs, private val cipher:
         prefs.write(com.qrcommunication.ploipanel.ssh.SshKeyVault.key(id), null)
         prefs.write(com.qrcommunication.ploipanel.ssh.SshHostTrustStore.key(id), null)
         prefs.write(com.qrcommunication.ploipanel.ssh.SshBookmarkStore.key(id), null)
+        ThresholdAlertStore(prefs).removeProfile(id)
         com.qrcommunication.ploipanel.ssh.TerminalSessions.closeProfile(id)
         if (prefs.read(KEY_ACTIVE) == id) prefs.write(KEY_ACTIVE, null)
     }

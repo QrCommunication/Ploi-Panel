@@ -1,10 +1,10 @@
 # Ploi Panel — administration Ploi sur Android
 
-**Ploi Panel 0.1.0** est un client Android open source, local-first, pour gérer plusieurs profils Ploi, leurs serveurs et leurs sites depuis un téléphone ou un écran pliable. Il communique directement avec l'[API officielle Ploi](https://developers.ploi.io/) ; aucun compte intermédiaire ni serveur Ploi Panel n'est requis. L'application n'est pas affiliée à Ploi.
+**Ploi Panel 0.2.0** est un client Android open source, local-first, pour gérer plusieurs profils Ploi, leurs serveurs et leurs sites depuis un téléphone ou un écran pliable. Il communique directement avec l'[API officielle Ploi](https://developers.ploi.io/) ; aucun compte intermédiaire ni serveur Ploi Panel n'est requis. L'application n'est pas affiliée à Ploi.
 
 > **État de la version :** le code et les tests locaux ne prouvent pas une intégration validée sur un compte Ploi réel, ni une publication sur Google Play. Vérifiez les droits du jeton, l'abonnement et les effets des actions avant toute utilisation sur des ressources importantes. Ne publiez jamais de jeton, archive ou clé SSH dans une issue.
 
-## Fonctions présentes en 0.1.0
+## Fonctions présentes en 0.2.0
 
 - Profils Ploi multiples avec jetons Bearer locaux ; navigation serveurs, sites et domaines de l'API, dont déploiements, bases, certificats, sauvegardes et opérations d'administration. Certaines actions modifient ou suppriment des ressources distantes : elles nécessitent une attention particulière. L'[inventaire des routes et de leur statut](docs/api-coverage.md) recense **231 opérations implémentées/testées localement, non vérifiées en conditions réelles** ; il ne garantit ni disponibilité pour chaque compte ni compatibilité permanente avec l'API.
 - Interface français/anglais, thème clair/sombre, navigation adaptative ; PIN de l'application, biométrie forte optionnelle et confirmation des opérations sensibles.
@@ -12,12 +12,14 @@
 - Trois types de [widgets d'écran d'accueil](docs/widget-multiserver.md) : **un serveur** (jauges), **jusqu'à quatre serveurs** (liste), et [contrôles HTTP(S) de sites](docs/local-checks.md) (jusqu'à dix cibles). Après création du PIN et d'un profil, maintenir un espace vide sur l'écran d'accueil → **Widgets → Ploi Panel**, puis configurer le widget. Les données peuvent être périmées ; le contenu sensible est masqué lorsque l'appareil est verrouillé.
 - [Vérifications locales de sites](docs/local-checks.md) par HTTP(S), indépendantes des moniteurs de l'API Ploi : cibles, codes acceptés, état/latence et alertes panne/rétablissement facultatives. WorkManager a un plancher de **15 minutes**, pas une fréquence garantie ; hors ligne, appareil éteint ou restrictions Android empêchent les alertes.
 - [Export/import chiffré de configuration](docs/portable-configuration.md) avec phrase de passe distincte du PIN via sélecteur de fichiers Android. L'archive contient profils, jetons, modèles locaux de scripts et préférences langue/thème ; elle **n'inclut pas** PIN, widgets, historiques, contrôles HTTP locaux, clés privées SSH ni hôtes épinglés. La restauration sur un second appareil reste à vérifier physiquement.
-- [Gestion SSH limitée](docs/ssh.md) : import de clés, confiance/empreintes d'hôtes et sonde de clé d'hôte par poignée de main ; **aucun terminal SSH, aucune authentification SSH ni commande distante**.
+- [Terminal SSH intégré](docs/ssh.md) : sessions interactives multiples (onglets) directement du téléphone vers vos serveurs, émulation xterm-256color (couleurs, vim/nano/htop/less, écran alternatif), clavier logiciel + barre de touches (Ctrl, Alt, Échap, Tab, flèches, F1–F12), clavier physique, copier/coller, taille de police réglable. Authentification par **mot de passe** (jamais enregistré) ou **clé** : import OpenSSH/PEM, y compris protégées par phrase de passe, ou **génération Ed25519 sur le téléphone** puis autorisation sur le serveur via l'API Ploi. La clé d'hôte est vérifiée contre les empreintes épinglées (TOFU) **avant** tout envoi d'identifiant ; hôte inconnu ou modifié = connexion bloquée. Ouverture en un geste depuis la fiche d'un serveur (IP et port SSH Ploi préremplis), destinations enregistrées par profil.
+- [Alertes de seuil](docs/monitoring-alerts.md) CPU/RAM/disque par serveur à partir de Ploi Monitoring, avec mesures consécutives et hystérésis ; même limite *best effort* (15 minutes minimum) que les contrôles locaux.
+- Verrouillage automatique configurable (immédiat, 30 s, 1, 5 ou 15 min après la sortie de l'application), mesuré sur horloge monotone.
 - [Lecture hors ligne](docs/offline-cache.md) : les pages de serveurs lues avec succès sont conservées **chiffrées** sur l'appareil, par profil. Si Ploi devient injoignable, la dernière liste connue reste consultable avec **l'horodatage de sa lecture** et les actions désactivées. Le cache **ne masque jamais** une réponse de l'API (jeton invalide, scope manquant, limite atteinte) et ne couvre pour l'instant **que** les pages de serveurs ; aucune écriture hors ligne n'est mise en file.
 
 ## Non inclus / à valider
 
-Pas d'OCR de jeton ni d'agent de surveillance externe ; pas de garantie de ping ou notification à intervalle fixe, ni de surveillance si le téléphone est indisponible. La sonde SSH ne remplace pas un client SSH. Les tests JVM, lint et builds ne remplacent pas des essais sur appareils, comptes Ploi dédiés, widgets de lanceur et migrations réelles. Le [cahier produit](docs/product.md) et le [plan historique](docs/implementation.md) décrivent aussi des objectifs, **pas des fonctions promises dans cette version**.
+Pas d'OCR de jeton ni d'agent de surveillance externe ; pas de garantie de ping ou notification à intervalle fixe, ni de surveillance si le téléphone est indisponible. Le terminal SSH ne propose ni SFTP, ni redirection de ports, ni transfert d'agent (désactivé volontairement), ni reprise automatique après coupure réseau. Les tests JVM, lint et builds ne remplacent pas des essais sur appareils, comptes Ploi dédiés, widgets de lanceur et migrations réelles. Le [cahier produit](docs/product.md) et le [plan historique](docs/implementation.md) décrivent aussi des objectifs, **pas des fonctions promises dans cette version**.
 
 ## Installer
 
@@ -47,7 +49,7 @@ APK de développement : `app/build/outputs/apk/debug/app-debug.apk`. Tests unita
 
 **Une sauvegarde inclut-elle mes widgets et clés SSH ?** Non. Voir la [liste exacte des données](docs/portable-configuration.md).
 
-**Puis-je ouvrir un terminal SSH ?** Non : seul le contrôle de clé d'hôte est présent.
+**Puis-je ouvrir un terminal SSH ?** Oui, depuis l'onglet « Terminal SSH » ou le bouton « Ouvrir un terminal SSH » d'un serveur. Épinglez d'abord la clé d'hôte (« Vérifier un hôte ») en comparant l'empreinte avec une source de confiance.
 
 **Puis-je installer la même version depuis Play après l'APK GitHub ?** Cela dépend de la clé de signature de l'APK et de celle utilisée par Play ; une réinstallation peut être nécessaire. Ne pas présumer d'une migration transparente.
 

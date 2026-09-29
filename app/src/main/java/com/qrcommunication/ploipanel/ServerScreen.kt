@@ -47,6 +47,7 @@ import kotlinx.coroutines.withContext
 @Composable
 internal fun ServerDetailScreen(
     token: String, server: Server, lock: AppLock, activity: FragmentActivity, refresh: Int,
+    profileId: String? = null,
     onChanged: () -> Unit, onDeleted: () -> Unit
 ) {
     var tab by remember(server.id, token) { mutableIntStateOf(0) }
@@ -88,7 +89,7 @@ internal fun ServerDetailScreen(
         }
         Box(Modifier.weight(1f).fillMaxWidth()) {
             when (tab) {
-                0 -> MonitoringView(token, server, refresh)
+                0 -> MonitoringView(token, server, refresh, profileId)
                 1 -> SitesScreen(token, server.id, lock, activity)
                 2 -> DatabasesScreen(token, server.id, lock, activity)
                 5 -> BackupsTab(token, server.id, lock, activity)
@@ -110,7 +111,7 @@ internal fun ServerDetailScreen(
 }
 
 @Composable
-internal fun MonitoringView(token: String, server: Server, refresh: Int) {
+internal fun MonitoringView(token: String, server: Server, refresh: Int, profileId: String? = null) {
     var samples by remember(server.id, token) { mutableStateOf<List<MonitorSample>>(emptyList()) }
     var loading by remember(server.id, token) { mutableStateOf(true) }
     var error by remember(server.id, token) { mutableStateOf<Throwable?>(null) }
@@ -144,6 +145,7 @@ internal fun MonitoringView(token: String, server: Server, refresh: Int) {
             MonitoringCharts(samples)
             Metric(stringResource(R.string.metric_load), latest.load.ifBlank { "—" })
         }
+        if (profileId != null && !loading && error == null && samples.isNotEmpty()) ThresholdAlertCard(profileId, server)
     }
 }
 

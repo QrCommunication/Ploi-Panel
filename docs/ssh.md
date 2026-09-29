@@ -1,4 +1,4 @@
-# SSH direct — cœur de confiance et coffre de clés
+# SSH direct — terminal, confiance et coffre de clés
 
 ## Portée de cet incrément
 
@@ -56,11 +56,43 @@ Livré (pur JVM, couvert par `SshKnownHostsTest` et `SshKeyVaultTest`) :
   - la boîte de dialogue de sonde est le **seul** point d'entrée UI autorisé à appeler
     `trust()`/`repin()` ; l'écran de gestion conserve l'interdiction (tests de contrat).
 
+## Terminal SSH interactif (0.2.0)
+
+- **Accès** : onglet « Terminal SSH » du panneau, ou bouton « Ouvrir un terminal SSH » d'un serveur
+  (IP et `ssh_port` Ploi préremplis). Destinations mémorisées par profil (`SshBookmarkStore`) :
+  hôte, port, utilisateur, référence de clé — **jamais** de mot de passe.
+- **Connexion** (`ssh/SshShell.kt`, `JSchShellConnector`) : `StrictHostKeyChecking=yes` avec un dépôt
+  de clés d'hôte en lecture seule adossé à `SshHostTrustStore` (`add()` ne fait rien,
+  `promptYesNo` refuse). Hôte inconnu → `UnknownHost`, clé différente → `HostKeyMismatch` :
+  la poignée de main s'arrête **avant** l'authentification, aucun mot de passe ni signature
+  n'est émis. Les types de clé épinglés sont proposés en premier (comme OpenSSH) pour ne pas
+  signaler à tort un premier contact. Transfert d'agent et X11 désactivés.
+- **Authentification** : mot de passe (et `keyboard-interactive` limité à une invite « password »)
+  ou clé du coffre. Les clés OpenSSH/PEM protégées par phrase de passe sont acceptées ; la phrase
+  est demandée à chaque connexion et effacée ensuite. PKCS#8 chiffré reste refusé (non géré par
+  JSch). Génération **Ed25519** sur l'appareil ; « Autoriser la clé sur ce serveur » envoie la
+  seule clé publique via `POST /servers/{server}/ssh-keys` après confirmation PIN/biométrie.
+- **Session** : PTY `xterm-256color`, redimensionnement suivant la surface (police réglable),
+  keep-alive 30 s. `TerminalSession` relie flux SSH et émulateur sur des threads d'E/S dédiés ;
+  les sessions survivent au verrouillage de l'application et au changement d'onglet, mais sont
+  fermées sur déconnexion explicite, fin distante ou suppression du profil. Maximum 8 sessions.
+- **Émulateur** (`ssh/TerminalEmulator.kt`, JVM pur) : UTF-8 (séquences coupées entre paquets),
+  C0/ESC/CSI/OSC, SGR 16/256/24 bits, écran alternatif 1049, régions de défilement, insertion/
+  suppression, tabulations, graphismes DEC, mode curseur applicatif, collage entre crochets
+  (marqueur de fin injecté neutralisé), réponses DSR/DA. OSC 52 (presse-papiers), manipulation de
+  fenêtre et souris sont **ignorés** : un serveur ne peut ni lire ni écrire le presse-papiers du
+  téléphone. Paramètres bornés contre les séquences hostiles.
+- **Saisie** : clavier logiciel (tampon invisible pour Retour arrière), clavier physique (flèches,
+  F1–F12, Ctrl/Alt), barre de touches avec Ctrl/Alt collants, raccourcis Ctrl+C/D/Z/L, coller
+  (entre crochets si demandé par l'hôte), copier l'écran et l'historique (marqué sensible).
+- **Implémentations cryptographiques** : `JSchSupport` force les classes Bouncy Castle pour
+  Ed25519/Ed448/X25519, absentes du JCA Android avant API 33.
+
 ## Explicitement NON implémenté
 
-- Aucune session authentifiée, aucun terminal, aucune exécution de commande : la sonde s'arrête
-  à la poignée de main et aucune connexion authentifiée n'a été testée.
-- Pas de génération de clés sur l'appareil, pas de passphrase PEM, pas d'agent forwarding.
+- Pas de SFTP/SCP, de redirection de ports, de transfert d'agent (refus volontaire), ni de
+  reconnexion automatique ; pas de sélection de texte fine dans le terminal (copie de tout
+  l'écran et de l'historique).
 - La sonde capture une seule clé d'hôte par connexion (algorithme négocié) ; les autres
   algorithmes du serveur sont découverts au fil des vérifications, comme avec OpenSSH.
 
@@ -77,7 +109,10 @@ Livré (pur JVM, couvert par `SshKnownHostsTest` et `SshKeyVaultTest`) :
 
 ## Limites de validation
 
-Tests JVM uniquement (parsing, transitions de confiance, décision de la sonde, chiffrement
-simulé par un chiffre de test) : le Keystore réel, une poignée de main SSH réelle et l'UI
-associée n'ont pas été validés sur appareil ni contre un serveur. Ne pas annoncer « SSH
-fonctionnel » à ce stade.
+Tests JVM (`TerminalEmulatorTest`, `SshKeyMaterialTest`, `SshBookmarkStoreTest`) et tests de bout
+en bout **contre un vrai serveur SSH embarqué** (Apache MINA SSHD, `SshShellEndToEndTest`) : refus
+d'un hôte inconnu sans tentative d'authentification, blocage d'une clé modifiée, mauvais mot de
+passe, session mot de passe avec PTY/écho/redimensionnement/fermeture, authentification par clé
+Ed25519 générée, fin distante, hôte injoignable. Le Keystore Android réel, les claviers logiciels
+tiers (IME), le rendu sur appareil/pliable et des serveurs Ploi réels n'ont **pas** été validés
+sur appareil dans ce cycle.

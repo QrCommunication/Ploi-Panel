@@ -1,6 +1,6 @@
-# Préparer une publication Google Play — Ploi Panel 0.1.0
+# Préparer une publication Google Play — Ploi Panel
 
-**Checklist manuelle, pas une preuve de publication.** Le dépôt ne contient ni clé de signature ni configuration secrète. La publication exige accès administrateur Play Console, vérifications sur appareils et approbation humaine. Le package figé dans `app/build.gradle.kts` est `com.qrcommunication.ploipanel`, `versionCode = 1`, `versionName = "0.1.0"`, `minSdk = 29`, `targetSdk = 36`. Confirmer ces valeurs dans l'AAB avant envoi ; incrémenter `versionCode` pour toute version Play ultérieure. Vérifier les exigences Play actuelles lors de la soumission.
+**Checklist manuelle, pas une preuve de publication.** Le dépôt ne contient ni clé de signature ni configuration secrète. La publication exige accès administrateur Play Console, vérifications sur appareils et approbation humaine. Le package figé dans `app/build.gradle.kts` est `com.qrcommunication.ploipanel`, `versionCode = 2`, `versionName = "0.2.0"` (0.1.0 = code 1), `minSdk = 29`, `targetSdk = 36`. Confirmer ces valeurs dans l'AAB avant envoi ; incrémenter `versionCode` pour toute version Play ultérieure. Vérifier les exigences Play actuelles lors de la soumission.
 
 ## Vérification de propriété Android (APK distinct de la publication Play)
 

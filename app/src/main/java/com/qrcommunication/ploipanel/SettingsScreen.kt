@@ -154,6 +154,7 @@ internal fun SettingsScreen(
 
         SettingsSectionHeading(R.string.settings_security)
         BiometricToggle(lock, activity)
+        AutoLockSetting()
         Text(stringResource(R.string.settings_biometric_hint), style = MaterialTheme.typography.bodySmall)
         if (pinChanged) Text(stringResource(R.string.settings_pin_changed), color = MaterialTheme.colorScheme.primary)
         FlowRow(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
