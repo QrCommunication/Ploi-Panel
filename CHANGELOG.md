@@ -2,6 +2,11 @@
 
 Le journal suit les versions de Ploi Panel. La présence d'une version dans le code ou dans ce fichier ne signifie pas qu'elle est publiée sur Google Play. Ne pas confondre tests locaux et validation sur compte Ploi réel.
 
+## [0.1.0-adi.1] — APK de vérification de propriété
+
+- Ajout de `assets/adi-registration.properties` contenant l'extrait de vérification fourni pour le compte développeur ; l'APK release signé sert à l'étape **Android developer verification → Importer un APK**, pas à confirmer une publication Play. Même package, versionCode et clé d'upload que 0.1.0. Voir [docs/PLAY_RELEASE.md](docs/PLAY_RELEASE.md).
+- La validation du package par Google dépend du certificat sélectionné dans la console et reste à effectuer manuellement ; aucun résultat Play n'est présumé.
+
 ## [0.1.0] — préversion GitHub
 
 - Client Android natif Kotlin/Compose, profils Ploi multiples et interface FR/EN avec PIN et biométrie optionnelle.
