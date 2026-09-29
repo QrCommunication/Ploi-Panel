@@ -7,7 +7,9 @@
 *.jks
 *.keystore
 *.p12
+*.pfx
 *.pem
+*signing*.properties
 .env
 .env.*
 *.log

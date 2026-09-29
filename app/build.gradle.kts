@@ -1,7 +1,22 @@
+import java.util.Properties
+
 plugins {
     id("com.android.application")
     id("org.jetbrains.kotlin.android")
     id("org.jetbrains.kotlin.plugin.compose")
+}
+
+// Never store the upload key or passwords in this repository or CI logs.
+// When unset, Gradle may build an unsigned release for analysis; distribution requires this file.
+val uploadSigning = providers.environmentVariable("PLOI_PANEL_SIGNING_PROPERTIES").orNull?.let { path ->
+    val source = file(path)
+    require(source.isFile) { "Upload signing properties file is missing" }
+    Properties().apply { source.inputStream().use { load(it) } }.also { properties ->
+        listOf("storeFile", "storePassword", "keyAlias", "keyPassword").forEach { field ->
+            require(!properties.getProperty(field).isNullOrBlank()) { "Missing upload signing field: $field" }
+        }
+        require(file(properties.getProperty("storeFile")).isFile) { "Upload keystore is missing" }
+    }
 }
 
 android {
@@ -17,8 +32,17 @@ android {
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
     }
 
+    signingConfigs {
+        if (uploadSigning != null) create("upload") {
+            storeFile = file(uploadSigning.getProperty("storeFile"))
+            storePassword = uploadSigning.getProperty("storePassword")
+            keyAlias = uploadSigning.getProperty("keyAlias")
+            keyPassword = uploadSigning.getProperty("keyPassword")
+        }
+    }
     buildTypes {
         release {
+            if (uploadSigning != null) signingConfig = signingConfigs.getByName("upload")
             isMinifyEnabled = true
             proguardFiles(getDefaultProguardFile("proguard-android-optimize.txt"), "proguard-rules.pro")
         }
@@ -43,6 +67,14 @@ android {
             keepDebugSymbols += "**/libandroidx.graphics.path.so"
         }
     }
+}
+
+// A public release must never silently fall back to an unsigned APK or AAB.
+val requireUploadSigning = tasks.register("requireUploadSigning") {
+    doLast { check(uploadSigning != null) { "Set PLOI_PANEL_SIGNING_PROPERTIES before building a release" } }
+}
+tasks.matching { it.name == "assembleRelease" || it.name == "bundleRelease" }.configureEach {
+    dependsOn(requireUploadSigning)
 }
 
 kotlin {

@@ -1,8 +1,10 @@
 # Cahier produit — Ploi Panel
 
+> Cahier d'intentions historique, **non** liste des fonctionnalités livrées. Pour l'état 0.1.0, voir [README](../README.md), [couverture API](api-coverage.md), [SSH](ssh.md), [contrôles locaux](local-checks.md) et [archive portable](portable-configuration.md). La licence actuelle du dépôt est [LGPL-3.0-only](../LICENSE), non GPL-3.0. Les objectifs OCR, terminal SSH et agent optionnel ne sont pas livrés ; les contrôles locaux, widgets de sites et export/import chiffré sont présents avec les limites indiquées dans leurs documents. Le minimum Android retenu est API 29. Ce cahier ne prouve aucun test sur compte Ploi réel.
+
 ## Décisions validées dans le thread Telegram 5929
 
-- Publication Play Store envisagée, dépôt public dans `QrCommunication/Ploi-Panel`, licence GPL-3.0.
+- Publication Play Store envisagée (non confirmée), dépôt public dans `QrCommunication/Ploi-Panel`, licence LGPL-3.0-only.
 - Android natif : Kotlin, Jetpack Compose, layouts adaptatifs pour téléphones et appareils pliables, en particulier Fold 8 et Fold 8 Ultra. La largeur disponible et la posture, non le nom commercial de l'appareil, déterminent les layouts. Version Android minimale à fixer selon tests de compatibilité et distribution Play ; viser au moins les appareils des trois dernières années.
 - Français et anglais ; thème clair/sombre automatique et sélection manuelle.
 - Plusieurs profils Ploi isolés, jeton saisi ou lu via photo/OCR ; photo traitée localement puis supprimée sans sauvegarde. Ne jamais exposer les jetons au presse-papiers, aux logs, aux sauvegardes Android non chiffrées ni aux widgets.
@@ -10,7 +12,7 @@
 - Couverture exhaustive des endpoints documentés de l'API Ploi : opérations de lecture, création, modification et suppression, ainsi que les commandes spécifiques aux ressources. Actions destructrices ou sensibles après vérification par code ou biométrie, même si l'application est déjà déverrouillée.
 - Sources de prestataires et offres/regions depuis l'API Ploi, avec capacités réellement disponibles par profil. Si l'API ne permet pas d'ajouter un prestataire, proposer un chemin externe explicite et ne pas simuler cette capacité. Les fournisseurs non actifs sont visibles mais non sélectionnables jusqu'à configuration.
 - Ploi Monitoring en source primaire pour CPU, RAM, disque et charge ; agent auto-hébergé optionnel uniquement pour ce que l'API ne fournit pas, avec consentement explicite. Pas d'agent requis pour utiliser l'application.
-- Widgets : un récapitulatif adaptable multi-serveurs et autant de widgets individuels que désiré ; sélection des serveurs/sites et des métriques, affichage d'un horodatage et d'un état « données périmées ».
+- Widgets : un récapitulatif adaptable multi-serveurs (quatre serveurs maximum), widgets individuels et widget distinct pour contrôles HTTP de sites ; sélection de ressources, horodatage et état « données périmées ». Les sites ne sont pas sélectionnés dans les widgets de monitoring serveur.
 - Vérification du site depuis le téléphone : disponibilité via HTTP(S), résultat et latence, pas ICMP implicite. URL et timeout configurables ; tenir compte des redirections, TLS, certificats, codes acceptables, faux positifs transitoires et réseaux captifs. Notifications panne/rétablissement et seuils, réglables par profil et ressource. Les limites Android imposent des contrôles d'arrière-plan *best effort*, pas de garantie stricte à 5 min.
 - SSH direct téléphone → serveur, avec vérification de clé hôte, gestion de clés sécurisée et interdiction de désactiver silencieusement la vérification.
 - Tout local : pas de backend propriétaire ni de compte intermédiaire. Cache local en lecture hors ligne, export/import chiffré avec phrase de passe distincte de la clé matérielle Android ; migration interappareils vérifiée. Désactiver Android Auto Backup pour les secrets.

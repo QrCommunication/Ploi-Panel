@@ -1,5 +1,7 @@
 # Ploi Panel Implementation Plan
 
+> Plan historique, ni checklist de release ni preuve que tous les objectifs sont livrés. Le périmètre 0.1.0 et l'absence de validation sur compte réel figurent dans le [README](../README.md) et l'[inventaire API](api-coverage.md). La licence du dépôt est désormais [LGPL-3.0-only](../LICENSE), et non GPL-3.0. L'OCR, les sessions SSH authentifiées et l'agent optionnel ne sont pas livrés. Les contrôles de sites, leur widget et l'export/import chiffré sont présents avec les limites décrites dans leurs documents. Le minimum périodique WorkManager est de 15 minutes, avec une exécution au mieux. Les jalons ci-dessous conservent leur raisonnement technique historique.
+
 > **For Hermes:** Follow `writing-plans` and `quality-gates` to split each milestone into bite-sized RED/GREEN/REFACTOR tasks before implementation. Never claim full API coverage before the endpoint inventory is complete and tested.
 
 **Goal:** Deliver a publishable Android-native client for every documented Ploi API operation, with local-only secrets, adaptive layouts, widgets, monitoring and optional SSH.
@@ -13,7 +15,7 @@
 ## Gate 0 — Auditable API contract and foundation
 
 1. Inventory each official API route by domain (user, credentials/providers, servers, sites, databases, deployments, SSL, backups, cron, services, DNS, etc.). For each, record method/path, scopes, request/response schema, subscription restrictions, paging, asynchronous behavior and available create/update/delete action. Mark undocumented account-web features as unavailable, not fake API endpoints. Store as `docs/api-coverage.md` and create machine-checkable coverage tests.
-2. Bootstrap Gradle wrapper, Android app, bilingual resources, GPL headers, `.gitignore`, Dependabot and CI (assemble, unit tests, lint, dependency checks). Pin Android min/target SDK based on the current Play Store requirements and test phones. Verify `./gradlew testDebugUnitTest lintDebug assembleDebug` before publishing code.
+2. Bootstrap Gradle wrapper, Android app, bilingual resources, LGPL-3.0-only licensing, `.gitignore`, Dependabot and CI (assemble, unit tests, lint, dependency checks). Pin Android min/target SDK based on the current Play Store requirements and test phones. Verify `./gradlew testDebugUnitTest lintDebug assembleDebug` before publishing code.
 3. Establish package contracts: `core/network`, `core/model`, `core/security`, `core/storage`, `core/ui`, `feature/*`, `widget/*`, `ssh/*`. Document error states (offline, token invalid, missing scope, plan not eligible, rate limit, task pending).
 
 ## Gate 1 — Safe multi-profile Ploi access
@@ -32,7 +34,7 @@
 
 10. Build modern adaptive navigation and master/detail lists for compact, medium and expanded widths; test on standard phones and representative Fold screen sizes/postures. Provide FR/EN and light/dark/system settings, accessibility, dynamic font sizes and touch targets.
 11. Implement Ploi Monitoring with missing-installation and plan-ineligible states, timestamps and unit-tested metric normalization; do not treat older samples as live. Add opt-in site HTTP(S) checks with configurable target, timeout, accepted status and failure debounce.
-12. Provide individual and multi-server widgets with selectable sites, sizes and stale states. Share the cache and polling budget; instrument rate-limit tests. Background work requests a five-minute freshness goal but UI and documentation must say *best effort*. Test notifications, denial of notification permission and app process death.
+12. Provide individual and multi-server widgets with stale states, plus a separate local site-check widget. Share the cache and polling budget; instrument rate-limit tests. Background periodic work has a 15-minute minimum and runs *best effort*, never an exact schedule. Test notifications, denial of notification permission and app process death.
 13. Optional agent: define authenticated protocol and threat model only after confirming which desired metrics are missing from Ploi. Avoid mandatory centralized infrastructure. SSH: host-key pinning/TOFU confirmation, encrypted keys and terminal session teardown tests.
 
 ## Gate 4 — Portability and release

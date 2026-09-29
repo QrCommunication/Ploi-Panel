@@ -3,9 +3,11 @@
 ## Portée
 
 Contrôles HTTP(S) exécutés par le téléphone lui-même, indépendants de l'API Ploi et distincts
-des moniteurs Ploi (domaine `monitoring`, lecture seule côté API). Aucune donnée ne quitte
-l'appareil : les cibles (libellé, URL, méthode, délai, codes acceptés, débordement) et le
-dernier état connu vivent dans les préférences locales, sans secret.
+des moniteurs Ploi (domaine `monitoring`, lecture seule côté API). Les cibles
+(libellé, URL, méthode, délai, codes acceptés, débordement) et le dernier état connu vivent
+dans les préférences locales, sans secret ; **chaque contrôle contacte l'URL cible** et
+expose donc au serveur distant l'adresse IP et les métadonnées de la requête. Aucun serveur
+Ploi Panel intermédiaire n'est utilisé.
 
 ## Comportement
 
