@@ -42,7 +42,12 @@ class UiWiringAuditContractTest {
         assertTrue(creation.contains("page = providerPage, perPage = 50"))
         assertTrue(creation.contains("BackHandler { if (customResultReady) confirmExit = true else onCancel() }"))
         assertTrue(creation.contains("credential = null; plan = \"\"; region = \"\"; providerPage = page.currentPage + 1"))
-        assertTrue(screen("MainActivity").contains("if (!creating) LazyRow("))
+        // Navigation steps aside during creation so its exit guard cannot be bypassed.
+        val main = screen("MainActivity")
+        assertTrue(main.contains("val showNavigation = !creating && !keyboardVisible"))
+        assertTrue(main.contains("if (rail && !creating) PanelNavigationRail("))
+        assertTrue(main.contains("locked = globalBatchRunning || creating, showDisconnect = !creating"))
+        assertTrue(main.contains("globalBatchRunning || creating -> null"))
     }
 
     @Test fun archivePickerSurvivesAppRelockAndNeverGetsRawTokensInIntent() {

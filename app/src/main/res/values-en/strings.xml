@@ -10,7 +10,6 @@
     <string name="profile_error_invalid">Invalid name or token.</string>
     <string name="profile_error_duplicate">A profile already uses this name.</string>
     <string name="profile_error_limit">Maximum number of profiles reached.</string>
-    <string name="current_profile">Profile: %1$s</string>
     <string name="servers">Servers</string>
     <string name="reload">Refresh</string>
     <string name="disconnect">Sign out</string>
@@ -791,7 +790,6 @@
     <string name="settings_profile_token_invalid">Token unreadable: this profile cannot be activated.</string>
     <string name="monitor_response_time">Response time</string>
     <string name="monitor_response_range">Min %1$s s · Max %2$s s</string>
-    <string name="dashboard_eyebrow">YOUR INFRASTRUCTURE</string>
     <plurals name="dashboard_page_count">
         <item quantity="one">%1$d server on this page</item>
         <item quantity="other">%1$d servers on this page</item>

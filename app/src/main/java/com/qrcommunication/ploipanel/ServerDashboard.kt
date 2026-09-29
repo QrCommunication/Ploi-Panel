@@ -1,24 +1,29 @@
 package com.qrcommunication.ploipanel
 
 import androidx.compose.foundation.BorderStroke
-import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
-import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
-import androidx.compose.foundation.shape.CircleShape
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.automirrored.outlined.KeyboardArrowRight
+import androidx.compose.material.icons.outlined.CheckCircle
+import androidx.compose.material.icons.outlined.CloudOff
+import androidx.compose.material.icons.outlined.Dns
+import androidx.compose.material.icons.outlined.Info
+import androidx.compose.material.icons.outlined.Terminal
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
+import androidx.compose.material3.Icon
+import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.res.pluralStringResource
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.semantics.clearAndSetSemantics
@@ -27,48 +32,39 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 
-/** Dashboard numbers describe only the loaded page; never imply a fleet-wide total. */
+/**
+ * Dashboard numbers describe only the loaded page; never imply a fleet-wide total. Every tile is a
+ * count of rows actually returned by Ploi for this page.
+ */
 @Composable
 internal fun ServerPageHero(page: ServerPage) {
     val colors = MaterialTheme.colorScheme
+    val active = page.servers.count { serverStatusKind(it.status) == ServerStatusKind.HEALTHY }
     Surface(
         shape = MaterialTheme.shapes.large,
         color = colors.primaryContainer,
+        contentColor = colors.onPrimaryContainer,
         modifier = Modifier.fillMaxWidth()
     ) {
-        Row(
-            Modifier.background(Brush.linearGradient(listOf(colors.primaryContainer, colors.secondaryContainer)))
-                .padding(20.dp),
-            verticalAlignment = Alignment.CenterVertically,
-            horizontalArrangement = Arrangement.spacedBy(16.dp)
-        ) {
-            Column(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(6.dp)) {
-                Text(
-                    stringResource(R.string.dashboard_eyebrow),
-                    style = MaterialTheme.typography.labelLarge,
-                    color = colors.onPrimaryContainer
-                )
+        Column(Modifier.padding(PanelSpacing.lg), verticalArrangement = Arrangement.spacedBy(PanelSpacing.md)) {
+            Column(verticalArrangement = Arrangement.spacedBy(PanelSpacing.xxs)) {
+                Text(stringResource(R.string.servers_hero_title), style = MaterialTheme.typography.titleLarge)
                 Text(
                     pluralStringResource(R.plurals.dashboard_page_count, page.servers.size, page.servers.size),
-                    style = MaterialTheme.typography.headlineMedium,
-                    color = colors.onPrimaryContainer
+                    style = MaterialTheme.typography.bodyMedium
                 )
                 Text(
                     stringResource(R.string.dashboard_page_scope, page.currentPage.toString(), page.lastPage.toString()),
-                    style = MaterialTheme.typography.bodySmall,
-                    color = colors.onPrimaryContainer
+                    style = MaterialTheme.typography.bodySmall
                 )
             }
-            Box(
-                Modifier.size(62.dp).background(colors.surface.copy(alpha = 0.7f), CircleShape),
-                contentAlignment = Alignment.Center
-            ) {
-                Text(
-                    page.servers.size.toString(),
-                    style = MaterialTheme.typography.titleLarge,
-                    color = colors.primary,
-                    fontWeight = FontWeight.Bold
-                )
+            Row(horizontalArrangement = Arrangement.spacedBy(PanelSpacing.sm), modifier = Modifier.fillMaxWidth()) {
+                MetricTile(stringResource(R.string.servers_metric_loaded), page.servers.size.toString(),
+                    Modifier.weight(1f), icon = Icons.Outlined.Dns)
+                MetricTile(stringResource(R.string.servers_metric_active), active.toString(),
+                    Modifier.weight(1f), icon = Icons.Outlined.CheckCircle)
+                MetricTile(stringResource(R.string.servers_metric_attention), (page.servers.size - active).toString(),
+                    Modifier.weight(1f), icon = Icons.Outlined.Info)
             }
         }
     }
@@ -89,22 +85,29 @@ internal fun OfflineCacheBanner(fetchedAt: Long) {
         color = colors.tertiaryContainer,
         modifier = Modifier.fillMaxWidth().clearAndSetSemantics { contentDescription = message }
     ) {
-        Column(Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(4.dp)) {
-            Text(
-                stringResource(R.string.offline_cache_title),
-                style = MaterialTheme.typography.titleSmall,
-                fontWeight = FontWeight.Bold,
-                color = colors.onTertiaryContainer
-            )
-            Text(
-                stringResource(R.string.offline_cache_body, timestamp),
-                style = MaterialTheme.typography.bodySmall,
-                color = colors.onTertiaryContainer
-            )
+        Row(Modifier.padding(PanelSpacing.lg), horizontalArrangement = Arrangement.spacedBy(PanelSpacing.md)) {
+            Icon(Icons.Outlined.CloudOff, contentDescription = null, tint = colors.onTertiaryContainer, modifier = Modifier.size(22.dp))
+            Column(verticalArrangement = Arrangement.spacedBy(PanelSpacing.xs)) {
+                Text(
+                    stringResource(R.string.offline_cache_title),
+                    style = MaterialTheme.typography.titleSmall,
+                    fontWeight = FontWeight.Bold,
+                    color = colors.onTertiaryContainer
+                )
+                Text(
+                    stringResource(R.string.offline_cache_body, timestamp),
+                    style = MaterialTheme.typography.bodySmall,
+                    color = colors.onTertiaryContainer
+                )
+            }
         }
     }
 }
 
+/**
+ * One server row: name, IP in monospace, a worded status pill and a one-tap SSH terminal.
+ * [enabled] = false (offline cache) disables opening the server; the terminal shortcut follows it.
+ */
 @Composable
 internal fun ServerItemCard(server: Server, enabled: Boolean = true, onClick: () -> Unit) {
     val colors = MaterialTheme.colorScheme
@@ -113,31 +116,34 @@ internal fun ServerItemCard(server: Server, enabled: Boolean = true, onClick: ()
         enabled = enabled,
         modifier = Modifier.fillMaxWidth(),
         shape = MaterialTheme.shapes.medium,
-        colors = CardDefaults.cardColors(containerColor = colors.surface),
+        colors = CardDefaults.cardColors(
+            containerColor = colors.surfaceContainerLowest,
+            disabledContainerColor = colors.surfaceContainerLow
+        ),
         border = BorderStroke(1.dp, colors.outlineVariant)
     ) {
         Row(
-            Modifier.fillMaxWidth().padding(16.dp),
+            Modifier.fillMaxWidth().padding(start = PanelSpacing.lg, top = PanelSpacing.md, bottom = PanelSpacing.md, end = PanelSpacing.xs),
             verticalAlignment = Alignment.CenterVertically,
-            horizontalArrangement = Arrangement.spacedBy(12.dp)
+            horizontalArrangement = Arrangement.spacedBy(PanelSpacing.md)
         ) {
-            Box(
-                Modifier.size(40.dp).background(colors.primaryContainer, MaterialTheme.shapes.small),
-                contentAlignment = Alignment.Center
-            ) {
-                Text(server.name.take(1).uppercase(), color = colors.primary, style = MaterialTheme.typography.titleMedium)
-            }
-            Column(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(3.dp)) {
+            IconBadge(Icons.Outlined.Dns, container = colors.primaryContainer, content = colors.onPrimaryContainer)
+            Column(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(PanelSpacing.xs)) {
                 Text(server.name, style = MaterialTheme.typography.titleMedium, maxLines = 1, overflow = TextOverflow.Ellipsis)
-                Text(server.ipAddress, style = MaterialTheme.typography.bodySmall, color = colors.onSurfaceVariant,
-                    maxLines = 1, overflow = TextOverflow.Ellipsis)
-                if (server.status.isNotBlank()) Text(
-                    stringResource(R.string.server_status, server.status),
-                    style = MaterialTheme.typography.labelLarge, color = colors.secondary,
-                    maxLines = 1, overflow = TextOverflow.Ellipsis
+                Text(
+                    server.ipAddress.ifBlank { stringResource(R.string.server_card_no_ip) },
+                    style = if (server.ipAddress.isBlank()) MaterialTheme.typography.bodySmall else panelMonoStyle,
+                    color = colors.onSurfaceVariant, maxLines = 1, overflow = TextOverflow.Ellipsis
                 )
+                StatusPill(server.status)
             }
-            Text("›", style = MaterialTheme.typography.headlineMedium, color = colors.onSurfaceVariant)
+            if (server.ipAddress.isNotBlank()) IconButton(
+                onClick = { TerminalNavigator.open(SshTarget(server.ipAddress, SSH_DEFAULT_PORT, server.id, server.name)) },
+                enabled = enabled
+            ) {
+                Icon(Icons.Outlined.Terminal, contentDescription = stringResource(R.string.server_card_terminal, server.name))
+            }
+            Icon(Icons.AutoMirrored.Outlined.KeyboardArrowRight, contentDescription = null, tint = colors.onSurfaceVariant)
         }
     }
 }

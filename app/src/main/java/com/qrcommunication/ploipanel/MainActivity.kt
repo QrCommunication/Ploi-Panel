@@ -6,6 +6,7 @@ import android.net.Uri
 import android.os.Bundle
 import android.os.SystemClock
 import android.view.WindowManager
+import androidx.activity.compose.BackHandler
 import androidx.activity.compose.LocalActivity
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.compose.setContent
@@ -15,28 +16,41 @@ import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.BoxWithConstraints
 import androidx.compose.foundation.layout.Column
-import androidx.compose.foundation.layout.WindowInsets
-import androidx.compose.foundation.layout.ime
-import androidx.compose.foundation.layout.imePadding
-import androidx.compose.foundation.layout.safeDrawingPadding
-import androidx.compose.foundation.rememberScrollState
-import androidx.compose.foundation.verticalScroll
-import androidx.compose.foundation.lazy.LazyRow
-import androidx.compose.foundation.lazy.rememberLazyListState
-import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.FlowRow
-import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.PaddingValues
+import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.WindowInsets
+import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
-import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.ime
+import androidx.compose.foundation.layout.imePadding
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.safeDrawingPadding
+import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.widthIn
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
-import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.text.KeyboardOptions
+import androidx.compose.foundation.verticalScroll
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.automirrored.outlined.KeyboardArrowLeft
+import androidx.compose.material.icons.automirrored.outlined.KeyboardArrowRight
+import androidx.compose.material.icons.outlined.Add
+import androidx.compose.material.icons.outlined.Close
+import androidx.compose.material.icons.outlined.Dns
+import androidx.compose.material.icons.outlined.ErrorOutline
+import androidx.compose.material.icons.outlined.Lock
+import androidx.compose.material.icons.outlined.MonitorHeart
+import androidx.compose.material.icons.outlined.Person
+import androidx.compose.material.icons.outlined.PersonAdd
+import androidx.compose.material.icons.outlined.Refresh
+import androidx.compose.material.icons.outlined.Search
+import androidx.compose.material.icons.outlined.SearchOff
 import androidx.compose.material3.Button
-import androidx.compose.material3.Card
-import androidx.compose.material3.FilterChip
+import androidx.compose.material3.Icon
+import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.OutlinedTextField
@@ -47,8 +61,8 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.LaunchedEffect
-import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.SideEffect
+import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableStateOf
@@ -57,17 +71,19 @@ import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.toArgb
 import androidx.compose.ui.platform.LocalConfiguration
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalDensity
+import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.stringResource
-import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.text.input.PasswordVisualTransformation
+import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
-import androidx.fragment.app.FragmentActivity
 import androidx.core.view.WindowCompat
+import androidx.fragment.app.FragmentActivity
 import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.LifecycleEventObserver
 import androidx.lifecycle.compose.LocalLifecycleOwner
@@ -166,10 +182,10 @@ private fun PloiPanel(widgetRoute: WidgetRoute?, onWidgetRouteConsumed: () -> Un
         controller.isAppearanceLightNavigationBars = !dark
     }
     CompositionLocalProvider(LocalContext provides localizedContext, LocalConfiguration provides configuration) {
-    MaterialTheme(colorScheme = colors, typography = panelTypography, shapes = panelShapes) {
+    PloiPanelTheme(dark) {
         // API 35+ draws edge-to-edge even without an explicit enableEdgeToEdge call.
         // Consume system bars once at the root; the IME then reduces the usable viewport.
-        Surface(modifier = Modifier.fillMaxSize().safeDrawingPadding().imePadding()) {
+        Surface(modifier = Modifier.fillMaxSize().safeDrawingPadding().imePadding(), color = MaterialTheme.colorScheme.background) {
             val context = activity
             val lock = remember { AppLock(SharedPreferencesProfilePrefs(context)) }
             var lockVersion by remember { mutableIntStateOf(0) }
@@ -287,6 +303,7 @@ private fun PanelHome(
     var error by remember { mutableStateOf<Throwable?>(null) }
     var loading by remember { mutableStateOf(false) }
     var deepLinkError by remember { mutableStateOf(false) }
+    var serverQuery by remember { mutableStateOf("") }
 
     fun onConfigurationImported() {
         profilesVersion++
@@ -379,55 +396,36 @@ private fun PanelHome(
         }
     }
 
+    // Shared by Settings and the top-bar profile switcher: one code path to change the active profile.
+    fun applyActiveProfile(profile: PloiProfile?) {
+        activeProfile = profile?.let { it to store.tokenFor(it.id) }
+        selected = null
+        serverQuery = ""
+        creating = false
+        showMonitored = false
+        deepLinkError = false
+        servers = null
+        page = 1
+        refresh++
+    }
+
     if (token == null) {
-        Column(
-            Modifier.fillMaxSize().verticalScroll(rememberScrollState()).padding(24.dp),
-            verticalArrangement = Arrangement.spacedBy(18.dp)
-        ) {
-            Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
-                Text(stringResource(R.string.app_name), style = MaterialTheme.typography.headlineLarge, fontWeight = FontWeight.Bold)
-                OutlinedButton(onClick = onLock) { Text(stringResource(R.string.lock_now)) }
-            }
-            Text(stringResource(R.string.intro), style = MaterialTheme.typography.bodyLarge)
-            if (deepLinkError) Text(stringResource(R.string.widget_route_unavailable), color = MaterialTheme.colorScheme.error)
-            if (profiles.isNotEmpty()) {
-                Text(stringResource(R.string.profiles), style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold)
-                profiles.forEach { profile ->
-                    Card(shape = RoundedCornerShape(16.dp), modifier = Modifier.fillMaxWidth()) {
-                        Column(Modifier.fillMaxWidth().padding(16.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
-                            Text(profile.label, style = MaterialTheme.typography.titleMedium)
-                            FlowRow(horizontalArrangement = Arrangement.spacedBy(8.dp), verticalArrangement = Arrangement.spacedBy(4.dp)) {
-                                OutlinedButton(onClick = { pendingProfileRemoval = profile }) {
-                                    Text(stringResource(R.string.delete_profile))
-                                }
-                                Button(onClick = {
-                                    val profileToken = store.tokenFor(profile.id)
-                                    if (profileToken != null) {
-                                        store.activate(profile.id)
-                                        activeProfile = profile to profileToken
-                                    } else {
-                                        profileError = R.string.settings_profile_token_invalid
-                                    }
-                                }) { Text(stringResource(R.string.use_profile)) }
-                            }
-                        }
-                    }
+        WelcomeScreen(
+            profiles = profiles, deepLinkError = deepLinkError, profileError = profileError,
+            draftLabel = draftLabel, onDraftLabel = { draftLabel = it },
+            draftToken = draftToken, onDraftToken = { draftToken = it },
+            onLock = onLock,
+            onUseProfile = { profile ->
+                val profileToken = store.tokenFor(profile.id)
+                if (profileToken != null) {
+                    store.activate(profile.id)
+                    activeProfile = profile to profileToken
+                } else {
+                    profileError = R.string.settings_profile_token_invalid
                 }
-            }
-            OutlinedTextField(
-                value = draftLabel, onValueChange = { draftLabel = it },
-                label = { Text(stringResource(R.string.profile_label)) },
-                singleLine = true, modifier = Modifier.fillMaxWidth()
-            )
-            OutlinedTextField(
-                value = draftToken, onValueChange = { draftToken = it },
-                label = { Text(stringResource(R.string.token)) },
-                visualTransformation = PasswordVisualTransformation(),
-                keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Password),
-                singleLine = true, modifier = Modifier.fillMaxWidth()
-            )
-            if (profileError != 0) Text(stringResource(profileError), color = MaterialTheme.colorScheme.error)
-            Button(onClick = {
+            },
+            onDeleteProfile = { pendingProfileRemoval = it },
+            onAddProfile = {
                 try {
                     val profile = store.add(draftLabel, draftToken.trim())
                     store.activate(profile.id)
@@ -443,8 +441,8 @@ private fun PanelHome(
                         else -> R.string.profile_error_invalid
                     }
                 }
-            }, enabled = draftLabel.isNotBlank() && draftToken.isNotBlank()) { Text(stringResource(R.string.add_profile)) }
-            SettingsSectionHeading(R.string.config_transfer_title)
+            }
+        ) {
             ConfigurationTransferSection(
                 configurationManager, lock, activity, importUri, onImportUriConsumed,
                 onChooseImport, onSaveEncryptedArchive, transferStatus,
@@ -466,167 +464,147 @@ private fun PanelHome(
         }
     } else {
         val keyboardVisible = WindowInsets.ime.getBottom(LocalDensity.current) > 0
-        Column(Modifier.fillMaxSize().padding(horizontal = 16.dp, vertical = 8.dp)) {
-            // Give focused fields the whole available height in landscape and on small phones.
-            if (!keyboardVisible) {
-                Surface(
-                    modifier = Modifier.fillMaxWidth(),
-                    color = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.55f),
-                    shape = MaterialTheme.shapes.medium
-                ) {
-                    Column(Modifier.padding(12.dp), verticalArrangement = Arrangement.spacedBy(6.dp)) {
-                        Column {
-                            Text(
-                                when (panelTab) {
-                                    1 -> stringResource(R.string.providers)
-                                    2 -> stringResource(R.string.account)
-                                    3 -> stringResource(R.string.scripts_tab)
-                                    4 -> stringResource(R.string.status_pages_tab)
-                                    5 -> stringResource(R.string.webserver_templates_tab)
-                                    6 -> stringResource(R.string.projects_tab)
-                                    7 -> stringResource(R.string.settings_tab)
-                                    8 -> stringResource(R.string.deploy_global_tab)
-                                    9 -> stringResource(R.string.local_checks_tab)
-                                    10 -> stringResource(R.string.ssh_term_tab)
-                                    else -> stringResource(if (creating) R.string.new_server else R.string.servers)
-                                },
-                                style = MaterialTheme.typography.titleLarge, fontWeight = FontWeight.Bold
-                            )
-                            Text(stringResource(R.string.current_profile, activeProfile?.first?.label.orEmpty()),
-                                style = MaterialTheme.typography.bodySmall)
-                        }
-                        FlowRow(horizontalArrangement = Arrangement.spacedBy(8.dp), verticalArrangement = Arrangement.spacedBy(4.dp)) {
-                            OutlinedButton(onClick = onLock) { Text(stringResource(R.string.lock_now)) }
-                            if (!creating) OutlinedButton(onClick = {
-                                store.deactivate()
-                                activeProfile = null
-                                draftLabel = ""
-                                draftToken = ""
-                                selected = null
-                                creating = false
-                                showMonitored = false
-                                panelTab = 0
-                                deepLinkError = false
-                                servers = null
-                                error = null
-                                page = 1
-                            }, enabled = !globalBatchRunning) { Text(stringResource(R.string.disconnect)) }
-                        }
-                    }
-                }
-                Spacer(Modifier.height(8.dp))
-                if (deepLinkError) {
-                    Text(stringResource(R.string.widget_route_unavailable), color = MaterialTheme.colorScheme.error)
-                }
-                val sections = listOf(
-                    0 to R.string.servers, 8 to R.string.deploy_global_tab,
-                    9 to R.string.local_checks_tab, 10 to R.string.ssh_term_tab,
-                    1 to R.string.providers, 2 to R.string.account, 3 to R.string.scripts_tab,
-                    4 to R.string.status_pages_tab, 5 to R.string.webserver_templates_tab,
-                    6 to R.string.projects_tab, 7 to R.string.settings_tab
-                )
-                val navigationState = rememberLazyListState()
-                LaunchedEffect(panelTab) { navigationState.animateScrollToItem(sections.indexOfFirst { it.first == panelTab }.coerceAtLeast(0)) }
-                if (!creating) LazyRow(
-                    modifier = Modifier.fillMaxWidth(),
-                    state = navigationState,
-                    horizontalArrangement = Arrangement.spacedBy(8.dp)
-                ) {
-                    items(sections.size) { index ->
-                        val (tab, label) = sections[index]
-                        FilterChip(
-                            selected = panelTab == tab,
-                            enabled = !globalBatchRunning || panelTab == tab,
-                            onClick = { panelTab = tab },
-                            label = { Text(stringResource(label)) }
-                        )
-                    }
-                }
-                Spacer(Modifier.height(8.dp))
-            }
-            BoxWithConstraints(Modifier.weight(1f).fillMaxWidth()) {
-                when (panelTab) {
-                    1 -> ProvidersScreen(token)
-                    2 -> AccountScreen(token)
-                    3 -> ScriptsScreen(token, lock, activity)
-                    4 -> StatusPagesScreen(token, lock, activity)
-                    5 -> WebserverTemplatesScreen(token)
-                    6 -> ProjectsScreen(token, lock, activity)
-                    8 -> activeProfile?.first?.id?.let { profileId ->
-                        GlobalDeployScriptsScreen(token, profileId, lock, activity,
-                            onRunningChange = { globalBatchRunning = it })
-                    }
-                    9 -> LocalChecksScreen()
-                    10 -> activeProfile?.first?.id?.let { profileId ->
-                        SshTerminalScreen(profileId, token, lock, activity)
-                    }
-                    7 -> SettingsScreen(
-                        store = store, profiles = profiles, active = activeProfile?.first,
-                        lock = lock, activity = activity, theme = theme, language = language,
-                        onThemeChanged = onThemeChanged, onLanguageChanged = onLanguageChanged,
-                        onProfilesChanged = { profilesVersion++ },
-                        onActiveChanged = { profile ->
-                            activeProfile = profile?.let { it to store.tokenFor(it.id) }
+        // Hub sub-pages return to "More"; an open server returns to the list. A running global
+        // deploy batch freezes navigation entirely (its own BackHandler keeps the report visible).
+        val backAction: (() -> Unit)? = when {
+            globalBatchRunning || creating -> null
+            parentTab(panelTab) != null -> { { panelTab = MORE_HUB_TAB } }
+            panelTab == 0 && showMonitored -> { { showMonitored = false } }
+            panelTab == 0 && selected != null -> { { selected = null } }
+            else -> null
+        }
+        BackHandler(enabled = backAction != null) { backAction?.invoke() }
+        // Server creation keeps its own back/exit guard, so primary navigation steps aside.
+        val showNavigation = !creating && !keyboardVisible
+        BoxWithConstraints(Modifier.fillMaxSize()) {
+            val rail = usesNavigationRail(maxWidth)
+            Row(Modifier.fillMaxSize()) {
+                if (rail && !creating) PanelNavigationRail(panelTab, locked = globalBatchRunning) { panelTab = it }
+                Column(Modifier.weight(1f).fillMaxHeight()) {
+                    // Give focused fields the whole available height in landscape and on small phones.
+                    if (!keyboardVisible) PanelTopBar(
+                        title = panelTabTitle(panelTab, creating),
+                        profiles = profiles, active = activeProfile?.first,
+                        // Creation owns its exit guard (one-time setup secrets): no profile switch meanwhile.
+                        locked = globalBatchRunning || creating, showDisconnect = !creating,
+                        onBack = backAction,
+                        onSwitchProfile = { profile ->
+                            if (store.tokenFor(profile.id) == null) {
+                                profileError = R.string.profile_menu_switch_failed
+                            } else {
+                                store.activate(profile.id)
+                                profileError = 0
+                                applyActiveProfile(profile)
+                            }
+                        },
+                        onManageProfiles = { panelTab = 7 },
+                        onDisconnect = {
+                            store.deactivate()
+                            activeProfile = null
+                            draftLabel = ""
+                            draftToken = ""
                             selected = null
                             creating = false
                             showMonitored = false
+                            panelTab = 0
                             deepLinkError = false
                             servers = null
+                            error = null
                             page = 1
-                            refresh++
                         },
-                        configurationManager = configurationManager,
-                        importUri = importUri,
-                        onImportUriConsumed = onImportUriConsumed,
-                        onChooseImport = onChooseImport,
-                        onSaveEncryptedArchive = onSaveEncryptedArchive,
-                        transferStatus = transferStatus,
-                        onImported = { onImportSuccess(); onConfigurationImported() },
                         onLock = onLock
                     )
-                    else -> {
-                        val expanded = maxWidth >= 720.dp
-                        when {
-                            creating -> CreateServerScreen(
-                                token,
-                                onDone = { creating = false; selected = null; refresh++ },
-                                onCancel = { creating = false }
-                            )
-                            showMonitored -> Column {
-                                OutlinedButton(onClick = { showMonitored = false }) { Text(stringResource(R.string.back)) }
-                                Box(Modifier.weight(1f).fillMaxWidth()) { MonitoredServersScreen(token) }
+                    if (globalBatchRunning) NavigationLockedNotice()
+                    if (deepLinkError || profileError != 0) Column(
+                        Modifier.padding(horizontal = PanelSpacing.lg, vertical = PanelSpacing.xs),
+                        verticalArrangement = Arrangement.spacedBy(PanelSpacing.xs)
+                    ) {
+                        if (deepLinkError) InlineNotice(stringResource(R.string.widget_route_unavailable))
+                        if (profileError != 0) InlineNotice(stringResource(profileError))
+                    }
+                    BoxWithConstraints(
+                        Modifier.weight(1f).fillMaxWidth().padding(horizontal = PanelSpacing.lg).padding(top = PanelSpacing.xs)
+                    ) {
+                        when (panelTab) {
+                            MORE_HUB_TAB -> MoreHubScreen(onOpen = { panelTab = it })
+                            1 -> ProvidersScreen(token)
+                            2 -> AccountScreen(token)
+                            3 -> ScriptsScreen(token, lock, activity)
+                            4 -> StatusPagesScreen(token, lock, activity)
+                            5 -> WebserverTemplatesScreen(token)
+                            6 -> ProjectsScreen(token, lock, activity)
+                            8 -> activeProfile?.first?.id?.let { profileId ->
+                                GlobalDeployScriptsScreen(token, profileId, lock, activity,
+                                    onRunningChange = { globalBatchRunning = it })
                             }
-                            expanded -> Row(horizontalArrangement = Arrangement.spacedBy(16.dp)) {
-                                Column(Modifier.weight(1f)) {
-                                    ServerList(servers, loading, error, page, serversCachedAt, onPage = { page = it; selected = null }, onRefresh = { refresh++ },
+                            9 -> LocalChecksScreen()
+                            10 -> activeProfile?.first?.id?.let { profileId ->
+                                SshTerminalScreen(profileId, token, lock, activity)
+                            }
+                            7 -> SettingsScreen(
+                                store = store, profiles = profiles, active = activeProfile?.first,
+                                lock = lock, activity = activity, theme = theme, language = language,
+                                onThemeChanged = onThemeChanged, onLanguageChanged = onLanguageChanged,
+                                onProfilesChanged = { profilesVersion++ },
+                                onActiveChanged = { profile -> applyActiveProfile(profile) },
+                                configurationManager = configurationManager,
+                                importUri = importUri,
+                                onImportUriConsumed = onImportUriConsumed,
+                                onChooseImport = onChooseImport,
+                                onSaveEncryptedArchive = onSaveEncryptedArchive,
+                                transferStatus = transferStatus,
+                                onImported = { onImportSuccess(); onConfigurationImported() },
+                                onLock = onLock
+                            )
+                            else -> {
+                                val expanded = maxWidth >= 720.dp
+                                when {
+                                    creating -> CreateServerScreen(
+                                        token,
+                                        onDone = { creating = false; selected = null; refresh++ },
+                                        onCancel = { creating = false }
+                                    )
+                                    showMonitored -> Column {
+                                        Box(Modifier.weight(1f).fillMaxWidth()) { MonitoredServersScreen(token) }
+                                    }
+                                    expanded -> Row(horizontalArrangement = Arrangement.spacedBy(PanelSpacing.lg)) {
+                                        Column(Modifier.weight(1f)) {
+                                            ServerList(servers, loading, error, page, serversCachedAt, serverQuery, { serverQuery = it },
+                                                onPage = { page = it; selected = null }, onRefresh = { refresh++ },
+                                                onSelect = { selected = it }, onCreate = { creating = true }, onMonitored = { showMonitored = true })
+                                        }
+                                        Column(Modifier.weight(1f)) {
+                                            val server = selected
+                                            if (server == null) EmptyState(
+                                                Icons.Outlined.Dns, stringResource(R.string.select_server),
+                                                modifier = Modifier.padding(top = PanelSpacing.xxl)
+                                            )
+                                            else ServerDetailScreen(
+                                                token, server, lock, activity, refresh,
+                                                profileId = activeProfile?.first?.id,
+                                                onChanged = { refresh++ },
+                                                onDeleted = { selected = null; refresh++ }
+                                            )
+                                        }
+                                    }
+                                    selected != null -> Column {
+                                        Box(Modifier.weight(1f).fillMaxWidth()) {
+                                            ServerDetailScreen(
+                                                token, selected!!, lock, activity, refresh,
+                                                profileId = activeProfile?.first?.id,
+                                                onChanged = { refresh++ },
+                                                onDeleted = { selected = null; refresh++ }
+                                            )
+                                        }
+                                    }
+                                    else -> ServerList(servers, loading, error, page, serversCachedAt, serverQuery, { serverQuery = it },
+                                        onPage = { page = it; selected = null }, onRefresh = { refresh++ },
                                         onSelect = { selected = it }, onCreate = { creating = true }, onMonitored = { showMonitored = true })
                                 }
-                                Column(Modifier.weight(1f)) {
-                                    val server = selected
-                                    if (server == null) Text(stringResource(R.string.select_server))
-                                    else ServerDetailScreen(
-                                        token, server, lock, activity, refresh,
-                                        profileId = activeProfile?.first?.id,
-                                        onChanged = { refresh++ },
-                                        onDeleted = { selected = null; refresh++ }
-                                    )
-                                }
                             }
-                            selected != null -> Column {
-                                OutlinedButton(onClick = { selected = null }) { Text(stringResource(R.string.back)) }
-                                Box(Modifier.weight(1f).fillMaxWidth()) {
-                                    ServerDetailScreen(
-                                        token, selected!!, lock, activity, refresh,
-                                        profileId = activeProfile?.first?.id,
-                                        onChanged = { refresh++ },
-                                        onDeleted = { selected = null; refresh++ }
-                                    )
-                                }
-                            }
-                            else -> ServerList(servers, loading, error, page, serversCachedAt, onPage = { page = it; selected = null }, onRefresh = { refresh++ },
-                                onSelect = { selected = it }, onCreate = { creating = true }, onMonitored = { showMonitored = true })
                         }
                     }
+                    if (!rail && showNavigation) PanelNavigationBar(panelTab, locked = globalBatchRunning) { panelTab = it }
                 }
             }
         }
@@ -665,69 +643,207 @@ internal fun BiometricToggle(lock: AppLock, activity: FragmentActivity) {
 
 @Composable
 internal fun ApiErrorText(failure: Throwable) {
-    val message = when (failure) {
-        is PloiHttpException -> when (failure.status) {
-            401 -> stringResource(R.string.error_auth)
-            403 -> stringResource(R.string.error_permission)
-            429 -> stringResource(R.string.error_rate, failure.retryAfterSeconds ?: "?")
-            else -> stringResource(R.string.error_other, failure.status)
-        }
-        is PloiMalformedPayloadException -> stringResource(R.string.error_malformed)
-        else -> stringResource(R.string.error_network)
+    val message = apiErrorMessage(failure)
+    Row(horizontalArrangement = Arrangement.spacedBy(PanelSpacing.sm), verticalAlignment = Alignment.Top) {
+        Icon(Icons.Outlined.ErrorOutline, contentDescription = null, tint = MaterialTheme.colorScheme.error,
+            modifier = Modifier.size(18.dp))
+        Text(message, color = MaterialTheme.colorScheme.error, style = MaterialTheme.typography.bodyMedium)
     }
-    Text(message, color = MaterialTheme.colorScheme.error)
+}
+
+/** One-line warning with an icon, for route/profile problems shown above the current screen. */
+@Composable
+internal fun InlineNotice(message: String) {
+    Surface(
+        color = MaterialTheme.colorScheme.errorContainer, contentColor = MaterialTheme.colorScheme.onErrorContainer,
+        shape = MaterialTheme.shapes.small, modifier = Modifier.fillMaxWidth()
+    ) {
+        Row(Modifier.padding(PanelSpacing.md), horizontalArrangement = Arrangement.spacedBy(PanelSpacing.sm)) {
+            Icon(Icons.Outlined.ErrorOutline, contentDescription = null, modifier = Modifier.size(18.dp))
+            Text(message, style = MaterialTheme.typography.bodyMedium)
+        }
+    }
+}
+
+/** Local, case-insensitive filter over the rows of the page already loaded (name, IP or status). */
+internal fun filterLoadedServers(servers: List<Server>, query: String): List<Server> {
+    val needle = query.trim()
+    if (needle.isEmpty()) return servers
+    return servers.filter {
+        it.name.contains(needle, ignoreCase = true) || it.ipAddress.contains(needle, ignoreCase = true) ||
+            it.status.contains(needle, ignoreCase = true)
+    }
 }
 
 @Composable
 private fun ServerList(
     pageData: ServerPage?, loading: Boolean, error: Throwable?, page: Int, cachedAt: Long?,
+    query: String, onQuery: (String) -> Unit,
     onPage: (Int) -> Unit, onRefresh: () -> Unit, onSelect: (Server) -> Unit,
     onCreate: () -> Unit, onMonitored: () -> Unit
 ) {
     // Cached rows are a past observation: opening a server would need live calls we cannot make,
     // and creating one would act on an account state we have not read. Reload stays available.
     val offline = cachedAt != null
+    val visible = pageData?.let { filterLoadedServers(it.servers, query) }.orEmpty()
     LazyColumn(
         modifier = Modifier.fillMaxSize(),
-        verticalArrangement = Arrangement.spacedBy(12.dp),
-        contentPadding = androidx.compose.foundation.layout.PaddingValues(bottom = 24.dp)
+        verticalArrangement = Arrangement.spacedBy(PanelSpacing.md),
+        contentPadding = PaddingValues(bottom = PanelSpacing.xl)
     ) {
         item {
-            FlowRow(horizontalArrangement = Arrangement.spacedBy(8.dp), verticalArrangement = Arrangement.spacedBy(4.dp)) {
-                Button(onClick = onCreate, enabled = !offline) { Text(stringResource(R.string.new_server)) }
-                OutlinedButton(onClick = onMonitored, enabled = !offline) { Text(stringResource(R.string.monitored_overview)) }
-                OutlinedButton(onClick = onRefresh, enabled = !loading) { Text(stringResource(R.string.reload)) }
+            FlowRow(
+                horizontalArrangement = Arrangement.spacedBy(PanelSpacing.sm),
+                verticalArrangement = Arrangement.spacedBy(PanelSpacing.xs)
+            ) {
+                Button(onClick = onCreate, enabled = !offline) {
+                    Icon(Icons.Outlined.Add, contentDescription = null, modifier = Modifier.size(18.dp))
+                    Text(stringResource(R.string.new_server), Modifier.padding(start = PanelSpacing.sm))
+                }
+                OutlinedButton(onClick = onMonitored, enabled = !offline) {
+                    Icon(Icons.Outlined.MonitorHeart, contentDescription = null, modifier = Modifier.size(18.dp))
+                    Text(stringResource(R.string.monitored_overview), Modifier.padding(start = PanelSpacing.sm))
+                }
+                OutlinedButton(onClick = onRefresh, enabled = !loading) {
+                    Icon(Icons.Outlined.Refresh, contentDescription = null, modifier = Modifier.size(18.dp))
+                    Text(stringResource(R.string.reload), Modifier.padding(start = PanelSpacing.sm))
+                }
             }
         }
-        if (loading) item { BusyIndicator(Modifier.padding(24.dp)) }
-        if (error != null) item { ApiErrorText(error) }
+        if (loading) item { LoadingState() }
+        if (error != null) item { ErrorState(error, onRetry = onRefresh, retryEnabled = !loading) }
         if (cachedAt != null) item { OfflineCacheBanner(cachedAt) }
         if (pageData != null) {
             item { ServerPageHero(pageData) }
             if (pageData.servers.isEmpty()) item {
-                Text(stringResource(R.string.dashboard_empty), style = MaterialTheme.typography.bodyLarge)
+                EmptyState(
+                    Icons.Outlined.Dns, stringResource(R.string.servers_empty_title),
+                    body = stringResource(R.string.dashboard_empty),
+                    actionLabel = stringResource(R.string.new_server), actionEnabled = !offline, onAction = onCreate
+                )
+            } else item {
+                OutlinedTextField(
+                    value = query, onValueChange = onQuery,
+                    label = { Text(stringResource(R.string.servers_search_label)) },
+                    supportingText = { Text(stringResource(R.string.servers_search_scope, pageData.servers.size)) },
+                    leadingIcon = { Icon(Icons.Outlined.Search, contentDescription = null) },
+                    trailingIcon = if (query.isNotEmpty()) {
+                        {
+                            IconButton(onClick = { onQuery("") }) {
+                                Icon(Icons.Outlined.Close, contentDescription = stringResource(R.string.servers_search_clear))
+                            }
+                        }
+                    } else null,
+                    singleLine = true, modifier = Modifier.fillMaxWidth()
+                )
             }
-            items(pageData.servers, key = { it.id }) { server ->
+            if (pageData.servers.isNotEmpty() && visible.isEmpty()) item {
+                EmptyState(
+                    Icons.Outlined.SearchOff, stringResource(R.string.servers_search_empty_title),
+                    body = stringResource(R.string.servers_search_empty_body),
+                    actionLabel = stringResource(R.string.servers_search_clear), onAction = { onQuery("") }
+                )
+            }
+            items(visible, key = { it.id }) { server ->
                 ServerItemCard(server, enabled = !offline) { onSelect(server) }
             }
             item {
-                FlowRow(
-                    horizontalArrangement = Arrangement.spacedBy(12.dp),
-                    verticalArrangement = Arrangement.spacedBy(4.dp),
-                    modifier = Modifier.fillMaxWidth()
+                Row(
+                    Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.SpaceBetween,
+                    verticalAlignment = Alignment.CenterVertically
                 ) {
                     OutlinedButton(onClick = { onPage(page - 1) }, enabled = page > 1) {
+                        Icon(Icons.AutoMirrored.Outlined.KeyboardArrowLeft, contentDescription = null, modifier = Modifier.size(18.dp))
                         Text(stringResource(R.string.previous))
                     }
                     Text(
-                        stringResource(R.string.page, pageData.currentPage.toString(), pageData.lastPage.toString()),
-                        Modifier.padding(top = 12.dp), style = MaterialTheme.typography.bodySmall
+                        stringResource(R.string.servers_page_label, pageData.currentPage.toString(), pageData.lastPage.toString()),
+                        style = MaterialTheme.typography.labelLarge,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                        modifier = Modifier.weight(1f).padding(horizontal = PanelSpacing.sm),
+                        textAlign = TextAlign.Center
                     )
                     OutlinedButton(onClick = { onPage(page + 1) }, enabled = pageData.hasNext) {
                         Text(stringResource(R.string.next))
+                        Icon(Icons.AutoMirrored.Outlined.KeyboardArrowRight, contentDescription = null, modifier = Modifier.size(18.dp))
                     }
                 }
             }
         }
     }
+}
+
+/**
+ * Shown when no profile is active: explains token storage, lists saved profiles and offers the
+ * add-profile form plus configuration import. Forms scroll so the keyboard never hides a field.
+ */
+@Composable
+private fun WelcomeScreen(
+    profiles: List<PloiProfile>, deepLinkError: Boolean, profileError: Int,
+    draftLabel: String, onDraftLabel: (String) -> Unit,
+    draftToken: String, onDraftToken: (String) -> Unit,
+    onLock: () -> Unit, onUseProfile: (PloiProfile) -> Unit, onDeleteProfile: (PloiProfile) -> Unit,
+    onAddProfile: () -> Unit,
+    transferSection: @Composable () -> Unit
+) {
+    Box(Modifier.fillMaxSize(), contentAlignment = Alignment.TopCenter) {
+        Column(
+            Modifier.fillMaxSize().widthIn(max = PanelSpacing.maxContentWidth)
+                .verticalScroll(rememberScrollState()).padding(PanelSpacing.xl),
+            verticalArrangement = Arrangement.spacedBy(PanelSpacing.lg)
+        ) {
+            Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(PanelSpacing.md)) {
+                Icon(painterResource(R.drawable.ic_app), contentDescription = null, tint = Color.Unspecified,
+                    modifier = Modifier.size(48.dp))
+                Text(stringResource(R.string.app_name), style = MaterialTheme.typography.titleLarge, modifier = Modifier.weight(1f))
+                IconButton(onClick = onLock) {
+                    Icon(Icons.Outlined.Lock, contentDescription = stringResource(R.string.lock_now))
+                }
+            }
+            Text(stringResource(R.string.welcome_title), style = MaterialTheme.typography.headlineMedium)
+            Text(stringResource(R.string.intro), style = MaterialTheme.typography.bodyLarge,
+                color = MaterialTheme.colorScheme.onSurfaceVariant)
+            if (deepLinkError) InlineNotice(stringResource(R.string.widget_route_unavailable))
+            if (profiles.isNotEmpty()) {
+                SectionHeader(stringResource(R.string.profiles))
+                profiles.forEach { profile ->
+                    SectionCard {
+                        Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(PanelSpacing.md)) {
+                            IconBadge(Icons.Outlined.Person)
+                            Text(profile.label, style = MaterialTheme.typography.titleMedium, modifier = Modifier.weight(1f))
+                        }
+                        FlowRow(horizontalArrangement = Arrangement.spacedBy(PanelSpacing.sm), verticalArrangement = Arrangement.spacedBy(PanelSpacing.xs)) {
+                            Button(onClick = { onUseProfile(profile) }) { Text(stringResource(R.string.use_profile)) }
+                            OutlinedButton(onClick = { onDeleteProfile(profile) }) { Text(stringResource(R.string.delete_profile)) }
+                        }
+                    }
+                }
+            }
+            SectionCard(title = stringResource(R.string.welcome_new_profile), icon = Icons.Outlined.PersonAdd) {
+                OutlinedTextField(
+                    value = draftLabel, onValueChange = onDraftLabel,
+                    label = { Text(stringResource(R.string.profile_label)) },
+                    singleLine = true, modifier = Modifier.fillMaxWidth()
+                )
+                OutlinedTextField(
+                    value = draftToken, onValueChange = onDraftToken,
+                    label = { Text(stringResource(R.string.token)) },
+                    visualTransformation = PasswordVisualTransformation(),
+                    keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Password),
+                    singleLine = true, modifier = Modifier.fillMaxWidth()
+                )
+                if (profileError != 0) ApiLikeError(stringResource(profileError))
+                Button(onClick = onAddProfile, enabled = draftLabel.isNotBlank() && draftToken.isNotBlank(),
+                    modifier = Modifier.fillMaxWidth()) { Text(stringResource(R.string.add_profile)) }
+            }
+            SectionHeader(stringResource(R.string.config_transfer_title))
+            transferSection()
+        }
+    }
+}
+
+@Composable
+private fun ApiLikeError(message: String) {
+    Text(message, color = MaterialTheme.colorScheme.error, style = MaterialTheme.typography.bodyMedium)
 }

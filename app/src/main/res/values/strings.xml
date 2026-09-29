@@ -10,7 +10,6 @@
     <string name="profile_error_invalid">Nom ou jeton invalide.</string>
     <string name="profile_error_duplicate">Un profil porte déjà ce nom.</string>
     <string name="profile_error_limit">Nombre maximal de profils atteint.</string>
-    <string name="current_profile">Profil : %1$s</string>
     <string name="servers">Serveurs</string>
     <string name="reload">Actualiser</string>
     <string name="disconnect">Déconnexion</string>
@@ -791,7 +790,6 @@
     <string name="settings_profile_token_invalid">Jeton illisible : ce profil ne peut pas être activé.</string>
     <string name="monitor_response_time">Temps de réponse</string>
     <string name="monitor_response_range">Min %1$s s · Max %2$s s</string>
-    <string name="dashboard_eyebrow">VOTRE INFRASTRUCTURE</string>
     <plurals name="dashboard_page_count">
         <item quantity="one">%1$d serveur sur cette page</item>
         <item quantity="other">%1$d serveurs sur cette page</item>

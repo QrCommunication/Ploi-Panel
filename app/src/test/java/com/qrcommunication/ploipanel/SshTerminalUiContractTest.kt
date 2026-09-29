@@ -19,10 +19,13 @@ class SshTerminalUiContractTest {
 
     @Test fun terminalIsReachableFromPanelAndServers() {
         val main = source("MainActivity.kt")
-        assertTrue(main.contains("10 to R.string.ssh_term_tab"))
+        val nav = source("AppNavigation.kt")
+        assertTrue(nav.contains("TERMINAL(10, R.string.nav_terminal)"))
+        assertTrue(nav.contains("10 -> R.string.ssh_term_tab"))
         assertTrue(main.contains("SshTerminalScreen(profileId, token, lock, activity)"))
         val server = source("ServerScreen.kt")
         assertTrue(server.contains("TerminalNavigator.open(SshTarget("))
+        assertTrue("server cards offer a one-tap terminal", source("ServerDashboard.kt").contains("TerminalNavigator.open(SshTarget("))
         assertTrue("uses the Ploi-reported SSH port", server.contains("current.sshPort.takeIf { it > 0 }"))
     }
 
