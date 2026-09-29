@@ -53,9 +53,8 @@
     <string name="site_disk">Disk usage: %1$s</string>
     <string name="site_health">Health URL: %1$s</string>
     <string name="pin_setup_title">Create your PIN</string>
-    <string name="pin_setup_intro">This PIN protects access to your profiles and encrypted tokens. Use 4 to 12 digits, with no runs or repeats.</string>
+    <string name="pin_setup_intro">This PIN protects access to your profiles and encrypted tokens. Choose 4 to 12 digits, not a straight run (123456) nor one repeated digit (111111).</string>
     <string name="pin_label">PIN code</string>
-    <string name="pin_confirm_label">Confirm PIN code</string>
     <string name="pin_mismatch">The two codes do not match.</string>
     <string name="pin_invalid">Invalid code: 4 to 12 digits, with no runs or repeats.</string>
     <string name="set_pin">Save PIN</string>

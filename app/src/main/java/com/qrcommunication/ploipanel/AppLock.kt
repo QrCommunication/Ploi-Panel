@@ -128,11 +128,28 @@ internal class AppLock(
      * straight ascending/descending run such as 1111, 1234 or 9876).
      */
     internal fun validatePin(pin: String) {
-        require(pin.length in MIN_PIN_LENGTH..MAX_PIN_LENGTH) { "PIN length out of range" }
-        require(pin.all { it.isDigit() }) { "PIN must be digits only" }
-        require(pin.toSet().size > 1) { "PIN too weak" }
-        val ascending = pin.zipWithNext().all { (a, b) -> b - a == 1 }
-        val descending = pin.zipWithNext().all { (a, b) -> a - b == 1 }
-        require(!ascending && !descending) { "PIN too weak" }
+        when (pinProblem(pin)) {
+            null -> Unit
+            PinProblem.LENGTH -> throw IllegalArgumentException("PIN length out of range")
+            PinProblem.NOT_DIGITS -> throw IllegalArgumentException("PIN must be digits only")
+            PinProblem.REPEATED, PinProblem.SEQUENCE -> throw IllegalArgumentException("PIN too weak")
+        }
     }
+}
+
+/** Why a candidate PIN is refused, so the UI can say exactly which rule failed. */
+internal enum class PinProblem { LENGTH, NOT_DIGITS, REPEATED, SEQUENCE }
+
+/**
+ * Single source of the PIN policy used by [AppLock.validatePin] and by the entry screens:
+ * 4–12 digits, not one repeated digit (111111), not a straight run (123456, 987654).
+ * Any length from 4 to 12 is accepted when it passes these rules.
+ */
+internal fun pinProblem(pin: String): PinProblem? {
+    if (pin.length !in AppLock.MIN_PIN_LENGTH..AppLock.MAX_PIN_LENGTH) return PinProblem.LENGTH
+    if (!pin.all { it in '0'..'9' }) return PinProblem.NOT_DIGITS
+    if (pin.toSet().size == 1) return PinProblem.REPEATED
+    val ascending = pin.zipWithNext().all { (a, b) -> b - a == 1 }
+    val descending = pin.zipWithNext().all { (a, b) -> a - b == 1 }
+    return if (ascending || descending) PinProblem.SEQUENCE else null
 }

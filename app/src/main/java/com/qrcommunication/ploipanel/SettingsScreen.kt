@@ -342,84 +342,8 @@ private fun ProfileEditorDialog(
     )
 }
 
+/** Same keypad, rules and two-step confirmation as first-run setup (see [ChangePinFlow]). */
 @Composable
 private fun ChangePinDialog(lock: AppLock, onDismiss: () -> Unit, onChanged: () -> Unit) {
-    var current by remember { mutableStateOf("") }
-    var next by remember { mutableStateOf("") }
-    var confirm by remember { mutableStateOf("") }
-    var error by remember { mutableIntStateOf(0) }
-    var attemptsLeft by remember { mutableIntStateOf(-1) }
-    var lockedMs by remember { mutableLongStateOf(lock.remainingLockMs()) }
-    LaunchedEffect(lockedMs > 0) {
-        while (lock.remainingLockMs() > 0) {
-            lockedMs = lock.remainingLockMs()
-            delay(1_000)
-        }
-        lockedMs = 0
-    }
-    AlertDialog(
-        onDismissRequest = onDismiss,
-        title = { Text(stringResource(R.string.settings_change_pin)) },
-        text = {
-            Column(
-                Modifier.fillMaxWidth().heightIn(max = 360.dp).verticalScroll(rememberScrollState()),
-                verticalArrangement = Arrangement.spacedBy(8.dp)
-            ) {
-                listOf(
-                    R.string.settings_current_pin to current,
-                    R.string.settings_new_pin to next,
-                    R.string.pin_confirm_label to confirm
-                ).forEachIndexed { index, (label, value) ->
-                    OutlinedTextField(
-                        value = value, onValueChange = { input ->
-                            val clean = input.filter(Char::isDigit)
-                            when (index) {
-                                0 -> current = clean
-                                1 -> next = clean
-                                else -> confirm = clean
-                            }
-                        }, label = { Text(stringResource(label)) },
-                        visualTransformation = PasswordVisualTransformation(),
-                        keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.NumberPassword),
-                        singleLine = true, modifier = Modifier.fillMaxWidth()
-                    )
-                }
-                if (error != 0) Text(stringResource(error), color = MaterialTheme.colorScheme.error)
-                if (lockedMs > 0) Text(
-                    stringResource(R.string.locked_wait, (lockedMs + 999) / 1_000),
-                    color = MaterialTheme.colorScheme.error
-                )
-                if (attemptsLeft >= 0) Text(
-                    pluralStringResource(R.plurals.wrong_pin, attemptsLeft, attemptsLeft),
-                    color = MaterialTheme.colorScheme.error
-                )
-            }
-        },
-        confirmButton = {
-            Button(onClick = {
-                error = 0
-                if (next != confirm) { error = R.string.pin_mismatch; return@Button }
-                try { lock.validatePin(next) }
-                catch (invalid: IllegalArgumentException) { error = R.string.pin_invalid; return@Button }
-                when (val result = lock.verify(current)) {
-                    is AppLock.UnlockResult.Unlocked -> {
-                        lock.setPin(next)
-                        current = ""; next = ""; confirm = ""
-                        onChanged()
-                    }
-                    is AppLock.UnlockResult.WrongPin -> {
-                        attemptsLeft = result.attemptsLeft
-                        current = ""
-                    }
-                    is AppLock.UnlockResult.Locked -> {
-                        lockedMs = result.remainingMs
-                        current = ""
-                    }
-                }
-            }, enabled = current.isNotBlank() && next.isNotBlank() && confirm.isNotBlank() && lockedMs <= 0 && !lock.isLocked()) {
-                Text(stringResource(R.string.settings_change_pin))
-            }
-        },
-        dismissButton = { OutlinedButton(onClick = onDismiss) { Text(stringResource(R.string.cancel)) } }
-    )
+    ChangePinFlow(lock, onDismiss, onChanged)
 }

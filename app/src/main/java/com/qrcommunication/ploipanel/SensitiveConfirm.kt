@@ -107,7 +107,7 @@ internal fun SensitiveConfirmDialog(
                 } else {
                     Text(stringResource(R.string.confirm_sensitive_pin))
                     OutlinedTextField(
-                        value = pin, onValueChange = { pin = it.filter(Char::isDigit) },
+                        value = pin, onValueChange = { pin = it.filter(Char::isDigit).take(AppLock.MAX_PIN_LENGTH) },
                         label = { Text(stringResource(R.string.pin_label)) },
                         visualTransformation = PasswordVisualTransformation(),
                         keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.NumberPassword, imeAction = ImeAction.Done),

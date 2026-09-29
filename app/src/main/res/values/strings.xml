@@ -53,9 +53,8 @@
     <string name="site_disk">Espace disque : %1$s</string>
     <string name="site_health">URL de santé : %1$s</string>
     <string name="pin_setup_title">Créez votre code PIN</string>
-    <string name="pin_setup_intro">Ce code protège l’accès à vos profils et jetons chiffrés. Utilisez 4 à 12 chiffres, sans suite ni répétition.</string>
+    <string name="pin_setup_intro">Ce code protège l’accès à vos profils et jetons chiffrés. Choisissez de 4 à 12 chiffres, sans suite (123456) ni chiffre unique répété (111111).</string>
     <string name="pin_label">Code PIN</string>
-    <string name="pin_confirm_label">Confirmez le code PIN</string>
     <string name="pin_mismatch">Les deux codes ne correspondent pas.</string>
     <string name="pin_invalid">Code invalide : 4 à 12 chiffres, sans suite ni répétition.</string>
     <string name="set_pin">Enregistrer le code PIN</string>

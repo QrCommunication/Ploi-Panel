@@ -3,6 +3,7 @@ package com.qrcommunication.ploipanel
 import android.content.Context
 import androidx.biometric.BiometricManager
 import androidx.biometric.BiometricPrompt
+import androidx.annotation.StringRes
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.layout.Arrangement
@@ -22,6 +23,7 @@ import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.outlined.Backspace
+import androidx.compose.material.icons.outlined.Close
 import androidx.compose.material.icons.outlined.ErrorOutline
 import androidx.compose.material.icons.outlined.Fingerprint
 import androidx.compose.material.icons.outlined.LockOpen
@@ -58,6 +60,8 @@ import androidx.compose.ui.semantics.liveRegion
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.window.Dialog
+import androidx.compose.ui.window.DialogProperties
 import androidx.core.content.ContextCompat
 import androidx.fragment.app.FragmentActivity
 import kotlinx.coroutines.delay
@@ -98,14 +102,15 @@ private fun PinDots(length: Int, error: Boolean) {
     val spoken = stringResource(R.string.pin_digits_entered, length)
     Row(
         Modifier.heightIn(min = 24.dp).clearAndSetSemantics { contentDescription = spoken },
-        horizontalArrangement = Arrangement.spacedBy(PanelSpacing.md),
+        horizontalArrangement = Arrangement.spacedBy(PanelSpacing.sm),
         verticalAlignment = Alignment.CenterVertically
     ) {
+        // Four hollow slots show the minimum; every further digit adds a dot, up to twelve.
         val shown = maxOf(length, AppLock.MIN_PIN_LENGTH)
         repeat(shown) { index ->
             val filled = index < length
             Box(
-                Modifier.size(14.dp).clip(CircleShape)
+                Modifier.size(12.dp).clip(CircleShape)
                     .background(if (filled) (if (error) colors.error else colors.primary) else Color.Transparent)
                     .border(2.dp, if (error) colors.error else colors.outline, CircleShape)
             )
@@ -147,6 +152,42 @@ private fun PinKey(label: String, enabled: Boolean, onClick: () -> Unit) {
     ) { Text(label, style = MaterialTheme.typography.headlineSmall) }
 }
 
+@StringRes
+internal fun pinProblemMessage(problem: PinProblem): Int = when (problem) {
+    PinProblem.LENGTH, PinProblem.NOT_DIGITS -> R.string.pin_problem_length
+    PinProblem.REPEATED -> R.string.pin_problem_repeated
+    PinProblem.SEQUENCE -> R.string.pin_problem_sequence
+}
+
+/**
+ * Dots + live counter + keypad, shared by setup, change and unlock. [showPolicy] shows the
+ * "n digits (4 to 12)" counter and the exact rule a new PIN breaks while it is typed, so a long
+ * but trivial code (123456, 111111) is explained instead of looking like a length limit.
+ */
+@Composable
+internal fun PinEntry(
+    value: String, onValueChange: (String) -> Unit,
+    enabled: Boolean = true, error: Boolean = false, showPolicy: Boolean = false
+) {
+    Column(horizontalAlignment = Alignment.CenterHorizontally, verticalArrangement = Arrangement.spacedBy(PanelSpacing.md)) {
+        PinDots(value.length, error)
+        if (showPolicy) {
+            Text(
+                stringResource(R.string.pin_length_counter, value.length, AppLock.MIN_PIN_LENGTH, AppLock.MAX_PIN_LENGTH),
+                style = MaterialTheme.typography.labelLarge,
+                color = MaterialTheme.colorScheme.onSurfaceVariant
+            )
+            val problem = pinProblem(value)?.takeIf { value.length >= AppLock.MIN_PIN_LENGTH }
+            if (problem != null) LockMessage(stringResource(pinProblemMessage(problem)))
+        }
+        PinKeypad(
+            enabled = enabled,
+            onDigit = { digit -> if (value.length < AppLock.MAX_PIN_LENGTH) onValueChange(value + digit) },
+            onBackspace = { onValueChange(value.dropLast(1)) }
+        )
+    }
+}
+
 /** Brand mark, title and supporting line shared by the setup and unlock screens. */
 @Composable
 private fun LockHeader(title: String, body: String?) {
@@ -170,64 +211,141 @@ private fun LockMessage(text: String) {
     }
 }
 
-/** First-run onboarding: choosing the PIN is mandatory before any profile can be used. */
+/**
+ * Two-step choice of a new PIN (enter, then confirm) used by first-run setup and by "Change PIN".
+ * [onChosen] receives a PIN that already passed [pinProblem]; it returns an error string res or 0.
+ */
 @Composable
-internal fun PinSetupScreen(lock: AppLock, onDone: () -> Unit) {
+private fun NewPinSteps(
+    title: Int, intro: Int, submitLabel: Int,
+    onChosen: (String) -> Int,
+    footer: @Composable () -> Unit = {}
+) {
     var pin by remember { mutableStateOf("") }
     var confirm by remember { mutableStateOf("") }
     var confirming by remember { mutableStateOf(false) }
     var error by remember { mutableIntStateOf(0) }
-    fun submit() {
-        if (pin != confirm) {
-            error = R.string.pin_mismatch
-            pin = ""; confirm = ""; confirming = false
-        } else {
-            try {
-                lock.setPin(pin)
-                error = 0
-                onDone()
-            } catch (invalid: IllegalArgumentException) {
-                error = R.string.pin_invalid
-                pin = ""; confirm = ""; confirming = false
+    fun restart(message: Int) { pin = ""; confirm = ""; confirming = false; error = message }
+    LockHeader(
+        stringResource(if (confirming) R.string.pin_step_confirm else title),
+        stringResource(if (confirming) R.string.pin_step_confirm_intro else intro)
+    )
+    if (error != 0) LockMessage(stringResource(error))
+    if (!confirming) {
+        PinEntry(pin, { pin = it; error = 0 }, showPolicy = true)
+        Button(
+            onClick = {
+                val problem = pinProblem(pin)
+                if (problem == null) { confirming = true; error = 0 } else error = pinProblemMessage(problem)
+            },
+            enabled = pin.length >= AppLock.MIN_PIN_LENGTH && pinProblem(pin) == null,
+            modifier = Modifier.fillMaxWidth().heightIn(min = PanelSpacing.touchTarget)
+        ) { Text(stringResource(R.string.pin_continue)) }
+    } else {
+        PinEntry(confirm, { confirm = it; error = 0 }, error = error != 0 && confirm.isEmpty())
+        Column(Modifier.fillMaxWidth(), verticalArrangement = Arrangement.spacedBy(PanelSpacing.sm)) {
+            Button(
+                onClick = {
+                    if (pin != confirm) restart(R.string.pin_mismatch)
+                    else {
+                        val failure = onChosen(pin)
+                        if (failure != 0) restart(failure)
+                    }
+                },
+                enabled = confirm.length >= AppLock.MIN_PIN_LENGTH,
+                modifier = Modifier.fillMaxWidth().heightIn(min = PanelSpacing.touchTarget)
+            ) { Text(stringResource(submitLabel)) }
+            TextButton(onClick = { restart(0) }, modifier = Modifier.fillMaxWidth()) {
+                Text(stringResource(R.string.pin_restart))
             }
         }
     }
+    footer()
+}
+
+@Composable
+private fun LockColumn(content: @Composable () -> Unit) {
     Box(Modifier.fillMaxSize(), contentAlignment = Alignment.TopCenter) {
         Column(
             Modifier.fillMaxSize().verticalScroll(rememberScrollState()).widthIn(max = 420.dp).padding(PanelSpacing.xl),
             horizontalAlignment = Alignment.CenterHorizontally,
             verticalArrangement = Arrangement.spacedBy(PanelSpacing.xl)
-        ) {
-            LockHeader(
-                stringResource(if (confirming) R.string.pin_step_confirm else R.string.pin_setup_title),
-                stringResource(if (confirming) R.string.pin_step_confirm_intro else R.string.pin_setup_intro)
-            )
-            val current = if (confirming) confirm else pin
-            PinDots(current.length, error != 0 && current.isEmpty())
-            if (error != 0) LockMessage(stringResource(error))
-            PinKeypad(
-                enabled = true,
-                onDigit = { digit ->
-                    if (current.length < AppLock.MAX_PIN_LENGTH) {
-                        error = 0
-                        if (confirming) confirm += digit else pin += digit
+        ) { content() }
+    }
+}
+
+/** First-run onboarding: choosing the PIN is mandatory before any profile can be used. */
+@Composable
+internal fun PinSetupScreen(lock: AppLock, onDone: () -> Unit) {
+    LockColumn {
+        NewPinSteps(R.string.pin_setup_title, R.string.pin_setup_intro, R.string.set_pin, onChosen = { chosen ->
+            try {
+                lock.setPin(chosen)
+                onDone()
+                0
+            } catch (_: IllegalArgumentException) {
+                R.string.pin_invalid
+            }
+        })
+    }
+}
+
+/**
+ * Settings "Change PIN" as a full-screen flow: verify the current PIN (lockout-protected), then
+ * choose and confirm a new one with the same keypad and rules as first-run setup.
+ */
+@Composable
+internal fun ChangePinFlow(lock: AppLock, onDismiss: () -> Unit, onChanged: () -> Unit) {
+    var verified by remember { mutableStateOf(false) }
+    var current by remember { mutableStateOf("") }
+    var attemptsLeft by remember { mutableIntStateOf(-1) }
+    var lockedMs by remember { mutableLongStateOf(lock.remainingLockMs()) }
+    LaunchedEffect(lockedMs > 0) {
+        while (lock.remainingLockMs() > 0) {
+            lockedMs = lock.remainingLockMs()
+            delay(1_000)
+        }
+        lockedMs = 0
+    }
+    Dialog(onDismissRequest = onDismiss, properties = DialogProperties(usePlatformDefaultWidth = false)) {
+        Surface(Modifier.fillMaxSize(), color = MaterialTheme.colorScheme.background) {
+            Column(Modifier.fillMaxSize()) {
+                Row(Modifier.fillMaxWidth().padding(PanelSpacing.xs), verticalAlignment = Alignment.CenterVertically) {
+                    IconButton(onClick = onDismiss) {
+                        Icon(Icons.Outlined.Close, contentDescription = stringResource(R.string.cancel))
                     }
-                },
-                onBackspace = { if (confirming) confirm = confirm.dropLast(1) else pin = pin.dropLast(1) }
-            )
-            if (!confirming) Button(
-                onClick = { confirming = true; error = 0 },
-                enabled = pin.length >= AppLock.MIN_PIN_LENGTH,
-                modifier = Modifier.fillMaxWidth().heightIn(min = PanelSpacing.touchTarget)
-            ) { Text(stringResource(R.string.pin_continue)) }
-            else Column(Modifier.fillMaxWidth(), verticalArrangement = Arrangement.spacedBy(PanelSpacing.sm)) {
-                Button(
-                    onClick = { submit() },
-                    enabled = pin.isNotEmpty() && confirm.isNotEmpty(),
-                    modifier = Modifier.fillMaxWidth().heightIn(min = PanelSpacing.touchTarget)
-                ) { Text(stringResource(R.string.set_pin)) }
-                TextButton(onClick = { pin = ""; confirm = ""; confirming = false; error = 0 },
-                    modifier = Modifier.fillMaxWidth()) { Text(stringResource(R.string.pin_restart)) }
+                    Text(stringResource(R.string.settings_change_pin), style = MaterialTheme.typography.titleLarge)
+                }
+                LockColumn {
+                    if (!verified) {
+                        LockHeader(stringResource(R.string.settings_current_pin), stringResource(R.string.lock_enter_pin))
+                        if (lockedMs > 0) LockMessage(stringResource(R.string.locked_wait, (lockedMs + 999) / 1_000))
+                        else if (attemptsLeft >= 0) LockMessage(pluralStringResource(R.plurals.wrong_pin, attemptsLeft, attemptsLeft))
+                        PinEntry(current, { current = it }, enabled = lockedMs <= 0, error = attemptsLeft >= 0 && current.isEmpty())
+                        Button(
+                            onClick = {
+                                when (val result = lock.verify(current)) {
+                                    is AppLock.UnlockResult.Unlocked -> { verified = true; attemptsLeft = -1 }
+                                    is AppLock.UnlockResult.WrongPin -> attemptsLeft = result.attemptsLeft
+                                    is AppLock.UnlockResult.Locked -> lockedMs = result.remainingMs
+                                }
+                                current = ""
+                            },
+                            enabled = current.isNotEmpty() && lockedMs <= 0,
+                            modifier = Modifier.fillMaxWidth().heightIn(min = PanelSpacing.touchTarget)
+                        ) { Text(stringResource(R.string.pin_continue)) }
+                    } else {
+                        NewPinSteps(R.string.settings_new_pin, R.string.pin_setup_intro, R.string.settings_change_pin, onChosen = { chosen ->
+                            try {
+                                lock.setPin(chosen)
+                                onChanged()
+                                0
+                            } catch (_: IllegalArgumentException) {
+                                R.string.pin_invalid
+                            }
+                        })
+                    }
+                }
             }
         }
     }
@@ -279,7 +397,6 @@ internal fun PinUnlockScreen(lock: AppLock, activity: FragmentActivity, onUnlock
             verticalArrangement = Arrangement.spacedBy(PanelSpacing.xl)
         ) {
             LockHeader(stringResource(R.string.unlock_title), stringResource(R.string.lock_enter_pin))
-            PinDots(pin.length, attemptsLeft >= 0 && pin.isEmpty())
             if (lockedMs > 0) {
                 Surface(
                     color = MaterialTheme.colorScheme.errorContainer, contentColor = MaterialTheme.colorScheme.onErrorContainer,
@@ -298,11 +415,7 @@ internal fun PinUnlockScreen(lock: AppLock, activity: FragmentActivity, onUnlock
             } else if (attemptsLeft >= 0) {
                 LockMessage(pluralStringResource(R.plurals.wrong_pin, attemptsLeft, attemptsLeft))
             }
-            PinKeypad(
-                enabled = lockedMs <= 0,
-                onDigit = { digit -> if (pin.length < AppLock.MAX_PIN_LENGTH) pin += digit },
-                onBackspace = { pin = pin.dropLast(1) }
-            )
+            PinEntry(pin, { pin = it }, enabled = lockedMs <= 0, error = attemptsLeft >= 0 && pin.isEmpty())
             Column(Modifier.fillMaxWidth(), verticalArrangement = Arrangement.spacedBy(PanelSpacing.sm)) {
                 Button(
                     onClick = { submit() },
