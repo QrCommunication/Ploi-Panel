@@ -4,36 +4,54 @@
     android:layout_width="match_parent"
     android:layout_height="wrap_content"
     android:minHeight="56dp"
-    android:orientation="vertical"
-    android:paddingHorizontal="8dp"
-    android:paddingVertical="5dp"
+    android:gravity="center_vertical"
+    android:orientation="horizontal"
+    android:paddingHorizontal="12dp"
+    android:paddingVertical="8dp"
     android:background="@drawable/widget_row_background">
 
     <TextView
-        android:id="@+id/widget_check_name"
-        android:layout_width="match_parent"
+        android:id="@+id/widget_check_dot"
+        android:layout_width="wrap_content"
         android:layout_height="wrap_content"
-        android:maxLines="1"
-        android:ellipsize="end"
-        android:textStyle="bold"
-        android:textColor="#FFFFFF"
-        android:textSize="13sp" />
+        android:importantForAccessibility="no"
+        android:text="@string/widget_status_dot"
+        android:textColor="@color/widget_unknown"
+        android:textSize="14sp" />
 
-    <TextView
-        android:id="@+id/widget_check_detail"
-        android:layout_width="match_parent"
+    <LinearLayout
+        android:layout_width="0dp"
         android:layout_height="wrap_content"
-        android:maxLines="2"
-        android:ellipsize="end"
-        android:textColor="#D3EDE6"
-        android:textSize="11sp" />
+        android:layout_weight="1"
+        android:layout_marginStart="10dp"
+        android:orientation="vertical">
+        <TextView
+            android:id="@+id/widget_check_name"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:maxLines="1"
+            android:ellipsize="end"
+            android:fontFamily="sans-serif-medium"
+            android:textColor="@color/widget_text"
+            android:textSize="14sp" />
+        <TextView
+            android:id="@+id/widget_check_detail"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:maxLines="2"
+            android:ellipsize="end"
+            android:textColor="@color/widget_text_secondary"
+            android:textSize="11sp" />
+    </LinearLayout>
 
     <TextView
         android:id="@+id/widget_check_status"
-        android:layout_width="match_parent"
+        android:layout_width="wrap_content"
         android:layout_height="wrap_content"
-        android:maxLines="1"
-        android:ellipsize="end"
-        android:textColor="#AEEAD9"
-        android:textSize="11sp" />
+        android:layout_marginStart="8dp"
+        android:maxLines="2"
+        android:gravity="end"
+        android:fontFamily="sans-serif-medium"
+        android:textColor="@color/widget_text_secondary"
+        android:textSize="12sp" />
 </LinearLayout>

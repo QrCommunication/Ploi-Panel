@@ -59,19 +59,20 @@ class MultiServerRowsService : RemoteViewsService() {
                 reading?.name ?: display.getString(R.string.widget_unknown_server, id))
             if (reading == null) {
                 row.setTextViewText(R.id.widget_row_metrics, display.getString(R.string.widget_no_data))
-                row.setTextViewText(R.id.widget_row_status, "")
-                row.setViewVisibility(R.id.widget_row_chart, View.GONE)
+                row.setViewVisibility(R.id.widget_row_metrics, View.VISIBLE)
+                row.setViewVisibility(R.id.widget_row_status, View.GONE)
+                bindGauges(display, row, rowGaugeSlots, null, emptySet())
             } else {
-                row.setTextViewText(R.id.widget_row_metrics, widgetMetrics(display, reading, config.metrics))
-                row.setTextViewText(R.id.widget_row_status,
-                    if (isStale(reading.sample, System.currentTimeMillis()))
-                        display.getString(R.string.widget_stale) else "")
-                val gauge = gaugeBitmap(gaugeValues(reading.sample, config.metrics), widgetGaugeLabels(display))
-                if (gauge == null) row.setViewVisibility(R.id.widget_row_chart, View.GONE)
-                else {
-                    row.setImageViewBitmap(R.id.widget_row_chart, gauge)
-                    row.setViewVisibility(R.id.widget_row_chart, View.VISIBLE)
-                }
+                bindStatus(display, row, R.id.widget_row_status, reading.status)
+                // Real gauges from the same cached sample; load stays text, never a gauge.
+                val shown = bindGauges(display, row, rowGaugeSlots, reading.sample, config.metrics)
+                val extras = listOfNotNull(
+                    widgetMetrics(display, reading, setOf("load")).takeIf { "load" in config.metrics },
+                    display.getString(R.string.widget_no_data).takeIf { shown == 0 && "load" !in config.metrics },
+                    display.getString(R.string.widget_stale).takeIf { isStale(reading.sample, System.currentTimeMillis()) }
+                ).joinToString(" · ")
+                row.setViewVisibility(R.id.widget_row_metrics, if (extras.isEmpty()) View.GONE else View.VISIBLE)
+                row.setTextViewText(R.id.widget_row_metrics, extras)
             }
             return row
         }

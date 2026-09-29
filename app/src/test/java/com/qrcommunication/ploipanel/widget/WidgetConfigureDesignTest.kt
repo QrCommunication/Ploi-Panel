@@ -21,11 +21,13 @@ class WidgetConfigureDesignTest {
     @Test fun selectionIsBoundedAndSurvivesPaging() {
         val config = source("app/src/main/java/com/qrcommunication/ploipanel/widget/WidgetConfigureActivity.kt")
         assertTrue(config.contains("WidgetConfig.MAX_MULTI_SERVERS"))
-        assertTrue(config.contains("selected = setOf(server.id)"))
+        assertTrue(config.contains("selected = toggleWidgetServer(selected, server.id, wanted, single)"))
         assertTrue(config.contains("take(if (single) 1 else WidgetConfig.MAX_MULTI_SERVERS)"))
         assertTrue(config.contains("Role.RadioButton"))
-        assertTrue(config.contains("selected.size < maxServers"))
-        assertTrue(config.contains("limitReached = true"))
+        assertTrue(config.contains("selected.size <= maxServers"))
+        // Multi: unchecked rows are disabled once the cap is reached (no silent over-selection).
+        assertTrue(config.contains("enabled = canPickWidgetServer(selected, server.id, single)"))
+        assertTrue(config.contains("val maxServers = widgetServerLimit(single)"))
         assertTrue(config.contains("PloiApi.servers(token, page, 50)"))
         assertTrue(config.contains("serverPage = null"))
         assertTrue(config.contains("retry++"))
@@ -41,8 +43,8 @@ class WidgetConfigureDesignTest {
     }
 
     @Test fun designLabelsExistInFrenchAndEnglish() {
-        val keys = listOf("profile", "servers", "selected", "remove", "count", "limit", "page_error", "retry",
-            "previous", "next", "page", "cpu", "ram", "disk", "load")
+        val keys = listOf("step_profile", "step_server", "step_servers", "step_metrics", "remove_named", "count", "limit",
+            "single_rule", "multi_rule", "page_error", "retry", "previous", "next", "page", "cpu", "ram", "disk", "load")
         for (locale in listOf("values", "values-en")) {
             val xml = source("app/src/main/res/$locale/widget_config_design.xml")
             val document = DocumentBuilderFactory.newInstance().newDocumentBuilder()

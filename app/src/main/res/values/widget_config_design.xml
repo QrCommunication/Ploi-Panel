@@ -1,9 +1,5 @@
 <resources>
-    <string name="widget_config_profile">Profil Ploi</string>
     <string name="widget_config_no_profiles">Aucun profil disponible. Ajoutez un profil dans Ploi Panel.</string>
-    <string name="widget_config_servers">Choisir les serveurs</string>
-    <string name="widget_config_selected">Sélection actuelle</string>
-    <string name="widget_config_remove">Retirer</string>
     <string name="widget_config_count">Sélection : %1$d/%2$d</string>
     <string name="widget_config_limit">Limite atteinte (%1$d). Désélectionnez un serveur pour continuer.</string>
     <string name="widget_config_page_error">Impossible de charger cette page de serveurs.</string>
@@ -16,4 +12,12 @@
     <string name="widget_config_ram">Utilisation de la mémoire (RAM)</string>
     <string name="widget_config_disk">Utilisation du disque</string>
     <string name="widget_config_load">Charge système</string>
+    <string name="widget_config_single_rule">Un seul serveur affiché, avec ses jauges.</string>
+    <string name="widget_config_multi_rule">Serveurs affichés : jusqu’à %1$d</string>
+    <string name="widget_config_checks_rule">Cibles de supervision : jusqu’à %1$d</string>
+    <string name="widget_config_step_profile">1. Profil Ploi</string>
+    <string name="widget_config_step_server">2. Serveur (un seul)</string>
+    <string name="widget_config_step_servers">2. Serveurs</string>
+    <string name="widget_config_step_metrics">3. Mesures affichées</string>
+    <string name="widget_config_remove_named">Retirer %1$s</string>
 </resources>

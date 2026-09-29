@@ -7,37 +7,46 @@ import android.content.res.Configuration
 import android.os.Bundle
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
+import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.isSystemInDarkTheme
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
-import androidx.compose.foundation.layout.Row
-import androidx.compose.foundation.layout.widthIn
-import androidx.compose.ui.Alignment
-import androidx.compose.material3.Card
-import androidx.compose.material3.OutlinedButton
-import androidx.compose.material3.HorizontalDivider
+import androidx.compose.foundation.layout.FlowRow
 import androidx.compose.foundation.layout.PaddingValues
+import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.imePadding
-import androidx.compose.foundation.layout.safeDrawingPadding
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.safeDrawingPadding
+import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.widthIn
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.selection.selectable
 import androidx.compose.foundation.selection.toggleable
-import androidx.compose.foundation.text.KeyboardOptions
+import androidx.compose.foundation.shape.CircleShape
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.outlined.Check
+import androidx.compose.material.icons.outlined.Close
+import androidx.compose.material.icons.outlined.Dns
+import androidx.compose.material.icons.outlined.Lock
+import androidx.compose.material.icons.outlined.LockOpen
+import androidx.compose.material.icons.outlined.MonitorHeart
+import androidx.compose.material.icons.outlined.Person
 import androidx.compose.material3.Button
 import androidx.compose.material3.Checkbox
+import androidx.compose.material3.HorizontalDivider
+import androidx.compose.material3.Icon
+import androidx.compose.material3.InputChip
 import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.OutlinedTextField
+import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.RadioButton
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
-import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.SideEffect
 import androidx.compose.runtime.getValue
@@ -46,33 +55,43 @@ import androidx.compose.runtime.mutableLongStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
+import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.alpha
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.toArgb
 import androidx.compose.ui.platform.LocalConfiguration
-import androidx.compose.ui.platform.LocalContext
-import androidx.compose.ui.semantics.Role
+import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.pluralStringResource
 import androidx.compose.ui.res.stringResource
-import androidx.compose.ui.text.input.KeyboardType
-import androidx.compose.ui.text.input.PasswordVisualTransformation
+import androidx.compose.ui.semantics.Role
+import androidx.compose.ui.text.style.TextAlign
+import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
+import androidx.core.view.WindowCompat
 import com.qrcommunication.ploipanel.AppLanguage
 import com.qrcommunication.ploipanel.AppLock
 import com.qrcommunication.ploipanel.AppTheme
+import com.qrcommunication.ploipanel.EmptyState
+import com.qrcommunication.ploipanel.LoadingState
 import com.qrcommunication.ploipanel.LocalCheckStore
+import com.qrcommunication.ploipanel.LocalizedActivityScope
+import com.qrcommunication.ploipanel.PanelSpacing
+import com.qrcommunication.ploipanel.PinEntry
 import com.qrcommunication.ploipanel.PloiApi
+import com.qrcommunication.ploipanel.PloiPanelTheme
 import com.qrcommunication.ploipanel.PloiProfile
 import com.qrcommunication.ploipanel.R
+import com.qrcommunication.ploipanel.SectionCard
+import com.qrcommunication.ploipanel.SectionHeader
 import com.qrcommunication.ploipanel.SharedPreferencesProfilePrefs
 import com.qrcommunication.ploipanel.UiPreferences
 import com.qrcommunication.ploipanel.panelDarkColors
 import com.qrcommunication.ploipanel.panelLightColors
-import com.qrcommunication.ploipanel.panelShapes
-import com.qrcommunication.ploipanel.panelTypography
-import androidx.core.view.WindowCompat
+import com.qrcommunication.ploipanel.panelMonoStyle
+import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.delay
-import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.withContext
 import java.util.Locale
 
@@ -125,9 +144,9 @@ class WidgetConfigureActivity : ComponentActivity() {
                 controller.isAppearanceLightStatusBars = !dark
                 controller.isAppearanceLightNavigationBars = !dark
             }
-            CompositionLocalProvider(LocalContext provides localizedContext, LocalConfiguration provides configuration) {
-                MaterialTheme(colorScheme = colors, typography = panelTypography, shapes = panelShapes) {
-                    Surface(Modifier.fillMaxSize(), color = colors.background) {
+            LocalizedActivityScope(this, localizedContext, configuration) {
+                PloiPanelTheme(dark) {
+                    Surface(Modifier.fillMaxSize(), color = MaterialTheme.colorScheme.background) {
                         if (checks) {
                             ConfigureSiteChecks(id) {
                                 SiteChecksData(this).save(id, it)
@@ -150,11 +169,72 @@ class WidgetConfigureActivity : ComponentActivity() {
         }
     }
 
+    /** Title bar shared by the three widget configuration screens. */
+    @Composable
+    private fun ConfigHeader(title: Int, subtitle: String) {
+        Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(PanelSpacing.md)) {
+            Icon(painterResource(R.drawable.ic_app), contentDescription = null, tint = Color.Unspecified,
+                modifier = Modifier.size(40.dp))
+            Column(Modifier.weight(1f)) {
+                Text(stringResource(title), style = MaterialTheme.typography.headlineSmall)
+                Text(subtitle, style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+            }
+        }
+    }
+
+    /** One selectable row: radio (single) or checkbox (multi), disabled once the cap is reached. */
+    @Composable
+    private fun ChoiceRow(
+        title: String, subtitle: String?, checked: Boolean, radio: Boolean, enabled: Boolean,
+        onToggle: (Boolean) -> Unit
+    ) {
+        val colors = MaterialTheme.colorScheme
+        Surface(
+            shape = MaterialTheme.shapes.medium,
+            color = if (checked) colors.primaryContainer else colors.surfaceContainerLowest,
+            border = BorderStroke(1.dp, if (checked) colors.primary else colors.outlineVariant),
+            modifier = Modifier.fillMaxWidth()
+        ) {
+            Row(
+                Modifier.fillMaxWidth().heightIn(min = 56.dp)
+                    .then(
+                        if (radio) Modifier.selectable(checked, enabled = enabled, role = Role.RadioButton, onClick = { onToggle(true) })
+                        else Modifier.toggleable(checked, enabled = enabled, role = Role.Checkbox, onValueChange = onToggle)
+                    )
+                    .padding(horizontal = PanelSpacing.md, vertical = PanelSpacing.sm)
+                    .alpha(if (enabled) 1f else 0.45f),
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                if (radio) RadioButton(checked, onClick = null, enabled = enabled)
+                else Checkbox(checked, onCheckedChange = null, enabled = enabled)
+                Column(Modifier.padding(start = PanelSpacing.md).weight(1f)) {
+                    Text(title, style = MaterialTheme.typography.titleSmall, maxLines = 1, overflow = TextOverflow.Ellipsis)
+                    if (subtitle != null) Text(subtitle, style = panelMonoStyle, color = colors.onSurfaceVariant,
+                        maxLines = 1, overflow = TextOverflow.Ellipsis)
+                }
+            }
+        }
+    }
+
+    @Composable
+    private fun SaveBar(enabled: Boolean, onSave: () -> Unit) {
+        HorizontalDivider()
+        Box(Modifier.fillMaxWidth().padding(horizontal = PanelSpacing.xl, vertical = PanelSpacing.md),
+            contentAlignment = Alignment.Center) {
+            Button(onClick = onSave, enabled = enabled,
+                modifier = Modifier.widthIn(max = PanelSpacing.maxContentWidth).fillMaxWidth().heightIn(min = PanelSpacing.touchTarget)) {
+                Icon(Icons.Outlined.Check, contentDescription = null, modifier = Modifier.size(18.dp))
+                Text(stringResource(R.string.widget_save), Modifier.padding(start = PanelSpacing.sm))
+            }
+        }
+    }
+
     @Composable
     private fun ConfigureWidget(id: Int, single: Boolean, onSave: (WidgetConfig) -> Unit) {
         val data = remember { WidgetData(this) }
         val existing = remember(id) { data.config(id) }
         var profile by remember { mutableStateOf(existing?.profileId) }
+        // Single widget: exactly one server. Multi widget: at most MAX_MULTI_SERVERS (3).
         var selected by remember {
             mutableStateOf(existing?.serverIds?.take(if (single) 1 else WidgetConfig.MAX_MULTI_SERVERS)?.toSet() ?: emptySet())
         }
@@ -170,7 +250,6 @@ class WidgetConfigureActivity : ComponentActivity() {
         var loadedProfile by remember { mutableStateOf<String?>(null) }
         var loading by remember { mutableStateOf(false) }
         var fetchError by remember { mutableStateOf(false) }
-        var limitReached by remember { mutableStateOf(false) }
         val profiles = if (authorized) data.profiles.profiles() else emptyList()
         LaunchedEffect(authorized, profile, page, retry) {
             serverPage = null // Never present old-page rows as the new page, including after a failed request.
@@ -193,157 +272,135 @@ class WidgetConfigureActivity : ComponentActivity() {
             catch (_: Exception) { fetchError = true }
             finally { loading = false }
         }
-        val maxServers = WidgetConfig.MAX_MULTI_SERVERS
+        val maxServers = widgetServerLimit(single)
+        val full = selected.size >= maxServers
         val canSave = authorized && profile != null && profiles.any { it.id == profile } &&
-            selected.isNotEmpty() && selected.size <= (if (single) 1 else maxServers) &&
+            selected.isNotEmpty() && selected.size <= maxServers &&
             loadedProfile == profile && metrics.isNotEmpty()
         Column(Modifier.fillMaxSize().safeDrawingPadding().imePadding(),
             horizontalAlignment = Alignment.CenterHorizontally) {
-            LazyColumn(Modifier.widthIn(max = 720.dp).fillMaxWidth().weight(1f),
-                contentPadding = PaddingValues(horizontal = 20.dp, vertical = 24.dp),
-                verticalArrangement = Arrangement.spacedBy(16.dp)) {
-                item { Text(stringResource(if (single) R.string.widget_single else R.string.widget_multi),
-                    style = MaterialTheme.typography.headlineMedium) }
+            LazyColumn(Modifier.widthIn(max = PanelSpacing.maxContentWidth).fillMaxWidth().weight(1f),
+                contentPadding = PaddingValues(horizontal = PanelSpacing.xl, vertical = PanelSpacing.xl),
+                verticalArrangement = Arrangement.spacedBy(PanelSpacing.md)) {
+                item {
+                    ConfigHeader(
+                        if (single) R.string.widget_single else R.string.widget_multi,
+                        if (single) stringResource(R.string.widget_config_single_rule)
+                        else stringResource(R.string.widget_config_multi_rule, WidgetConfig.MAX_MULTI_SERVERS)
+                    )
+                }
                 if (!authorized) {
                     item { PinGate() }
                 } else {
                     item { Text(stringResource(R.string.widget_public_notice),
-                        style = MaterialTheme.typography.bodySmall) }
-                    item { Text(stringResource(R.string.widget_config_profile), style = MaterialTheme.typography.titleMedium) }
-                    if (profiles.isEmpty()) item { Text(stringResource(R.string.widget_config_no_profiles)) }
+                        style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant) }
+                    item { SectionHeader(stringResource(R.string.widget_config_step_profile)) }
+                    if (profiles.isEmpty()) item { EmptyState(Icons.Outlined.Person, stringResource(R.string.widget_config_no_profiles)) }
                     items(profiles, key = { "profile.${it.id}" }) { item: PloiProfile ->
-                        Card(Modifier.fillMaxWidth()) {
-                            Row(Modifier.fillMaxWidth().heightIn(min = 56.dp)
-                                .selectable(selected = profile == item.id, role = Role.RadioButton,
-                                    onClick = { if (profile != item.id) {
-                                        profile = item.id; selected = emptySet(); selectedNames = emptyMap()
-                                        limitReached = false
-                                    } })
-                                .padding(horizontal = 12.dp), verticalAlignment = Alignment.CenterVertically) {
-                                RadioButton(selected = profile == item.id, onClick = null)
-                                Text(item.label, Modifier.padding(start = 12.dp))
+                        ChoiceRow(item.label, null, checked = profile == item.id, radio = true, enabled = true) {
+                            if (profile != item.id) {
+                                profile = item.id; selected = emptySet(); selectedNames = emptyMap()
                             }
                         }
                     }
                     if (profile != null && profiles.any { it.id == profile }) {
                         item {
-                            Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween,
-                                verticalAlignment = Alignment.CenterVertically) {
-                                Text(stringResource(R.string.widget_config_servers), style = MaterialTheme.typography.titleMedium)
-                                if (!single) Text(stringResource(R.string.widget_config_count, selected.size, maxServers))
-                            }
-                        }
-                        if (selected.isNotEmpty()) item {
-                            Card(Modifier.fillMaxWidth()) {
-                                Column(Modifier.padding(12.dp), verticalArrangement = Arrangement.spacedBy(4.dp)) {
-                                    Text(stringResource(R.string.widget_config_selected),
-                                        style = MaterialTheme.typography.titleSmall)
-                                    selected.forEach { serverId ->
-                                        Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
-                                            Text(selectedNames[serverId]
-                                                ?: stringResource(R.string.widget_unknown_server, serverId),
-                                                modifier = Modifier.weight(1f))
-                                            OutlinedButton(onClick = {
-                                                selected = selected - serverId
-                                                selectedNames = selectedNames - serverId
-                                                limitReached = false
-                                            }) { Text(stringResource(R.string.widget_config_remove)) }
-                                        }
-                                    }
+                            Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
+                                SectionHeader(
+                                    stringResource(if (single) R.string.widget_config_step_server else R.string.widget_config_step_servers),
+                                    Modifier.weight(1f)
+                                )
+                                Surface(shape = CircleShape, color = if (full) MaterialTheme.colorScheme.primary
+                                    else MaterialTheme.colorScheme.secondaryContainer,
+                                    contentColor = if (full) MaterialTheme.colorScheme.onPrimary
+                                    else MaterialTheme.colorScheme.onSecondaryContainer) {
+                                    Text(stringResource(R.string.widget_config_count, selected.size, maxServers),
+                                        Modifier.padding(horizontal = PanelSpacing.md, vertical = PanelSpacing.xs),
+                                        style = MaterialTheme.typography.labelLarge)
                                 }
                             }
                         }
-                        if (loading) item { Text(stringResource(R.string.widget_loading)) }
+                        if (selected.isNotEmpty()) item {
+                            FlowRow(horizontalArrangement = Arrangement.spacedBy(PanelSpacing.sm),
+                                verticalArrangement = Arrangement.spacedBy(PanelSpacing.xs)) {
+                                selected.forEach { serverId ->
+                                    val name = selectedNames[serverId] ?: stringResource(R.string.widget_unknown_server, serverId)
+                                    InputChip(
+                                        selected = true,
+                                        onClick = {
+                                            selected = selected - serverId
+                                            selectedNames = selectedNames - serverId
+                                        },
+                                        label = { Text(name, maxLines = 1, overflow = TextOverflow.Ellipsis) },
+                                        trailingIcon = {
+                                            Icon(Icons.Outlined.Close, modifier = Modifier.size(18.dp),
+                                                contentDescription = stringResource(R.string.widget_config_remove_named, name))
+                                        }
+                                    )
+                                }
+                            }
+                        }
+                        if (!single && full) item {
+                            Text(stringResource(R.string.widget_config_limit, maxServers),
+                                style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                        }
+                        if (loading) item { LoadingState(rows = 2) }
                         if (fetchError) item {
-                            Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                            Column(verticalArrangement = Arrangement.spacedBy(PanelSpacing.sm)) {
                                 Text(stringResource(R.string.widget_config_page_error), color = MaterialTheme.colorScheme.error)
                                 OutlinedButton(onClick = { retry++ }) { Text(stringResource(R.string.widget_config_retry)) }
                             }
                         }
                         if (serverPage?.servers?.isEmpty() == true) item {
-                            Text(stringResource(R.string.widget_config_empty_page))
+                            EmptyState(Icons.Outlined.Dns, stringResource(R.string.widget_config_empty_page))
                         }
                         items(serverPage?.servers ?: emptyList(), key = { "server.${it.id}" }) { server ->
                             val checked = server.id in selected
-                            Card(Modifier.fillMaxWidth()) {
-                                Row(Modifier.fillMaxWidth().heightIn(min = 56.dp)
-                                    .then(if (single) Modifier.selectable(checked, role = Role.RadioButton,
-                                        onClick = {
-                                            selected = setOf(server.id)
-                                            selectedNames = mapOf(server.id to server.name)
-                                            limitReached = false
-                                        })
-                                    else Modifier.toggleable(checked, role = Role.Checkbox, onValueChange = { wanted ->
-                                        if (!wanted) {
-                                            selected = selected - server.id
-                                            selectedNames = selectedNames - server.id
-                                            limitReached = false
-                                        } else if (selected.size < maxServers) {
-                                            selected = selected + server.id
-                                            selectedNames = selectedNames + (server.id to server.name)
-                                            limitReached = false
-                                        } else limitReached = true
-                                    }))
-                                    .padding(horizontal = 12.dp), verticalAlignment = Alignment.CenterVertically) {
-                                    if (single) RadioButton(checked, onClick = null)
-                                    else Checkbox(checked, onCheckedChange = null)
-                                    Text(server.name, Modifier.padding(start = 12.dp))
-                                }
+                            ChoiceRow(
+                                server.name, server.ipAddress.ifBlank { null }, checked, radio = single,
+                                // Multi: once three are chosen, the others are disabled until one is removed.
+                                enabled = canPickWidgetServer(selected, server.id, single)
+                            ) { wanted ->
+                                selected = toggleWidgetServer(selected, server.id, wanted, single)
+                                selectedNames = if (single) mapOf(server.id to server.name)
+                                else (selectedNames + (server.id to server.name)).filterKeys { it in selected }
                             }
                         }
-                        if (limitReached && !single) item {
-                            Text(stringResource(R.string.widget_config_limit, maxServers),
-                                color = MaterialTheme.colorScheme.error)
-                        }
                         if (serverPage != null) item {
-                            Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(8.dp),
+                            Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(PanelSpacing.sm),
                                 verticalAlignment = Alignment.CenterVertically) {
-                                OutlinedButton(onClick = { page--; limitReached = false }, enabled = page > 1) {
+                                OutlinedButton(onClick = { page-- }, enabled = page > 1) {
                                     Text(stringResource(R.string.widget_config_previous))
                                 }
                                 Text(stringResource(R.string.widget_config_page, page), Modifier.weight(1f),
-                                    style = MaterialTheme.typography.bodyMedium)
-                                OutlinedButton(onClick = { page++; limitReached = false }, enabled = serverPage?.hasNext == true) {
+                                    style = MaterialTheme.typography.labelLarge, textAlign = TextAlign.Center)
+                                OutlinedButton(onClick = { page++ }, enabled = serverPage?.hasNext == true) {
                                     Text(stringResource(R.string.widget_config_next))
                                 }
                             }
                         }
                     }
-                    item { Text(stringResource(R.string.widget_metrics), style = MaterialTheme.typography.titleMedium) }
+                    item { SectionHeader(stringResource(R.string.widget_config_step_metrics)) }
                     items(listOf("cpu", "ram", "disk", "load"), key = { "metric.$it" }) { metric ->
-                        val checked = metric in metrics
                         val label = when (metric) {
                             "cpu" -> R.string.widget_config_cpu
                             "ram" -> R.string.widget_config_ram
                             "disk" -> R.string.widget_config_disk
                             else -> R.string.widget_config_load
                         }
-                        Card(Modifier.fillMaxWidth()) {
-                            Row(Modifier.fillMaxWidth().heightIn(min = 56.dp)
-                                .toggleable(value = checked, role = Role.Checkbox, onValueChange = { wanted ->
-                                    metrics = if (wanted) metrics + metric else metrics - metric
-                                }).padding(horizontal = 12.dp), verticalAlignment = Alignment.CenterVertically) {
-                                Checkbox(checked = checked, onCheckedChange = null)
-                                Text(stringResource(label), Modifier.padding(start = 12.dp))
-                            }
+                        ChoiceRow(stringResource(label), null, checked = metric in metrics, radio = false, enabled = true) { wanted ->
+                            metrics = if (wanted) metrics + metric else metrics - metric
                         }
                     }
                 }
             }
-            if (authorized) {
-                HorizontalDivider()
-                Box(Modifier.fillMaxWidth().padding(horizontal = 20.dp, vertical = 12.dp),
-                    contentAlignment = Alignment.Center) {
-                    Button(onClick = { profile?.let { onSave(WidgetConfig(it, selected.toList(), metrics)) } },
-                        enabled = canSave, modifier = Modifier.widthIn(max = 720.dp).fillMaxWidth()) {
-                        Text(stringResource(R.string.widget_save))
-                    }
-                }
+            if (authorized) SaveBar(canSave) {
+                profile?.let { onSave(WidgetConfig(it, selected.toList(), metrics)) }
             }
         }
     }
 
-    /** Shared launcher PIN gate: identical unlock behavior for every configurable widget. */
+    /** Shared launcher PIN gate: same keypad and 4–12 digit rule as the app lock screen. */
     @Composable
     private fun PinGate() {
         val lock = remember { AppLock(SharedPreferencesProfilePrefs(this)) }
@@ -356,15 +413,15 @@ class WidgetConfigureActivity : ComponentActivity() {
             }
             lockedMs = 0L
         }
-        Column(verticalArrangement = Arrangement.spacedBy(16.dp)) {
-            Text(stringResource(R.string.widget_pin_prompt))
+        SectionCard(title = stringResource(R.string.widget_pin), icon = Icons.Outlined.Lock) {
+            Text(stringResource(R.string.widget_pin_prompt), style = MaterialTheme.typography.bodyMedium)
             if (!lock.hasPin()) {
                 Text(stringResource(R.string.widget_no_pin), color = MaterialTheme.colorScheme.error)
             }
-            OutlinedTextField(pin, { pin = it.filter(Char::isDigit).take(AppLock.MAX_PIN_LENGTH) },
-                label = { Text(stringResource(R.string.widget_pin)) },
-                visualTransformation = PasswordVisualTransformation(), modifier = Modifier.fillMaxWidth(),
-                keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.NumberPassword))
+            Box(Modifier.fillMaxWidth(), contentAlignment = Alignment.Center) {
+                PinEntry(pin, { pin = it.take(AppLock.MAX_PIN_LENGTH); pinError = false },
+                    enabled = lockedMs <= 0L && lock.hasPin(), error = pinError && pin.isEmpty())
+            }
             if (pinError) Text(stringResource(R.string.widget_pin_error), color = MaterialTheme.colorScheme.error)
             if (lockedMs > 0L) {
                 val seconds = ((lockedMs + 999L) / 1_000L).toInt()
@@ -378,8 +435,10 @@ class WidgetConfigureActivity : ComponentActivity() {
                     is AppLock.UnlockResult.WrongPin -> pinError = true
                 }
                 pin = ""
-            }, enabled = pin.isNotBlank() && lockedMs <= 0L && lock.hasPin()) {
-                Text(stringResource(R.string.widget_unlock))
+            }, enabled = pin.isNotBlank() && lockedMs <= 0L && lock.hasPin(),
+                modifier = Modifier.fillMaxWidth().heightIn(min = PanelSpacing.touchTarget)) {
+                Icon(Icons.Outlined.LockOpen, contentDescription = null, modifier = Modifier.size(18.dp))
+                Text(stringResource(R.string.widget_unlock), Modifier.padding(start = PanelSpacing.sm))
             }
         }
     }
@@ -396,65 +455,42 @@ class WidgetConfigureActivity : ComponentActivity() {
             mutableStateOf(existing?.targetIds?.filter { targetId -> targets.any { it.id == targetId } }?.toSet()
                 ?: targets.map { it.id }.take(maxChecks).toSet())
         }
-        var limitReached by remember { mutableStateOf(false) }
         val canSave = authorized && selected.isNotEmpty() && selected.size <= maxChecks
         Column(Modifier.fillMaxSize().safeDrawingPadding().imePadding(),
             horizontalAlignment = Alignment.CenterHorizontally) {
-            LazyColumn(Modifier.widthIn(max = 720.dp).fillMaxWidth().weight(1f),
-                contentPadding = PaddingValues(horizontal = 20.dp, vertical = 24.dp),
-                verticalArrangement = Arrangement.spacedBy(16.dp)) {
-                item { Text(stringResource(R.string.widget_checks), style = MaterialTheme.typography.headlineMedium) }
+            LazyColumn(Modifier.widthIn(max = PanelSpacing.maxContentWidth).fillMaxWidth().weight(1f),
+                contentPadding = PaddingValues(horizontal = PanelSpacing.xl, vertical = PanelSpacing.xl),
+                verticalArrangement = Arrangement.spacedBy(PanelSpacing.md)) {
+                item { ConfigHeader(R.string.widget_checks, stringResource(R.string.widget_config_checks_rule, maxChecks)) }
                 if (!authorized) {
                     item { PinGate() }
                 } else {
                     item { Text(stringResource(R.string.widget_checks_notice),
-                        style = MaterialTheme.typography.bodySmall) }
+                        style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant) }
                     item {
-                        Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween,
-                            verticalAlignment = Alignment.CenterVertically) {
-                            Text(stringResource(R.string.widget_config_checks), style = MaterialTheme.typography.titleMedium)
-                            Text(stringResource(R.string.widget_config_count, selected.size, maxChecks))
+                        Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
+                            SectionHeader(stringResource(R.string.widget_config_checks), Modifier.weight(1f))
+                            Text(stringResource(R.string.widget_config_count, selected.size, maxChecks),
+                                style = MaterialTheme.typography.labelLarge)
                         }
                     }
-                    if (targets.isEmpty()) item { Text(stringResource(R.string.widget_config_no_checks)) }
+                    if (targets.isEmpty()) item { EmptyState(Icons.Outlined.MonitorHeart, stringResource(R.string.widget_config_no_checks)) }
                     items(targets, key = { "check.${it.id}" }) { target ->
                         val checked = target.id in selected
-                        Card(Modifier.fillMaxWidth()) {
-                            Column(Modifier.fillMaxWidth().heightIn(min = 56.dp)
-                                .toggleable(value = checked, role = Role.Checkbox, onValueChange = { wanted ->
-                                    if (!wanted) {
-                                        selected = selected - target.id
-                                        limitReached = false
-                                    } else if (selected.size < maxChecks) {
-                                        selected = selected + target.id
-                                        limitReached = false
-                                    } else limitReached = true
-                                }).padding(horizontal = 12.dp, vertical = 8.dp)) {
-                                Row(verticalAlignment = Alignment.CenterVertically) {
-                                    Checkbox(checked = checked, onCheckedChange = null)
-                                    Text(target.label, Modifier.padding(start = 12.dp))
-                                }
-                                Text(target.url, Modifier.padding(start = 48.dp),
-                                    style = MaterialTheme.typography.bodySmall)
-                            }
+                        ChoiceRow(target.label, target.url, checked, radio = false,
+                            enabled = checked || selected.size < maxChecks) { wanted ->
+                            selected = if (!wanted) selected - target.id
+                            else if (selected.size < maxChecks) selected + target.id else selected
                         }
                     }
-                    if (limitReached) item {
+                    if (selected.size >= maxChecks) item {
                         Text(stringResource(R.string.widget_config_checks_limit, maxChecks),
-                            color = MaterialTheme.colorScheme.error)
+                            style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
                     }
                 }
             }
-            if (authorized) {
-                HorizontalDivider()
-                Box(Modifier.fillMaxWidth().padding(horizontal = 20.dp, vertical = 12.dp),
-                    contentAlignment = Alignment.Center) {
-                    Button(onClick = {
-                        onSave(SiteCheckWidgetConfig(targets.map { it.id }.filter { it in selected }))
-                    }, enabled = canSave, modifier = Modifier.widthIn(max = 720.dp).fillMaxWidth()) {
-                        Text(stringResource(R.string.widget_save))
-                    }
-                }
+            if (authorized) SaveBar(canSave) {
+                onSave(SiteCheckWidgetConfig(targets.map { it.id }.filter { it in selected }))
             }
         }
     }

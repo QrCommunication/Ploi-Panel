@@ -24,11 +24,12 @@ class MultiWidgetLayoutContractTest {
         assertTrue(renderer.contains("if (single) R.layout.widget_monitoring else R.layout.widget_multi"))
         assertTrue(renderer.contains("view.setRemoteAdapter(R.id.widget_server_list, adapter)"))
         assertTrue(renderer.contains("manager.notifyAppWidgetViewDataChanged(id, R.id.widget_server_list)"))
-        assertTrue(factory.contains("gaugeBitmap(gaugeValues(reading.sample, config.metrics)"))
+        // Native progress bars bound from the same cached sample (no bitmap, theme-aware colours).
+        assertTrue(factory.contains("bindGauges(display, row, rowGaugeSlots, reading.sample, config.metrics)"))
         assertTrue(factory.contains("getViewAt(position: Int)"))
         assertTrue(factory.contains("isDeviceLocked"))
         assertTrue(source("${res}layout/widget_multi.xml").contains("<ListView"))
-        assertTrue(source("${res}layout/widget_multi_row.xml").contains("widget_row_chart"))
+        assertTrue(source("${res}layout/widget_multi_row.xml").contains("widget_row_cpu_ok"))
         assertTrue(source("app/src/main/AndroidManifest.xml").contains("android.permission.BIND_REMOTEVIEWS"))
         assertFalse(factory.contains("PloiApi."))
         assertFalse(renderer.contains("putExtra(\"token\""))
@@ -41,6 +42,6 @@ class MultiWidgetLayoutContractTest {
         assertTrue(renderer.contains("widgetServerIds(saved.serverIds, single)"))
         assertTrue(renderer.contains("widgetServerIds(saved.serverIds, WidgetRefresh.isSingle(context, id))"))
         assertTrue(factory.contains("config.serverIds.getOrNull(position)"))
-        assertTrue(data.contains("const val MAX_MULTI_SERVERS = 4"))
+        assertTrue(data.contains("const val MAX_MULTI_SERVERS = 3"))
     }
 }

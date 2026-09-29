@@ -35,12 +35,6 @@ import java.util.Date
 import java.util.Locale
 import java.util.concurrent.TimeUnit
 
-internal fun widgetGaugeLabels(context: Context): Map<String, String> = mapOf(
-    "cpu" to context.getString(R.string.metric_cpu),
-    "ram" to context.getString(R.string.metric_ram),
-    "disk" to context.getString(R.string.metric_disk)
-)
-
 internal fun widgetMetrics(context: Context, reading: WidgetReading, metrics: Set<String>): String =
     metrics.sorted().joinToString(" · ") { metric ->
         val label = when (metric) {
@@ -127,26 +121,39 @@ internal object WidgetRefresh {
         val title = if (single) R.string.widget_single else R.string.widget_multi
         view.setTextViewText(R.id.widget_title, displayContext.getString(title))
         if (single) {
-            val content = when {
+            val serverId = config?.serverIds?.singleOrNull()
+            val reading = serverId?.let { rows[it] }
+            val message = when {
                 config == null -> displayContext.getString(R.string.widget_setup)
                 locked -> displayContext.getString(R.string.widget_locked)
                 !validProfile -> displayContext.getString(R.string.widget_profile_missing)
-                else -> config.serverIds.joinToString("\n") { server ->
-                    val reading = rows[server]
-                    if (reading == null) displayContext.getString(R.string.widget_no_data)
-                    else "${reading.name}: ${widgetMetrics(displayContext, reading, config.metrics)}" +
-                        if (isStale(reading.sample, System.currentTimeMillis()) || error)
-                            " · ${displayContext.getString(R.string.widget_stale)}" else ""
-                }
+                reading == null -> displayContext.getString(R.string.widget_no_data)
+                else -> null
             }
-            view.setTextViewText(R.id.widget_content, content)
-            val chart = config?.serverIds?.singleOrNull()?.let { rows[it] }?.let { reading ->
-                gaugeBitmap(gaugeValues(reading.sample, config.metrics), widgetGaugeLabels(displayContext))
+            if (reading != null && message == null) {
+                view.setViewVisibility(R.id.widget_server_name, View.VISIBLE)
+                view.setTextViewText(R.id.widget_server_name, reading.name)
+                bindStatus(displayContext, view, R.id.widget_status, reading.status)
+                val shown = bindGauges(displayContext, view, singleGaugeSlots, reading.sample, config.metrics)
+                val stale = isStale(reading.sample, System.currentTimeMillis()) || error
+                // Load is not a percentage: plain text only, never a gauge.
+                val load = if ("load" in config.metrics) widgetMetrics(displayContext, reading, setOf("load")) else null
+                view.setViewVisibility(R.id.widget_load, if (load != null) View.VISIBLE else View.GONE)
+                if (load != null) view.setTextViewText(R.id.widget_load, load)
+                val note = listOfNotNull(
+                    displayContext.getString(R.string.widget_no_data).takeIf { shown == 0 && load == null },
+                    displayContext.getString(R.string.widget_stale).takeIf { stale }
+                ).joinToString(" · ")
+                view.setViewVisibility(R.id.widget_content, if (note.isEmpty()) View.GONE else View.VISIBLE)
+                view.setTextViewText(R.id.widget_content, note)
+            } else {
+                view.setViewVisibility(R.id.widget_server_name, View.GONE)
+                view.setViewVisibility(R.id.widget_status, View.GONE)
+                view.setViewVisibility(R.id.widget_load, View.GONE)
+                bindGauges(displayContext, view, singleGaugeSlots, null, emptySet())
+                view.setViewVisibility(R.id.widget_content, View.VISIBLE)
+                view.setTextViewText(R.id.widget_content, message ?: "")
             }
-            if (chart != null) {
-                view.setImageViewBitmap(R.id.widget_chart, chart)
-                view.setViewVisibility(R.id.widget_chart, View.VISIBLE)
-            } else view.setViewVisibility(R.id.widget_chart, View.GONE)
         } else {
             val state = when {
                 config == null -> displayContext.getString(R.string.widget_setup)
@@ -157,7 +164,10 @@ internal object WidgetRefresh {
             view.setTextViewText(R.id.widget_state, state ?: "")
             view.setViewVisibility(R.id.widget_state, if (state == null) View.GONE else View.VISIBLE)
             view.setViewVisibility(R.id.widget_server_list, if (state == null) View.VISIBLE else View.GONE)
-            if (state == null) {
+            view.setViewVisibility(R.id.widget_count, if (state == null) View.VISIBLE else View.GONE)
+            if (state == null && config != null) {
+                view.setTextViewText(R.id.widget_count, displayContext.getString(
+                    R.string.widget_multi_count, config.serverIds.size, WidgetConfig.MAX_MULTI_SERVERS))
                 // A distinct URI makes Android bind a separate, correctly invalidated list per widget.
                 val adapter = Intent(context, MultiServerRowsService::class.java).apply {
                     putExtra(AppWidgetManager.EXTRA_APPWIDGET_ID, id)
@@ -238,7 +248,9 @@ class WidgetWorker(context: Context, params: WorkerParameters) : CoroutineWorker
                 val key = config.profileId to serverId
                 val reading = if (key in results) results[key] else try {
                     val detail = PloiApi.server(token, serverId)
-                    PloiApi.monitoring(token, serverId)?.let { WidgetReading(detail.name, it, System.currentTimeMillis()) }
+                    PloiApi.monitoring(token, serverId)?.let {
+                        WidgetReading(detail.name, it, System.currentTimeMillis(), detail.status)
+                    }
                 } catch (cancelled: CancellationException) {
                     throw cancelled
                 } catch (limited: PloiHttpException) {

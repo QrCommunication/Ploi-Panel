@@ -22,7 +22,8 @@ internal data class WidgetConfig(val profileId: String, val serverIds: List<Long
         require(metrics.isNotEmpty() && metrics.all { it in METRICS })
     }
     companion object {
-        const val MAX_MULTI_SERVERS = 4
+        /** Multi-server widget shows at most three servers; the single widget exactly one. */
+        const val MAX_MULTI_SERVERS = 3
         val METRICS = setOf("cpu", "ram", "disk", "load")
     }
 }
@@ -30,7 +31,26 @@ internal data class WidgetConfig(val profileId: String, val serverIds: List<Long
 internal fun widgetServerIds(ids: List<Long>, single: Boolean): List<Long> =
     ids.take(if (single) 1 else WidgetConfig.MAX_MULTI_SERVERS)
 
-internal data class WidgetReading(val name: String, val sample: MonitorSample, val fetchedAt: Long)
+/** Most servers a widget of this kind may hold: 1 for the single widget, 3 for the multi widget. */
+internal fun widgetServerLimit(single: Boolean): Int = if (single) 1 else WidgetConfig.MAX_MULTI_SERVERS
+
+/**
+ * Selection rule of the configuration screen. Single: choosing a server replaces the previous
+ * one (radio). Multi: adding beyond the limit is refused and the selection is returned unchanged.
+ */
+internal fun toggleWidgetServer(selected: Set<Long>, serverId: Long, wanted: Boolean, single: Boolean): Set<Long> = when {
+    single -> if (wanted) setOf(serverId) else selected
+    !wanted -> selected - serverId
+    serverId in selected -> selected
+    selected.size >= widgetServerLimit(false) -> selected
+    else -> selected + serverId
+}
+
+/** Whether an unchecked row may still be chosen; used to disable rows once the cap is reached. */
+internal fun canPickWidgetServer(selected: Set<Long>, serverId: Long, single: Boolean): Boolean =
+    single || serverId in selected || selected.size < widgetServerLimit(false)
+
+internal data class WidgetReading(val name: String, val sample: MonitorSample, val fetchedAt: Long, val status: String = "")
 
 internal fun sampleTime(date: String): Long? = try {
     Instant.parse(date).toEpochMilli()
@@ -61,7 +81,7 @@ internal class WidgetData(context: Context) {
         val obj = JSONObject(prefs.getString("config.$id", null) ?: return null)
         val ids = obj.getJSONArray("servers")
         val metrics = obj.getJSONArray("metrics")
-        // Previous app versions allowed six servers; preserve the first four on upgrade.
+        // Older versions allowed six, then four servers; keep the first three on upgrade.
         WidgetConfig(obj.getString("profile"), (0 until ids.length()).map { ids.getLong(it) }
             .take(WidgetConfig.MAX_MULTI_SERVERS),
             (0 until metrics.length()).map { metrics.getString(it) }.toSet())
@@ -84,7 +104,8 @@ internal class WidgetData(context: Context) {
             val serverId = row.getLong("server")
             if (serverId !in config.serverIds) null else serverId to WidgetReading(
                 row.getString("name"), MonitorSample(row.getString("cpu"), row.getString("ram"),
-                    row.getString("disk"), row.getString("load"), row.getString("date")), row.getLong("fetched"))
+                    row.getString("disk"), row.getString("load"), row.getString("date")), row.getLong("fetched"),
+                row.optString("status"))
         }.toMap()
     } catch (_: Exception) { emptyMap() }
     }
@@ -95,7 +116,8 @@ internal class WidgetData(context: Context) {
             data.put(JSONObject().put("server", serverId).put("name", reading.name)
                 .put("cpu", reading.sample.cpu).put("ram", reading.sample.ram)
                 .put("disk", reading.sample.disk).put("load", reading.sample.load)
-                .put("date", reading.sample.date).put("fetched", reading.fetchedAt))
+                .put("date", reading.sample.date).put("fetched", reading.fetchedAt)
+                .put("status", reading.status))
         }
         val raw = JSONObject().put("profile", config.profileId).put("rows", data).toString()
         val blob = cipher.encrypt(raw.toByteArray(StandardCharsets.UTF_8))

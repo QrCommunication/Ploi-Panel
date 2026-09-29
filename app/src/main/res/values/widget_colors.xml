@@ -1,0 +1,14 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Launcher widget palette (light). Night values live in values-night. Every text/background pair
+     meets WCAG AA; gauge colours are always shown next to the number they represent. -->
+<resources>
+    <color name="widget_surface">#F7FFFFFF</color>
+    <color name="widget_row">#FFEBEFF2</color>
+    <color name="widget_text">#FF161C22</color>
+    <color name="widget_text_secondary">#FF414A53</color>
+    <color name="widget_track">#FFDEE4E8</color>
+    <color name="widget_ok">#FF0B6E62</color>
+    <color name="widget_warn">#FF8A5A00</color>
+    <color name="widget_crit">#FFB3261E</color>
+    <color name="widget_unknown">#FF5C6670</color>
+</resources>

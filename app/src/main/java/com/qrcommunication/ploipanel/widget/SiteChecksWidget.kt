@@ -233,8 +233,19 @@ class SiteCheckRowsService : RemoteViewsService() {
             )
             view.setTextViewText(
                 R.id.widget_check_status,
-                if (row.stale) "$stateLabel · ${display.getString(R.string.local_checks_stale)}" else stateLabel
+                if (row.stale) "$stateLabel\n${display.getString(R.string.local_checks_stale)}" else stateLabel
             )
+            // The dot repeats the worded state in colour; it is hidden from accessibility services.
+            val color = display.getColor(
+                when {
+                    row.stale -> R.color.widget_unknown
+                    row.state == CheckState.UP -> R.color.widget_ok
+                    row.state == CheckState.DOWN -> R.color.widget_crit
+                    else -> R.color.widget_unknown
+                }
+            )
+            view.setTextColor(R.id.widget_check_dot, color)
+            view.setTextColor(R.id.widget_check_status, color)
             return view
         }
     }
