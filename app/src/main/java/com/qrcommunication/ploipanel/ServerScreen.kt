@@ -1,27 +1,57 @@
 package com.qrcommunication.ploipanel
 
+import androidx.activity.compose.BackHandler
+import androidx.annotation.StringRes
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
-import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.FlowRow
+import androidx.compose.foundation.layout.PaddingValues
+import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.lazy.LazyColumn
-import androidx.compose.foundation.lazy.LazyRow
-import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.foundation.verticalScroll
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.automirrored.outlined.AltRoute
+import androidx.compose.material.icons.automirrored.outlined.ArrowBack
+import androidx.compose.material.icons.automirrored.outlined.ReceiptLong
+import androidx.compose.material.icons.outlined.Autorenew
+import androidx.compose.material.icons.outlined.Backup
+import androidx.compose.material.icons.outlined.Bolt
+import androidx.compose.material.icons.outlined.Delete
+import androidx.compose.material.icons.outlined.Dns
+import androidx.compose.material.icons.outlined.Edit
+import androidx.compose.material.icons.outlined.Group
+import androidx.compose.material.icons.outlined.Info
+import androidx.compose.material.icons.outlined.Insights
+import androidx.compose.material.icons.outlined.Inventory2
+import androidx.compose.material.icons.outlined.Key
+import androidx.compose.material.icons.outlined.Language
+import androidx.compose.material.icons.outlined.MonitorHeart
+import androidx.compose.material.icons.outlined.Refresh
+import androidx.compose.material.icons.outlined.RestartAlt
+import androidx.compose.material.icons.outlined.Schedule
+import androidx.compose.material.icons.outlined.Shield
+import androidx.compose.material.icons.outlined.Storage
+import androidx.compose.material.icons.outlined.Terminal
+import androidx.compose.material.icons.outlined.Tune
+import androidx.compose.material.icons.outlined.WarningAmber
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Button
-import androidx.compose.material3.Card
-import androidx.compose.material3.FilterChip
+import androidx.compose.material3.ButtonDefaults
+import androidx.compose.material3.FilledTonalButton
+import androidx.compose.material3.Icon
+import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.OutlinedTextField
+import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
@@ -31,11 +61,16 @@ import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
+import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.res.pluralStringResource
 import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.semantics.heading
+import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.KeyboardType
+import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.fragment.app.FragmentActivity
 import kotlinx.coroutines.CancellationException
@@ -43,68 +78,189 @@ import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 
-/** Server detail with monitoring, sites, live info/actions and activity logs. */
+/** Groups of the server detail hub. Every [ServerSection] belongs to exactly one category. */
+internal enum class ServerCategory(@param:StringRes val title: Int, @param:StringRes val description: Int) {
+    OVERVIEW(R.string.server_category_overview, R.string.server_category_overview_description),
+    APPS(R.string.server_category_apps, R.string.server_category_apps_description),
+    DATA(R.string.server_category_data, R.string.server_category_data_description),
+    SYSTEM(R.string.server_category_system, R.string.server_category_system_description),
+    ACCESS(R.string.server_category_access, R.string.server_category_access_description)
+}
+
+/**
+ * The 16 server sub-screens. [id] keeps the historical tab numbers so behaviour and tests that
+ * reason about them stay stable.
+ */
+internal enum class ServerSection(
+    val id: Int, val category: ServerCategory,
+    @param:StringRes val title: Int, @param:StringRes val description: Int
+) {
+    MONITORING(0, ServerCategory.OVERVIEW, R.string.monitoring, R.string.server_section_monitoring_description),
+    INFOS(3, ServerCategory.OVERVIEW, R.string.infos, R.string.server_section_infos_description),
+    LOGS(4, ServerCategory.OVERVIEW, R.string.logs, R.string.server_section_logs_description),
+    INSIGHTS(14, ServerCategory.OVERVIEW, R.string.insights_tab, R.string.server_section_insights_description),
+    SITES(1, ServerCategory.APPS, R.string.sites, R.string.server_section_sites_description),
+    LOAD_BALANCER(13, ServerCategory.APPS, R.string.load_balancer_tab, R.string.server_section_load_balancer_description),
+    CONTAINERS(15, ServerCategory.APPS, R.string.containers_tab, R.string.server_section_containers_description),
+    DATABASES(2, ServerCategory.DATA, R.string.databases_tab, R.string.server_section_databases_description),
+    BACKUPS(5, ServerCategory.DATA, R.string.backups_tab, R.string.server_section_backups_description),
+    SERVICES(11, ServerCategory.SYSTEM, R.string.services_tab, R.string.server_section_services_description),
+    DAEMONS(7, ServerCategory.SYSTEM, R.string.daemons_tab, R.string.server_section_daemons_description),
+    CRONTABS(6, ServerCategory.SYSTEM, R.string.crontabs_tab, R.string.server_section_crontabs_description),
+    SYSTEM_USERS(9, ServerCategory.SYSTEM, R.string.system_users_tab, R.string.server_section_system_users_description),
+    NETWORK_RULES(8, ServerCategory.SYSTEM, R.string.network_rules_tab, R.string.server_section_network_rules_description),
+    ONE_OFF_SCRIPT(10, ServerCategory.SYSTEM, R.string.one_off_script_tab, R.string.server_section_one_off_script_description),
+    SSH_KEYS(12, ServerCategory.ACCESS, R.string.ssh_keys_tab, R.string.server_section_ssh_keys_description)
+}
+
+internal fun serverSectionIcon(section: ServerSection): ImageVector = when (section) {
+    ServerSection.MONITORING -> Icons.Outlined.MonitorHeart
+    ServerSection.INFOS -> Icons.Outlined.Info
+    ServerSection.LOGS -> Icons.AutoMirrored.Outlined.ReceiptLong
+    ServerSection.INSIGHTS -> Icons.Outlined.Insights
+    ServerSection.SITES -> Icons.Outlined.Language
+    ServerSection.LOAD_BALANCER -> Icons.AutoMirrored.Outlined.AltRoute
+    ServerSection.CONTAINERS -> Icons.Outlined.Inventory2
+    ServerSection.DATABASES -> Icons.Outlined.Storage
+    ServerSection.BACKUPS -> Icons.Outlined.Backup
+    ServerSection.SERVICES -> Icons.Outlined.Tune
+    ServerSection.DAEMONS -> Icons.Outlined.Autorenew
+    ServerSection.CRONTABS -> Icons.Outlined.Schedule
+    ServerSection.SYSTEM_USERS -> Icons.Outlined.Group
+    ServerSection.NETWORK_RULES -> Icons.Outlined.Shield
+    ServerSection.ONE_OFF_SCRIPT -> Icons.Outlined.Bolt
+    ServerSection.SSH_KEYS -> Icons.Outlined.Key
+}
+
+internal fun serverCategoryIcon(category: ServerCategory): ImageVector = when (category) {
+    ServerCategory.OVERVIEW -> Icons.Outlined.MonitorHeart
+    ServerCategory.APPS -> Icons.Outlined.Language
+    ServerCategory.DATA -> Icons.Outlined.Storage
+    ServerCategory.SYSTEM -> Icons.Outlined.Tune
+    ServerCategory.ACCESS -> Icons.Outlined.Key
+}
+
+/** Opens the in-app terminal on this server's address (port refined by the Infos screen). */
+private fun openServerTerminal(server: Server) {
+    TerminalNavigator.open(SshTarget(server.ipAddress, SSH_DEFAULT_PORT, server.id, server.name))
+}
+
+/**
+ * Server detail: a hero (name, IP, status, quick Terminal/Monitoring) above a category hub. Each
+ * sub-screen opens in a bounded viewport under a back row; Back returns to the hub, never further.
+ */
 @Composable
 internal fun ServerDetailScreen(
     token: String, server: Server, lock: AppLock, activity: FragmentActivity, refresh: Int,
     profileId: String? = null,
     onChanged: () -> Unit, onDeleted: () -> Unit
 ) {
-    var tab by remember(server.id, token) { mutableIntStateOf(0) }
-    val tabs = listOf(
-        0 to R.string.monitoring, 1 to R.string.sites, 2 to R.string.databases_tab,
-        5 to R.string.backups_tab, 6 to R.string.crontabs_tab, 7 to R.string.daemons_tab,
-        8 to R.string.network_rules_tab, 9 to R.string.system_users_tab,
-        10 to R.string.one_off_script_tab, 11 to R.string.services_tab,
-        12 to R.string.ssh_keys_tab, 13 to R.string.load_balancer_tab,
-        14 to R.string.insights_tab, 15 to R.string.containers_tab,
-        3 to R.string.infos, 4 to R.string.logs
-    )
-    val tabState = rememberLazyListState()
-    LaunchedEffect(tab) {
-        tabState.animateScrollToItem(tabs.indexOfFirst { it.first == tab }.coerceAtLeast(0))
-    }
+    var section by remember(server.id, token) { mutableStateOf<ServerSection?>(null) }
+    BackHandler(enabled = section != null) { section = null }
     Column(Modifier.fillMaxSize()) {
-        Column(Modifier.fillMaxWidth().padding(bottom = 4.dp)) {
-            Text(server.name, style = MaterialTheme.typography.titleMedium,
-                maxLines = 1, color = MaterialTheme.colorScheme.onSurface)
-            Text(server.ipAddress, style = MaterialTheme.typography.bodySmall,
-                color = MaterialTheme.colorScheme.onSurfaceVariant)
-            if (server.ipAddress.isNotBlank()) OutlinedButton(onClick = {
-                TerminalNavigator.open(SshTarget(server.ipAddress, SSH_DEFAULT_PORT, server.id, server.name))
-            }) { Text(stringResource(R.string.ssh_term_open_server)) }
-        }
-        LazyRow(
-            modifier = Modifier.fillMaxWidth(),
-            state = tabState,
-            horizontalArrangement = Arrangement.spacedBy(8.dp)
-        ) {
-            items(tabs, key = { it.first }) { (index, title) ->
-                FilterChip(
-                    selected = tab == index,
-                    onClick = { tab = index },
-                    label = { Text(stringResource(title)) }
-                )
+        val current = section
+        if (current == null) {
+            LazyColumn(
+                Modifier.fillMaxSize(),
+                verticalArrangement = Arrangement.spacedBy(PanelSpacing.md),
+                contentPadding = PaddingValues(bottom = PanelSpacing.xl)
+            ) {
+                item { ServerHero(server, onMonitoring = { section = ServerSection.MONITORING }) }
+                items(ServerCategory.entries, key = { it.name }) { category ->
+                    SectionCard(
+                        title = stringResource(category.title),
+                        description = stringResource(category.description),
+                        icon = serverCategoryIcon(category)
+                    ) {
+                        ServerSection.entries.filter { it.category == category }.forEach { entry ->
+                            PanelListItem(
+                                icon = serverSectionIcon(entry),
+                                title = stringResource(entry.title),
+                                description = stringResource(entry.description)
+                            ) { section = entry }
+                        }
+                        if (category == ServerCategory.ACCESS && server.ipAddress.isNotBlank()) PanelListItem(
+                            icon = Icons.Outlined.Terminal,
+                            title = stringResource(R.string.ssh_term_open_server),
+                            description = stringResource(R.string.server_section_terminal_description)
+                        ) { openServerTerminal(server) }
+                    }
+                }
+            }
+        } else {
+            Row(
+                Modifier.fillMaxWidth().padding(bottom = PanelSpacing.xs),
+                verticalAlignment = Alignment.CenterVertically,
+                horizontalArrangement = Arrangement.spacedBy(PanelSpacing.xs)
+            ) {
+                IconButton(onClick = { section = null }) {
+                    Icon(Icons.AutoMirrored.Outlined.ArrowBack, contentDescription = stringResource(R.string.server_all_categories))
+                }
+                Column(Modifier.weight(1f)) {
+                    Text(stringResource(current.title), style = MaterialTheme.typography.titleMedium,
+                        maxLines = 1, overflow = TextOverflow.Ellipsis)
+                    Text(
+                        "${server.name} · ${stringResource(current.category.title)}",
+                        style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant,
+                        maxLines = 1, overflow = TextOverflow.Ellipsis
+                    )
+                }
+                if (server.ipAddress.isNotBlank() && current != ServerSection.INFOS) IconButton(onClick = { openServerTerminal(server) }) {
+                    Icon(Icons.Outlined.Terminal, contentDescription = stringResource(R.string.ssh_term_open_server))
+                }
+            }
+            Box(Modifier.weight(1f).fillMaxWidth()) {
+                when (current) {
+                    ServerSection.MONITORING -> MonitoringView(token, server, refresh, profileId)
+                    ServerSection.SITES -> SitesScreen(token, server.id, lock, activity)
+                    ServerSection.DATABASES -> DatabasesScreen(token, server.id, lock, activity)
+                    ServerSection.BACKUPS -> BackupsTab(token, server.id, lock, activity)
+                    ServerSection.CRONTABS -> CrontabsScreen(token, server.id, lock, activity)
+                    ServerSection.DAEMONS -> DaemonsScreen(token, server.id, lock, activity)
+                    ServerSection.NETWORK_RULES -> NetworkRulesScreen(token, server.id, lock, activity)
+                    ServerSection.SYSTEM_USERS -> SystemUsersScreen(token, server.id, lock, activity)
+                    ServerSection.ONE_OFF_SCRIPT -> OneOffScriptScreen(token, server.id, lock, activity)
+                    ServerSection.SERVICES -> ServicesScreen(token, server, lock, activity)
+                    ServerSection.SSH_KEYS -> SshKeysScreen(token, server.id, lock, activity)
+                    ServerSection.LOAD_BALANCER -> LoadBalancerScreen(token, server, lock, activity)
+                    ServerSection.INSIGHTS -> InsightsScreen(token, server.id, lock, activity)
+                    ServerSection.CONTAINERS -> ContainersScreen(token, server.id, lock, activity)
+                    ServerSection.INFOS -> ServerInfoTab(token, server, lock, activity, onChanged, onDeleted)
+                    ServerSection.LOGS -> ServerLogsTab(token, server.id)
+                }
             }
         }
-        Box(Modifier.weight(1f).fillMaxWidth()) {
-            when (tab) {
-                0 -> MonitoringView(token, server, refresh, profileId)
-                1 -> SitesScreen(token, server.id, lock, activity)
-                2 -> DatabasesScreen(token, server.id, lock, activity)
-                5 -> BackupsTab(token, server.id, lock, activity)
-                6 -> CrontabsScreen(token, server.id, lock, activity)
-                7 -> DaemonsScreen(token, server.id, lock, activity)
-                8 -> NetworkRulesScreen(token, server.id, lock, activity)
-                9 -> SystemUsersScreen(token, server.id, lock, activity)
-                10 -> OneOffScriptScreen(token, server.id, lock, activity)
-                11 -> ServicesScreen(token, server, lock, activity)
-                12 -> SshKeysScreen(token, server.id, lock, activity)
-                13 -> LoadBalancerScreen(token, server, lock, activity)
-                14 -> InsightsScreen(token, server.id, lock, activity)
-                15 -> ContainersScreen(token, server.id, lock, activity)
-                3 -> ServerInfoTab(token, server, lock, activity, onChanged, onDeleted)
-                else -> ServerLogsTab(token, server.id)
+    }
+}
+
+/** Identity of the server and its two most used actions. */
+@Composable
+private fun ServerHero(server: Server, onMonitoring: () -> Unit) {
+    val colors = MaterialTheme.colorScheme
+    Surface(
+        shape = MaterialTheme.shapes.large, color = colors.primaryContainer, contentColor = colors.onPrimaryContainer,
+        modifier = Modifier.fillMaxWidth()
+    ) {
+        Column(Modifier.padding(PanelSpacing.lg), verticalArrangement = Arrangement.spacedBy(PanelSpacing.md)) {
+            Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(PanelSpacing.md)) {
+                IconBadge(Icons.Outlined.Dns, container = colors.surfaceContainerLowest, content = colors.primary, size = 48)
+                Column(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(PanelSpacing.xxs)) {
+                    Text(server.name, style = MaterialTheme.typography.headlineSmall,
+                        maxLines = 2, overflow = TextOverflow.Ellipsis,
+                        modifier = Modifier.semantics { heading() })
+                    if (server.ipAddress.isNotBlank()) Text(server.ipAddress, style = panelMonoStyle)
+                }
+            }
+            StatusPill(server.status)
+            FlowRow(horizontalArrangement = Arrangement.spacedBy(PanelSpacing.sm), verticalArrangement = Arrangement.spacedBy(PanelSpacing.xs)) {
+                if (server.ipAddress.isNotBlank()) Button(onClick = { openServerTerminal(server) }) {
+                    Icon(Icons.Outlined.Terminal, contentDescription = null, modifier = Modifier.size(18.dp))
+                    Text(stringResource(R.string.ssh_term_open_server), Modifier.padding(start = PanelSpacing.sm))
+                }
+                OutlinedButton(onClick = onMonitoring) {
+                    Icon(Icons.Outlined.MonitorHeart, contentDescription = null, modifier = Modifier.size(18.dp))
+                    Text(stringResource(R.string.monitoring), Modifier.padding(start = PanelSpacing.sm))
+                }
             }
         }
     }
@@ -115,7 +271,8 @@ internal fun MonitoringView(token: String, server: Server, refresh: Int, profile
     var samples by remember(server.id, token) { mutableStateOf<List<MonitorSample>>(emptyList()) }
     var loading by remember(server.id, token) { mutableStateOf(true) }
     var error by remember(server.id, token) { mutableStateOf<Throwable?>(null) }
-    LaunchedEffect(server.id, token, refresh) {
+    var retry by remember(server.id, token) { mutableIntStateOf(0) }
+    LaunchedEffect(server.id, token, refresh, retry) {
         loading = true
         error = null
         samples = emptyList()
@@ -130,18 +287,18 @@ internal fun MonitoringView(token: String, server: Server, refresh: Int, profile
             loading = false
         }
     }
-    Column(Modifier.padding(16.dp).verticalScroll(rememberScrollState()), verticalArrangement = Arrangement.spacedBy(12.dp)) {
-        Text(server.name, style = MaterialTheme.typography.headlineSmall, fontWeight = FontWeight.Bold)
-        Text(stringResource(R.string.monitoring), style = MaterialTheme.typography.titleLarge)
-        if (loading) BusyIndicator()
+    Column(Modifier.fillMaxSize().verticalScroll(rememberScrollState()).padding(vertical = PanelSpacing.sm),
+        verticalArrangement = Arrangement.spacedBy(PanelSpacing.md)) {
+        if (loading) LoadingState(rows = 2)
         if (error is PloiHttpException && (error as PloiHttpException).status == 422) {
-            Text(stringResource(R.string.monitoring_unavailable))
-        } else if (error != null) ApiErrorText(error!!)
-        else if (!loading && samples.isEmpty()) Text(stringResource(R.string.monitoring_unavailable))
+            EmptyState(Icons.Outlined.MonitorHeart, stringResource(R.string.monitoring_unavailable))
+        } else if (error != null) ErrorState(error!!, onRetry = { retry++ }, retryEnabled = !loading)
+        else if (!loading && samples.isEmpty()) EmptyState(Icons.Outlined.MonitorHeart, stringResource(R.string.monitoring_unavailable))
         if (!loading && error == null && samples.isNotEmpty()) {
             val latest = samples.last()
-            Text(stringResource(R.string.stale_warning))
-            Text(stringResource(R.string.updated, latest.date))
+            Text(stringResource(R.string.stale_warning), style = MaterialTheme.typography.bodySmall,
+                color = MaterialTheme.colorScheme.onSurfaceVariant)
+            Text(stringResource(R.string.updated, latest.date), style = MaterialTheme.typography.labelLarge)
             MonitoringCharts(samples)
             Metric(stringResource(R.string.metric_load), latest.load.ifBlank { "—" })
         }
@@ -151,9 +308,10 @@ internal fun MonitoringView(token: String, server: Server, refresh: Int, profile
 
 @Composable
 private fun Metric(label: String, value: String) {
-    Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
-        Text(label, style = MaterialTheme.typography.bodyLarge)
-        Text(value, fontWeight = FontWeight.Bold)
+    Row(Modifier.fillMaxWidth().padding(vertical = PanelSpacing.xs), horizontalArrangement = Arrangement.SpaceBetween,
+        verticalAlignment = Alignment.CenterVertically) {
+        Text(label, style = MaterialTheme.typography.bodyLarge, color = MaterialTheme.colorScheme.onSurfaceVariant)
+        Text(value, style = panelMonoStyle, fontWeight = FontWeight.SemiBold)
     }
 }
 
@@ -192,50 +350,75 @@ private fun ServerInfoTab(
         }
     }
 
-    Column(Modifier.padding(16.dp).verticalScroll(rememberScrollState()), verticalArrangement = Arrangement.spacedBy(10.dp)) {
-        Text(server.name, style = MaterialTheme.typography.headlineSmall, fontWeight = FontWeight.Bold)
-        if (loading) BusyIndicator()
-        if (error != null) ApiErrorText(error!!)
+    Column(Modifier.fillMaxSize().verticalScroll(rememberScrollState()).padding(vertical = PanelSpacing.sm),
+        verticalArrangement = Arrangement.spacedBy(PanelSpacing.md)) {
+        if (loading) LoadingState(rows = 2)
+        if (error != null) ErrorState(error!!, onRetry = { refresh++ }, retryEnabled = !loading)
         detail?.let { current ->
-            Text(stringResource(R.string.server_status, current.status))
-            if (current.type.isNotBlank()) Text(stringResource(R.string.detail_type, current.type))
-            if (current.ipAddress.isNotBlank()) Text(stringResource(R.string.detail_ip, current.ipAddress))
-            if (current.sshPort > 0) Text(stringResource(R.string.detail_ssh_port, current.sshPort))
-            if (current.ipAddress.isNotBlank()) OutlinedButton(onClick = {
-                TerminalNavigator.open(
-                    SshTarget(current.ipAddress, current.sshPort.takeIf { it > 0 } ?: SSH_DEFAULT_PORT, current.id, current.name)
-                )
-            }) { Text(stringResource(R.string.ssh_term_open_server)) }
-            if (current.phpVersion.isNotBlank()) Text(stringResource(R.string.detail_php, current.phpVersion))
-            if (current.mysqlVersion.isNotBlank()) Text(stringResource(R.string.detail_mysql, current.mysqlVersion))
-            Text(stringResource(R.string.detail_sites_count, current.sitesCount))
-            Text(stringResource(if (current.monitoring) R.string.detail_monitoring_on else R.string.detail_monitoring_off))
-            if (current.rebootRequired) Text(stringResource(R.string.detail_reboot_required), color = MaterialTheme.colorScheme.error)
-            if (current.updatesPackages > 0) {
-                Text(
-                    pluralStringResource(
-                        R.plurals.detail_updates, current.updatesPackages,
-                        current.updatesPackages, current.updatesSecurity
+            SectionCard(title = current.name, icon = Icons.Outlined.Dns) {
+                StatusPill(current.status)
+                Text(stringResource(R.string.server_status, current.status), style = MaterialTheme.typography.bodyMedium)
+                if (current.type.isNotBlank()) InfoLine(stringResource(R.string.detail_type, current.type))
+                if (current.ipAddress.isNotBlank()) InfoLine(stringResource(R.string.detail_ip, current.ipAddress), mono = true)
+                if (current.sshPort > 0) InfoLine(stringResource(R.string.detail_ssh_port, current.sshPort), mono = true)
+                if (current.phpVersion.isNotBlank()) InfoLine(stringResource(R.string.detail_php, current.phpVersion))
+                if (current.mysqlVersion.isNotBlank()) InfoLine(stringResource(R.string.detail_mysql, current.mysqlVersion))
+                InfoLine(stringResource(R.string.detail_sites_count, current.sitesCount))
+                InfoLine(stringResource(if (current.monitoring) R.string.detail_monitoring_on else R.string.detail_monitoring_off))
+                if (current.providerName.isNotBlank()) InfoLine(stringResource(R.string.detail_provider, current.providerName))
+                if (current.description.isNotBlank()) InfoLine(stringResource(R.string.detail_description, current.description))
+                if (current.createdAt.isNotBlank()) InfoLine(stringResource(R.string.detail_created, current.createdAt))
+                if (current.ipAddress.isNotBlank()) FilledTonalButton(onClick = {
+                    TerminalNavigator.open(
+                        SshTarget(current.ipAddress, current.sshPort.takeIf { it > 0 } ?: SSH_DEFAULT_PORT, current.id, current.name)
                     )
-                )
+                }) {
+                    Icon(Icons.Outlined.Terminal, contentDescription = null, modifier = Modifier.size(18.dp))
+                    Text(stringResource(R.string.ssh_term_open_server), Modifier.padding(start = PanelSpacing.sm))
+                }
             }
-            if (current.providerName.isNotBlank()) Text(stringResource(R.string.detail_provider, current.providerName))
-            if (current.description.isNotBlank()) Text(stringResource(R.string.detail_description, current.description))
-            if (current.createdAt.isNotBlank()) Text(stringResource(R.string.detail_created, current.createdAt))
+            if (current.rebootRequired || current.updatesPackages > 0) Surface(
+                color = PanelTheme.status.warningContainer, contentColor = PanelTheme.status.onWarningContainer,
+                shape = MaterialTheme.shapes.medium, modifier = Modifier.fillMaxWidth()
+            ) {
+                Row(Modifier.padding(PanelSpacing.lg), horizontalArrangement = Arrangement.spacedBy(PanelSpacing.md)) {
+                    Icon(Icons.Outlined.WarningAmber, contentDescription = null)
+                    Column(verticalArrangement = Arrangement.spacedBy(PanelSpacing.xs)) {
+                        if (current.rebootRequired) Text(stringResource(R.string.detail_reboot_required),
+                            style = MaterialTheme.typography.titleSmall)
+                        if (current.updatesPackages > 0) {
+                            Text(
+                                pluralStringResource(
+                                    R.plurals.detail_updates, current.updatesPackages,
+                                    current.updatesPackages, current.updatesSecurity
+                                ),
+                                style = MaterialTheme.typography.bodyMedium
+                            )
+                        }
+                    }
+                }
+            }
         }
-        FlowRow(horizontalArrangement = Arrangement.spacedBy(8.dp), verticalArrangement = Arrangement.spacedBy(4.dp)) {
+        FlowRow(horizontalArrangement = Arrangement.spacedBy(PanelSpacing.sm), verticalArrangement = Arrangement.spacedBy(PanelSpacing.xs)) {
             OutlinedButton(onClick = { editing = true }, enabled = !busy && detail != null) {
-                Text(stringResource(R.string.edit_server))
+                Icon(Icons.Outlined.Edit, contentDescription = null, modifier = Modifier.size(18.dp))
+                Text(stringResource(R.string.edit_server), Modifier.padding(start = PanelSpacing.sm))
             }
             OutlinedButton(onClick = { confirmRestart = true }, enabled = !busy) {
-                Text(stringResource(R.string.restart_server))
+                Icon(Icons.Outlined.RestartAlt, contentDescription = null, modifier = Modifier.size(18.dp))
+                Text(stringResource(R.string.restart_server), Modifier.padding(start = PanelSpacing.sm))
             }
-            OutlinedButton(onClick = { confirmDelete = true }, enabled = !busy) {
-                Text(stringResource(R.string.delete_server), color = MaterialTheme.colorScheme.error)
+            OutlinedButton(
+                onClick = { confirmDelete = true }, enabled = !busy,
+                colors = ButtonDefaults.outlinedButtonColors(contentColor = MaterialTheme.colorScheme.error)
+            ) {
+                Icon(Icons.Outlined.Delete, contentDescription = null, modifier = Modifier.size(18.dp))
+                Text(stringResource(R.string.delete_server), Modifier.padding(start = PanelSpacing.sm))
             }
         }
+        if (busy) BusyIndicator()
         if (actionError != null) ApiErrorText(actionError!!)
-        if (actionFeedback.isNotEmpty()) Text(actionFeedback)
+        if (actionFeedback.isNotEmpty()) Text(actionFeedback, color = PanelTheme.status.success)
     }
 
     if (editing && detail != null) {
@@ -316,6 +499,11 @@ private fun ServerInfoTab(
             onDismiss = { confirmDelete = false }
         )
     }
+}
+
+@Composable
+private fun InfoLine(text: String, mono: Boolean = false) {
+    Text(text, style = if (mono) panelMonoStyle else MaterialTheme.typography.bodyMedium)
 }
 
 /** Edit dialog for PATCH /servers/{id}: name always, optional IP + SSH port (sent together). */
@@ -399,29 +587,31 @@ private fun ServerLogsTab(token: String, serverId: Long) {
         }
     }
 
-    Column(Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(10.dp)) {
-        OutlinedButton(onClick = { refresh++ }, enabled = !loading) { Text(stringResource(R.string.reload)) }
-        if (loading) BusyIndicator()
-        if (error != null) ApiErrorText(error!!)
+    Column(Modifier.fillMaxSize().padding(vertical = PanelSpacing.sm), verticalArrangement = Arrangement.spacedBy(PanelSpacing.md)) {
+        OutlinedButton(onClick = { refresh++ }, enabled = !loading) {
+            Icon(Icons.Outlined.Refresh, contentDescription = null, modifier = Modifier.size(18.dp))
+            Text(stringResource(R.string.reload), Modifier.padding(start = PanelSpacing.sm))
+        }
+        if (loading) LoadingState()
+        if (error != null) ErrorState(error!!, onRetry = { refresh++ }, retryEnabled = !loading)
         result?.let { data ->
-            if (data.logs.isEmpty()) Text(stringResource(R.string.empty_logs))
-            FlowRow(horizontalArrangement = Arrangement.spacedBy(8.dp), verticalArrangement = Arrangement.spacedBy(4.dp)) {
+            if (data.logs.isEmpty()) EmptyState(Icons.AutoMirrored.Outlined.ReceiptLong, stringResource(R.string.empty_logs))
+            FlowRow(horizontalArrangement = Arrangement.spacedBy(PanelSpacing.sm), verticalArrangement = Arrangement.spacedBy(PanelSpacing.xs)) {
                 OutlinedButton(onClick = { page-- }, enabled = page > 1) { Text(stringResource(R.string.previous)) }
                 Text(
                     stringResource(R.string.page, data.currentPage.toString(), data.lastPage.toString()),
-                    Modifier.padding(top = 12.dp)
+                    Modifier.padding(top = PanelSpacing.md), style = MaterialTheme.typography.labelLarge
                 )
                 OutlinedButton(onClick = { page++ }, enabled = data.hasNext) { Text(stringResource(R.string.next)) }
             }
-            LazyColumn(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+            LazyColumn(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(PanelSpacing.sm)) {
                 items(data.logs) { entry ->
-                    Card(modifier = Modifier.fillMaxWidth()) {
-                        Column(Modifier.padding(12.dp)) {
-                            Text(entry.description, style = MaterialTheme.typography.bodyLarge)
-                            Text(entry.createdAt, style = MaterialTheme.typography.bodySmall)
-                            if (entry.content.isNotBlank()) {
-                                Text(entry.content, style = MaterialTheme.typography.bodySmall)
-                            }
+                    SectionCard {
+                        Text(entry.description, style = MaterialTheme.typography.bodyLarge)
+                        Text(entry.createdAt, style = MaterialTheme.typography.labelMedium,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant)
+                        if (entry.content.isNotBlank()) {
+                            Text(entry.content, style = panelMonoStyle)
                         }
                     }
                 }
@@ -454,27 +644,28 @@ internal fun MonitoredServersScreen(token: String) {
         }
     }
 
-    Column(Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(10.dp)) {
-        OutlinedButton(onClick = { refresh++ }, enabled = !loading) { Text(stringResource(R.string.reload)) }
-        Text(stringResource(R.string.stale_warning), style = MaterialTheme.typography.bodySmall)
-        if (loading) BusyIndicator()
-        if (error != null) ApiErrorText(error!!)
+    Column(Modifier.fillMaxSize().padding(vertical = PanelSpacing.sm), verticalArrangement = Arrangement.spacedBy(PanelSpacing.md)) {
+        OutlinedButton(onClick = { refresh++ }, enabled = !loading) {
+            Icon(Icons.Outlined.Refresh, contentDescription = null, modifier = Modifier.size(18.dp))
+            Text(stringResource(R.string.reload), Modifier.padding(start = PanelSpacing.sm))
+        }
+        Text(stringResource(R.string.stale_warning), style = MaterialTheme.typography.bodySmall,
+            color = MaterialTheme.colorScheme.onSurfaceVariant)
+        if (loading) LoadingState()
+        if (error != null) ErrorState(error!!, onRetry = { refresh++ }, retryEnabled = !loading)
         servers?.let { list ->
-            if (list.isEmpty()) Text(stringResource(R.string.no_monitored_servers))
-            LazyColumn(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+            if (list.isEmpty()) EmptyState(Icons.Outlined.MonitorHeart, stringResource(R.string.no_monitored_servers))
+            LazyColumn(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(PanelSpacing.sm)) {
                 items(list, key = { it.id }) { server ->
                     val latest = server.statistics.lastOrNull()
-                    Card(modifier = Modifier.fillMaxWidth()) {
-                        Column(Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(6.dp)) {
-                            Text(server.name, style = MaterialTheme.typography.titleMedium)
-                            if (server.ip.isNotBlank()) Text(server.ip)
-                            if (latest == null) {
-                                Text(stringResource(R.string.monitoring_unavailable))
-                            } else {
-                                Text(stringResource(R.string.updated, latest.date))
-                                MonitoringCharts(server.statistics)
-                                Metric(stringResource(R.string.metric_load), latest.load.ifBlank { "—" })
-                            }
+                    SectionCard(title = server.name, icon = Icons.Outlined.Dns) {
+                        if (server.ip.isNotBlank()) Text(server.ip, style = panelMonoStyle)
+                        if (latest == null) {
+                            Text(stringResource(R.string.monitoring_unavailable))
+                        } else {
+                            Text(stringResource(R.string.updated, latest.date), style = MaterialTheme.typography.labelLarge)
+                            MonitoringCharts(server.statistics)
+                            Metric(stringResource(R.string.metric_load), latest.load.ifBlank { "—" })
                         }
                     }
                 }

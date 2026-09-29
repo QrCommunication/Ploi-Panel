@@ -25,14 +25,21 @@ class ResponsiveLayoutContractTest {
         assertTrue(source("app/src/main/AndroidManifest.xml").contains("android:windowSoftInputMode=\"adjustResize\""))
     }
 
-    @Test fun accountAndServerTabsAreBoundedAndKeepSelectionVisible() {
+    @Test fun accountAndServerNavigationIsBoundedAndKeepsSelectionVisible() {
         val main = source("${ui}MainActivity.kt")
+        val nav = source("${ui}AppNavigation.kt")
         val detail = source("${ui}ServerScreen.kt")
-        assertTrue(main.contains("LazyRow(") && main.contains("animateScrollToItem(sections.indexOfFirst { it.first == panelTab }.coerceAtLeast(0))"))
-        assertTrue(main.contains("0 to R.string.servers, 8 to R.string.deploy_global_tab"))
-        assertTrue(detail.contains("LazyRow(") && detail.contains("tabState.animateScrollToItem("))
+        // Five fixed destinations (bar or rail) replace the old scrolling chip strip; the selected
+        // destination is always on screen and derived from panelTab.
+        assertTrue(main.contains("PanelNavigationBar(panelTab, locked = globalBatchRunning)"))
+        assertTrue(main.contains("PanelNavigationRail(panelTab, locked = globalBatchRunning)"))
+        assertTrue(nav.contains("selected = current == destination"))
+        assertTrue(nav.contains("enabled = !locked || current == destination"))
+        // Content lives in a weighted viewport between top bar and bottom bar.
         assertTrue(main.contains("Modifier.weight(1f).fillMaxWidth()"))
-        assertTrue(detail.contains("FilterChip(") && main.contains("FilterChip("))
+        // Server sub-screens open in a bounded viewport under their back row.
+        assertTrue(detail.contains("Box(Modifier.weight(1f).fillMaxWidth())"))
+        assertTrue(detail.contains("BackHandler(enabled = section != null) { section = null }"))
     }
 
     @Test fun settingsExposeProfileAppearanceLanguageAndBiometricUnlock() {
