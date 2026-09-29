@@ -10,7 +10,6 @@ import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Button
 import androidx.compose.material3.Card
-import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.RadioButton
@@ -113,7 +112,7 @@ internal fun BackupChannelsDialog(
                 OutlinedButton(onClick = { attaching = true }, enabled = !busy) {
                     Text(stringResource(R.string.attach_backup_channel))
                 }
-                if (loading) CircularProgressIndicator()
+                if (loading) BusyIndicator()
                 if (error != null) ApiErrorText(error!!)
                 if (feedback.isNotEmpty()) Text(feedback)
                 channels?.let { list ->

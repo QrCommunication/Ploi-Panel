@@ -807,4 +807,16 @@
     <string name="custom_leave_title">Leave setup?</string>
     <string name="custom_leave_warning">Copy the public SSH key and installation command before leaving. This screen won’t show them again.</string>
     <string name="custom_leave_action">Leave anyway</string>
+    <!-- Screen reader descriptions for graphics and spinners. The count is last to keep away from
+         the PluralsCandidate heuristic; these announce readings only, never an invented value. -->
+    <string name="a11y_loading">Loading</string>
+    <string name="a11y_unknown">unknown reading</string>
+    <string name="a11y_percent">%1$s%%</string>
+    <string name="a11y_chart_empty">%1$s: no reading</string>
+    <string name="a11y_chart_unknown">%1$s: unreadable reading</string>
+    <string name="a11y_chart_single">%1$s: %2$s, single reading, no trend</string>
+    <string name="a11y_chart_trend">%2$s: latest %3$s, minimum %4$s%%, maximum %5$s%%, readings: %1$d</string>
+    <string name="a11y_response_trend">Response time: latest %2$s s, minimum %3$s s, maximum %4$s s, readings: %1$d</string>
+    <string name="a11y_uptime_healthy">Uptime %1$s%%, at or above threshold</string>
+    <string name="a11y_uptime_degraded">Uptime %1$s%%, below threshold</string>
 </resources>

@@ -18,7 +18,6 @@ import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Button
 import androidx.compose.material3.Card
-import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.FilterChip
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedButton
@@ -130,7 +129,7 @@ internal fun MonitoringView(token: String, server: Server, refresh: Int) {
     Column(Modifier.padding(16.dp).verticalScroll(rememberScrollState()), verticalArrangement = Arrangement.spacedBy(12.dp)) {
         Text(server.name, style = MaterialTheme.typography.headlineSmall, fontWeight = FontWeight.Bold)
         Text(stringResource(R.string.monitoring), style = MaterialTheme.typography.titleLarge)
-        if (loading) CircularProgressIndicator()
+        if (loading) BusyIndicator()
         if (error is PloiHttpException && (error as PloiHttpException).status == 422) {
             Text(stringResource(R.string.monitoring_unavailable))
         } else if (error != null) ApiErrorText(error!!)
@@ -190,7 +189,7 @@ private fun ServerInfoTab(
 
     Column(Modifier.padding(16.dp).verticalScroll(rememberScrollState()), verticalArrangement = Arrangement.spacedBy(10.dp)) {
         Text(server.name, style = MaterialTheme.typography.headlineSmall, fontWeight = FontWeight.Bold)
-        if (loading) CircularProgressIndicator()
+        if (loading) BusyIndicator()
         if (error != null) ApiErrorText(error!!)
         detail?.let { current ->
             Text(stringResource(R.string.server_status, current.status))
@@ -392,7 +391,7 @@ private fun ServerLogsTab(token: String, serverId: Long) {
 
     Column(Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(10.dp)) {
         OutlinedButton(onClick = { refresh++ }, enabled = !loading) { Text(stringResource(R.string.reload)) }
-        if (loading) CircularProgressIndicator()
+        if (loading) BusyIndicator()
         if (error != null) ApiErrorText(error!!)
         result?.let { data ->
             if (data.logs.isEmpty()) Text(stringResource(R.string.empty_logs))
@@ -448,7 +447,7 @@ internal fun MonitoredServersScreen(token: String) {
     Column(Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(10.dp)) {
         OutlinedButton(onClick = { refresh++ }, enabled = !loading) { Text(stringResource(R.string.reload)) }
         Text(stringResource(R.string.stale_warning), style = MaterialTheme.typography.bodySmall)
-        if (loading) CircularProgressIndicator()
+        if (loading) BusyIndicator()
         if (error != null) ApiErrorText(error!!)
         servers?.let { list ->
             if (list.isEmpty()) Text(stringResource(R.string.no_monitored_servers))

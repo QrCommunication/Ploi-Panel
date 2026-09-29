@@ -35,7 +35,6 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material3.Button
 import androidx.compose.material3.Card
-import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.FilterChip
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedButton
@@ -649,7 +648,7 @@ private fun ServerList(
                 OutlinedButton(onClick = onRefresh, enabled = !loading) { Text(stringResource(R.string.reload)) }
             }
         }
-        if (loading) item { CircularProgressIndicator(Modifier.padding(24.dp)) }
+        if (loading) item { BusyIndicator(Modifier.padding(24.dp)) }
         if (error != null) item { ApiErrorText(error) }
         if (pageData != null) {
             item { ServerPageHero(pageData) }

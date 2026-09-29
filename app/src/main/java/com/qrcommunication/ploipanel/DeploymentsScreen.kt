@@ -13,7 +13,6 @@ import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Button
-import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.OutlinedTextField
@@ -115,7 +114,7 @@ internal fun RepositoryDialog(
                 Modifier.verticalScroll(rememberScrollState()),
                 verticalArrangement = Arrangement.spacedBy(8.dp)
             ) {
-                if (loading) CircularProgressIndicator()
+                if (loading) BusyIndicator()
                 if (error != null) ApiErrorText(error!!)
                 if (feedback.isNotEmpty()) Text(feedback)
                 repository?.let { repo ->
@@ -286,7 +285,7 @@ internal fun DeployScriptDialog(
                 Text(stringResource(R.string.deploy_script) + " — " + siteDomain,
                     style = MaterialTheme.typography.titleLarge)
                 Text(stringResource(R.string.deploy_site_editor_hint), style = MaterialTheme.typography.bodySmall)
-                if (loading) CircularProgressIndicator()
+                if (loading) BusyIndicator()
                 if (error != null) ApiErrorText(error!!)
                 if (feedback.isNotEmpty()) Text(feedback, color = MaterialTheme.colorScheme.primary)
                 if (content != null) {
@@ -397,7 +396,7 @@ internal fun EnvDialog(
                 Modifier.verticalScroll(rememberScrollState()),
                 verticalArrangement = Arrangement.spacedBy(8.dp)
             ) {
-                if (loading) CircularProgressIndicator()
+                if (loading) BusyIndicator()
                 if (error != null) ApiErrorText(error!!)
                 if (feedback.isNotEmpty()) Text(feedback)
                 content?.let { current ->

@@ -13,7 +13,6 @@ import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Card
-import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.Text
@@ -68,7 +67,7 @@ internal fun WebserverTemplatesScreen(token: String) {
                 Text(stringResource(R.string.reload))
             }
         }
-        if (loading) CircularProgressIndicator()
+        if (loading) BusyIndicator()
         if (error != null) ApiErrorText(error!!)
         result?.let { data ->
             if (data.templates.isEmpty()) Text(stringResource(R.string.empty_webserver_templates))
@@ -146,7 +145,7 @@ private fun WebserverTemplateDetailDialog(
                 Modifier.heightIn(max = 480.dp).verticalScroll(rememberScrollState()),
                 verticalArrangement = Arrangement.spacedBy(8.dp)
             ) {
-                if (loading) CircularProgressIndicator()
+                if (loading) BusyIndicator()
                 if (error != null) ApiErrorText(error!!)
                 detail?.let { data ->
                     if (data.createdAt.isNotBlank()) {

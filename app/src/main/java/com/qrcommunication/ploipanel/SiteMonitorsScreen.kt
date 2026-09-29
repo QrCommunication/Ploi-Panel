@@ -11,7 +11,6 @@ import androidx.compose.foundation.lazy.items
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Button
 import androidx.compose.material3.Card
-import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.Text
@@ -74,7 +73,7 @@ internal fun SiteMonitorsScreen(token: String, serverId: Long, siteId: Long, loc
                 Text(stringResource(R.string.reload))
             }
         }
-        if (loading) CircularProgressIndicator()
+        if (loading) BusyIndicator()
         if (error != null) ApiErrorText(error!!)
         if (feedback.isNotEmpty()) Text(feedback)
         result?.let { data ->
@@ -98,9 +97,14 @@ internal fun SiteMonitorsScreen(token: String, serverId: Long, siteId: Long, loc
                             Text(monitor.label.ifBlank { "#${monitor.id}" }, style = MaterialTheme.typography.titleMedium)
                             Text(stringResource(R.string.monitor_uptime, monitor.location, monitor.averageUptime))
                             monitoringPercent(monitor.averageUptime)?.let { percent ->
+                                val healthy = percent >= UPTIME_HEALTHY_PERCENT
                                 PercentProgress(
                                     percent,
-                                    if (percent >= 95f) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.error
+                                    if (healthy) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.error,
+                                    description = stringResource(
+                                        if (healthy) R.string.a11y_uptime_healthy else R.string.a11y_uptime_degraded,
+                                        formatPercent(percent).orEmpty()
+                                    )
                                 )
                             }
                             FlowRow(horizontalArrangement = Arrangement.spacedBy(8.dp), verticalArrangement = Arrangement.spacedBy(4.dp)) {

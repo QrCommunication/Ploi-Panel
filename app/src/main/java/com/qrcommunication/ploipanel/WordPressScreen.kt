@@ -16,7 +16,6 @@ import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Button
 import androidx.compose.material3.Card
-import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.OutlinedTextField
@@ -125,7 +124,7 @@ private fun WpExtensionsTab(
                 Text(stringResource(if (themes) R.string.wp_install_theme else R.string.wp_install_plugin))
             }
         }
-        if (loading) CircularProgressIndicator()
+        if (loading) BusyIndicator()
         if (error != null) ApiErrorText(error!!)
         if (feedback.isNotEmpty()) Text(feedback)
         result?.let { extensions ->
@@ -296,7 +295,7 @@ private fun WpToolsTab(token: String, serverId: Long, siteId: Long, lock: AppLoc
         Modifier.verticalScroll(rememberScrollState()),
         verticalArrangement = Arrangement.spacedBy(10.dp)
     ) {
-        if (busy) CircularProgressIndicator()
+        if (busy) BusyIndicator()
         if (error != null) ApiErrorText(error!!)
         if (feedback.isNotEmpty()) Text(feedback)
         if (output.isNotEmpty()) {
@@ -581,7 +580,7 @@ private fun WpRepositoriesTab(token: String, serverId: Long, siteId: Long, lock:
                 Text(stringResource(R.string.wp_repo_deploy_all))
             }
         }
-        if (loading) CircularProgressIndicator()
+        if (loading) BusyIndicator()
         if (error != null) ApiErrorText(error!!)
         if (feedback.isNotEmpty()) Text(feedback)
         result?.let { repositories ->

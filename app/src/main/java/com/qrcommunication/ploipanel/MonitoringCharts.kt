@@ -16,6 +16,8 @@ import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.StrokeCap
 import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.semantics.clearAndSetSemantics
+import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import java.util.Locale
@@ -37,12 +39,23 @@ private fun PercentChart(label: String, values: List<Float?>, accent: Color) {
     val grid = MaterialTheme.colorScheme.outlineVariant
     // An invalid point breaks the line; do not interpolate across an unknown reading.
     val hasTrend = values.size >= 2 && values.zipWithNext().any { (a, b) -> a != null && b != null }
-    Card(Modifier.fillMaxWidth()) {
+    // The graphic is decorative once the summary below states the same readings in words.
+    val summary = trendSummary(values)
+    val spoken = when {
+        summary == null -> stringResource(R.string.a11y_chart_empty, label)
+        !summary.hasKnownReading -> stringResource(R.string.a11y_chart_unknown, label)
+        hasTrend -> stringResource(
+            R.string.a11y_chart_trend, values.size, label, percentSpeech(summary.latest),
+            formatPercent(summary.min).orEmpty(), formatPercent(summary.max).orEmpty()
+        )
+        else -> stringResource(R.string.a11y_chart_single, label, percentSpeech(summary.latest))
+    }
+    Card(Modifier.fillMaxWidth().clearAndSetSemantics { contentDescription = spoken }) {
         Column(Modifier.padding(14.dp), verticalArrangement = Arrangement.spacedBy(9.dp)) {
             Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
                 Text(label, style = MaterialTheme.typography.titleSmall)
                 Text(
-                    latest?.let { "${if (it % 1f == 0f) it.toInt().toString() else it.toString()} %" } ?: "—",
+                    formatPercent(latest)?.let { "$it %" } ?: "—",
                     style = MaterialTheme.typography.titleSmall, fontWeight = FontWeight.Bold, color = accent
                 )
             }
@@ -88,7 +101,12 @@ internal fun ResponseTimeTrend(responses: List<UptimeResponse>) {
     val grid = MaterialTheme.colorScheme.outlineVariant
     val min = values.min()
     val max = values.max()
-    Card(Modifier.fillMaxWidth()) {
+    val spoken = stringResource(
+        R.string.a11y_response_trend, values.size,
+        String.format(Locale.US, "%.3f", values.last()),
+        String.format(Locale.US, "%.3f", min), String.format(Locale.US, "%.3f", max)
+    )
+    Card(Modifier.fillMaxWidth().clearAndSetSemantics { contentDescription = spoken }) {
         Column(Modifier.padding(12.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
             Text(stringResource(R.string.monitor_response_time), style = MaterialTheme.typography.titleSmall)
             Canvas(Modifier.fillMaxWidth().height(72.dp)) {
@@ -118,10 +136,19 @@ internal fun ResponseTimeTrend(responses: List<UptimeResponse>) {
     }
 }
 
+/**
+ * Percentage bar. [description] must be supplied wherever the bar's colour carries meaning of its
+ * own; when it is null the caller has already described the value in text or in its own semantics.
+ */
 @Composable
-internal fun PercentProgress(value: Float?, color: Color, modifier: Modifier = Modifier) {
+internal fun PercentProgress(
+    value: Float?, color: Color, modifier: Modifier = Modifier, description: String? = null
+) {
     val track = MaterialTheme.colorScheme.surfaceVariant
-    Canvas(modifier.fillMaxWidth().height(9.dp)) {
+    val described = description
+        ?.let { modifier.clearAndSetSemantics { contentDescription = it } }
+        ?: modifier
+    Canvas(described.fillMaxWidth().height(9.dp)) {
         val y = size.height / 2f
         drawLine(track, Offset(0f, y), Offset(size.width, y), size.height, StrokeCap.Round)
         if (value != null && value > 0f) {

@@ -9,7 +9,6 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.material3.Card
-import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.Text
@@ -108,7 +107,7 @@ internal fun AccountScreen(token: String) {
         item {
             when {
                 infoError != null -> ApiErrorText(infoError!!)
-                info == null -> CircularProgressIndicator()
+                info == null -> BusyIndicator()
                 else -> Card(Modifier.fillMaxWidth()) {
                     Column(Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(4.dp)) {
                         Text(info!!.name, style = MaterialTheme.typography.titleMedium)
@@ -124,7 +123,7 @@ internal fun AccountScreen(token: String) {
         item { Text(stringResource(R.string.backup_configurations), style = MaterialTheme.typography.titleMedium) }
         when {
             backupsError != null -> item { ApiErrorText(backupsError!!) }
-            backups == null -> item { CircularProgressIndicator() }
+            backups == null -> item { BusyIndicator() }
             backups!!.configurations.isEmpty() -> item { Text(stringResource(R.string.empty_backup_configurations)) }
             else -> items(backups!!.configurations.size) { index ->
                 val configuration = backups!!.configurations[index]
@@ -145,7 +144,7 @@ internal fun AccountScreen(token: String) {
         item { Text(stringResource(R.string.notification_channels), style = MaterialTheme.typography.titleMedium) }
         when {
             channelsError != null -> item { ApiErrorText(channelsError!!) }
-            channels == null -> item { CircularProgressIndicator() }
+            channels == null -> item { BusyIndicator() }
             channels!!.channels.isEmpty() -> item { Text(stringResource(R.string.empty_notification_channels)) }
             else -> items(channels!!.channels.size) { index ->
                 val channel = channels!!.channels[index]
@@ -165,7 +164,7 @@ internal fun AccountScreen(token: String) {
         item { Text(stringResource(R.string.source_control), style = MaterialTheme.typography.titleMedium) }
         when {
             sourceControlError != null -> item { ApiErrorText(sourceControlError!!) }
-            sourceControl == null -> item { CircularProgressIndicator() }
+            sourceControl == null -> item { BusyIndicator() }
             sourceControl!!.providers.isEmpty() -> item { Text(stringResource(R.string.empty_source_control)) }
             else -> items(sourceControl!!.providers.size) { index ->
                 val provider = sourceControl!!.providers[index]
@@ -226,7 +225,7 @@ private fun SourceControlCard(token: String, provider: SourceControlProvider, ex
                 Text(stringResource(R.string.repositories), style = MaterialTheme.typography.titleSmall)
                 when {
                     error != null -> ApiErrorText(error!!)
-                    repositories == null -> CircularProgressIndicator()
+                    repositories == null -> BusyIndicator()
                     repositories!!.isEmpty() -> Text(stringResource(R.string.empty_repositories))
                     else -> repositories!!.forEach { repository -> Text(repository.name) }
                 }

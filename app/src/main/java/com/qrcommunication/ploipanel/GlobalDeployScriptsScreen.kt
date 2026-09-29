@@ -15,7 +15,6 @@ import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.Button
 import androidx.compose.material3.Card
 import androidx.compose.material3.Checkbox
-import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.OutlinedTextField
@@ -82,7 +81,7 @@ internal fun GlobalDeployScriptsScreen(token: String, profileId: String, lock: A
         Column(verticalArrangement = Arrangement.spacedBy(10.dp)) {
             Text(stringResource(R.string.deploy_global_templates), style = MaterialTheme.typography.titleLarge)
             Text(stringResource(R.string.deploy_global_local_hint), style = MaterialTheme.typography.bodySmall)
-            if (templates == null && error == null) CircularProgressIndicator()
+            if (templates == null && error == null) BusyIndicator()
             templates?.forEach { item ->
                 Card(onClick = {
                     selectedTemplate = item.id
@@ -202,7 +201,7 @@ internal fun GlobalDeployScriptsScreen(token: String, profileId: String, lock: A
             }
             if (validation) Text(stringResource(R.string.deploy_global_invalid), color = MaterialTheme.colorScheme.error)
             progress?.let { (done, total) -> Text(stringResource(R.string.deploy_global_progress, done, total)) }
-            if (busy) CircularProgressIndicator()
+            if (busy) BusyIndicator()
             outcome?.let { batch ->
                 Text(stringResource(if (batch.abortedBeforeWrite) R.string.deploy_global_preflight_abort
                     else R.string.deploy_global_report), style = MaterialTheme.typography.titleMedium)

@@ -807,4 +807,16 @@
     <string name="custom_leave_title">Quitter la configuration ?</string>
     <string name="custom_leave_warning">Copiez la clé SSH publique et la commande d’installation avant de quitter. Cet écran ne les affichera plus.</string>
     <string name="custom_leave_action">Quitter quand même</string>
+    <!-- Screen reader descriptions for graphics and spinners. The count is last to keep away from
+         the PluralsCandidate heuristic; these announce readings only, never an invented value. -->
+    <string name="a11y_loading">Chargement en cours</string>
+    <string name="a11y_unknown">mesure inconnue</string>
+    <string name="a11y_percent">%1$s %%</string>
+    <string name="a11y_chart_empty">%1$s : aucune mesure</string>
+    <string name="a11y_chart_unknown">%1$s : mesure illisible</string>
+    <string name="a11y_chart_single">%1$s : %2$s, mesure unique, pas de tendance</string>
+    <string name="a11y_chart_trend">%2$s : dernière mesure %3$s, minimum %4$s %%, maximum %5$s %%, relevés : %1$d</string>
+    <string name="a11y_response_trend">Temps de réponse : dernier %2$s s, minimum %3$s s, maximum %4$s s, relevés : %1$d</string>
+    <string name="a11y_uptime_healthy">Disponibilité %1$s %%, conforme au seuil</string>
+    <string name="a11y_uptime_degraded">Disponibilité %1$s %%, sous le seuil</string>
 </resources>

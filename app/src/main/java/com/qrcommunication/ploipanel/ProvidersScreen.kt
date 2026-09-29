@@ -19,7 +19,6 @@ import androidx.compose.foundation.verticalScroll
 import androidx.compose.foundation.lazy.items
 import androidx.compose.material3.Button
 import androidx.compose.material3.Card
-import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.Text
@@ -102,7 +101,7 @@ private fun ProviderList(
                 context.startActivity(Intent(Intent.ACTION_VIEW, "https://ploi.io/profile/server-providers".toUri()))
             }) { Text(stringResource(R.string.add_provider)) }
         }
-        if (loading) CircularProgressIndicator()
+        if (loading) BusyIndicator()
         if (error != null) ApiErrorText(error)
         if (data != null) {
             if (data.providers.isEmpty()) Text(stringResource(R.string.empty_providers))
@@ -148,7 +147,7 @@ private fun ProviderDetail(token: String, id: Long) {
     Column(Modifier.fillMaxSize().verticalScroll(rememberScrollState()).padding(16.dp),
         verticalArrangement = Arrangement.spacedBy(12.dp)) {
         Text(stringResource(R.string.provider_detail), style = MaterialTheme.typography.titleLarge)
-        if (loading) CircularProgressIndicator()
+        if (loading) BusyIndicator()
         if (error != null) ApiErrorText(error!!)
         provider?.let { details ->
             Text(details.displayName, style = MaterialTheme.typography.headlineSmall)

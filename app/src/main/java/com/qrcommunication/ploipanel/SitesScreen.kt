@@ -19,7 +19,6 @@ import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Button
 import androidx.compose.material3.Card
-import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.OutlinedTextField
@@ -155,7 +154,7 @@ private fun SiteList(
             OutlinedButton(onClick = onRefresh, enabled = !loading) { Text(stringResource(R.string.reload)) }
             OutlinedButton(onClick = onCreate) { Text(stringResource(R.string.new_site)) }
         }
-        if (loading) CircularProgressIndicator()
+        if (loading) BusyIndicator()
         if (error != null) ApiErrorText(error)
         if (data != null) {
             if (data.sites.isEmpty()) Text(stringResource(R.string.empty_sites))
@@ -374,7 +373,7 @@ private fun SiteDetail(
 
     Column(Modifier.fillMaxSize().padding(16.dp), verticalArrangement = Arrangement.spacedBy(10.dp)) {
         if (siteCategory == null) {
-            if (loading) CircularProgressIndicator()
+            if (loading) BusyIndicator()
             if (error != null) ApiErrorText(error!!)
             site?.let { details ->
                 Text(details.domain, style = MaterialTheme.typography.headlineSmall)
@@ -394,7 +393,7 @@ private fun SiteDetail(
             Text(stringResource(siteCategory!!.title), style = MaterialTheme.typography.titleLarge)
             Column(Modifier.weight(1f).fillMaxWidth().verticalScroll(rememberScrollState()),
                 verticalArrangement = Arrangement.spacedBy(10.dp)) {
-                if (loading) CircularProgressIndicator()
+                if (loading) BusyIndicator()
                 if (error != null) ApiErrorText(error!!)
                 site?.let { details ->
                     when (siteCategory ?: return@let) {
@@ -666,7 +665,7 @@ private fun TestDomainSection(
 
     Column(verticalArrangement = Arrangement.spacedBy(6.dp)) {
         if (!loaded) {
-            CircularProgressIndicator()
+            BusyIndicator()
         } else if (info == null || info!!.testDomain.isBlank()) {
             Text(stringResource(R.string.test_domain_none))
             OutlinedButton(onClick = { pendingEnable = true }, enabled = !busy) {
@@ -894,7 +893,7 @@ private fun SiteLogsDialog(token: String, serverId: Long, siteId: Long, onDismis
         title = { Text(stringResource(R.string.site_logs)) },
         text = {
             Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
-                if (loading) CircularProgressIndicator()
+                if (loading) BusyIndicator()
                 if (error != null) ApiErrorText(error!!)
                 result?.let { data ->
                     if (data.logs.isEmpty()) Text(stringResource(R.string.empty_site_logs))
@@ -936,7 +935,7 @@ private fun SiteLogsDialog(token: String, serverId: Long, siteId: Long, onDismis
                             }
                         }
                     }
-                    if (detailLoading) CircularProgressIndicator()
+                    if (detailLoading) BusyIndicator()
                     selected?.let { entry ->
                         if (entry.content.isNotBlank()) {
                             Text(entry.content, style = MaterialTheme.typography.bodySmall)
@@ -988,7 +987,7 @@ private fun HorizonDialog(token: String, serverId: Long, onDismiss: () -> Unit) 
                         }
                     }
                 }
-                if (loading) CircularProgressIndicator()
+                if (loading) BusyIndicator()
                 if (error != null) ApiErrorText(error!!)
                 when (val stats = result) {
                     is HorizonStatistics.Stats -> {
@@ -1050,7 +1049,7 @@ private fun NginxDialog(token: String, serverId: Long, siteId: Long, onSave: (St
         title = { Text(stringResource(R.string.nginx_configuration)) },
         text = {
             Column(Modifier.verticalScroll(rememberScrollState()), verticalArrangement = Arrangement.spacedBy(8.dp)) {
-                if (loading) CircularProgressIndicator()
+                if (loading) BusyIndicator()
                 if (error != null) ApiErrorText(error!!)
                 content?.let { current ->
                     if (editing) {

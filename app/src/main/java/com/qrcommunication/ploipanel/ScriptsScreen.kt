@@ -16,7 +16,6 @@ import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Button
 import androidx.compose.material3.Card
 import androidx.compose.material3.Checkbox
-import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.OutlinedTextField
@@ -116,7 +115,7 @@ internal fun ScriptsScreen(token: String, lock: AppLock, activity: FragmentActiv
                 Text(stringResource(R.string.new_script))
             }
         }
-        if (loading) CircularProgressIndicator()
+        if (loading) BusyIndicator()
         if (error != null) ApiErrorText(error!!)
         if (feedback.isNotEmpty()) Text(feedback)
         startedOn?.let { names ->
@@ -371,7 +370,7 @@ private fun ServerMultiSelect(
     }
     when {
         loadError != null -> ApiErrorText(loadError!!)
-        servers == null -> CircularProgressIndicator()
+        servers == null -> BusyIndicator()
         servers!!.isEmpty() -> Text(stringResource(R.string.empty_run_servers))
         else -> LazyColumn(Modifier.heightIn(max = 280.dp)) {
             items(servers!!, key = { it.id }) { server ->
@@ -504,7 +503,7 @@ private fun ScriptSchedulesDialog(
                         Text(stringResource(R.string.new_schedule))
                     }
                 }
-                if (loading) CircularProgressIndicator()
+                if (loading) BusyIndicator()
                 if (error != null) ApiErrorText(error!!)
                 if (feedback.isNotEmpty()) Text(feedback)
                 result?.let { data ->
@@ -791,7 +790,7 @@ private fun ScriptActionsDialog(
                         Text(stringResource(R.string.new_action))
                     }
                 }
-                if (loading) CircularProgressIndicator()
+                if (loading) BusyIndicator()
                 if (error != null) ApiErrorText(error!!)
                 if (feedback.isNotEmpty()) Text(feedback)
                 result?.let { actions ->
@@ -1106,7 +1105,7 @@ internal fun OneOffScriptScreen(token: String, serverId: Long, lock: AppLock, ac
             enabled = !busy && !polling && content.isNotBlank()
         ) { Text(stringResource(R.string.run_script_submit)) }
         if (error != null) ApiErrorText(error!!)
-        if (busy) CircularProgressIndicator()
+        if (busy) BusyIndicator()
         if (polling) Text(stringResource(R.string.execution_following))
         if (!polling && shouldPollExecution(execution)) Text(stringResource(R.string.execution_manual_refresh))
         execution?.let { exec ->

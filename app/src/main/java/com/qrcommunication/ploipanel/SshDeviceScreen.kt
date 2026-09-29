@@ -11,7 +11,6 @@ import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Button
 import androidx.compose.material3.Card
-import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.OutlinedTextField
@@ -124,7 +123,7 @@ internal fun SshDeviceSection(profileId: String?, lock: AppLock, activity: Fragm
         Text(stringResource(R.string.ssh_keys_heading), style = MaterialTheme.typography.titleMedium)
         when {
             keysError != 0 -> Text(stringResource(keysError), color = MaterialTheme.colorScheme.error)
-            keys == null -> CircularProgressIndicator()
+            keys == null -> BusyIndicator()
             keys!!.isEmpty() -> Text(
                 stringResource(R.string.ssh_keys_empty), style = MaterialTheme.typography.bodySmall
             )
@@ -155,7 +154,7 @@ internal fun SshDeviceSection(profileId: String?, lock: AppLock, activity: Fragm
         Text(stringResource(R.string.ssh_hosts_heading), style = MaterialTheme.typography.titleMedium)
         when {
             hostsError != 0 -> Text(stringResource(hostsError), color = MaterialTheme.colorScheme.error)
-            hosts == null -> CircularProgressIndicator()
+            hosts == null -> BusyIndicator()
             hosts!!.isEmpty() -> Text(
                 stringResource(R.string.ssh_hosts_empty), style = MaterialTheme.typography.bodySmall
             )
@@ -312,7 +311,7 @@ private fun SshKeyImportDialog(
                     textStyle = MaterialTheme.typography.bodySmall.copy(fontFamily = FontFamily.Monospace),
                     minLines = 4, maxLines = 10, enabled = !busy, modifier = Modifier.fillMaxWidth())
                 if (error != 0) Text(stringResource(error), color = MaterialTheme.colorScheme.error)
-                if (busy) CircularProgressIndicator()
+                if (busy) BusyIndicator()
             }
         },
         confirmButton = {
@@ -369,7 +368,7 @@ private fun KnownHostsImportDialog(
                         label = { Text("known_hosts") },
                         textStyle = MaterialTheme.typography.bodySmall.copy(fontFamily = FontFamily.Monospace),
                         minLines = 4, maxLines = 10, enabled = !busy, modifier = Modifier.fillMaxWidth())
-                    if (busy) CircularProgressIndicator()
+                    if (busy) BusyIndicator()
                 } else {
                     Text(stringResource(R.string.ssh_hosts_imported, outcome.imported))
                     if (outcome.errors.isNotEmpty()) {

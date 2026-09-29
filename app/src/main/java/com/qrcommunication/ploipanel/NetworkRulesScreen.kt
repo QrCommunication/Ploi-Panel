@@ -11,7 +11,6 @@ import androidx.compose.foundation.lazy.items
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Button
 import androidx.compose.material3.Card
-import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.OutlinedTextField
@@ -97,7 +96,7 @@ internal fun NetworkRulesScreen(token: String, serverId: Long, lock: AppLock, ac
                 Text(stringResource(R.string.new_network_rule))
             }
         }
-        if (loading) CircularProgressIndicator()
+        if (loading) BusyIndicator()
         if (error != null) ApiErrorText(error!!)
         if (feedback.isNotEmpty()) Text(feedback)
         result?.let { data ->

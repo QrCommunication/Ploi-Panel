@@ -4,7 +4,6 @@ import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.FlowRow
 import androidx.compose.foundation.layout.padding
-import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
@@ -70,7 +69,7 @@ internal fun <T> PagedOptionPicker(
     Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
         Text(label)
         if (loading) {
-            CircularProgressIndicator()
+            BusyIndicator()
             Text(stringResource(R.string.backup_loading_options))
         }
         error?.let { failure ->

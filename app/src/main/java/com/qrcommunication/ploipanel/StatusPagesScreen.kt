@@ -14,7 +14,6 @@ import androidx.compose.foundation.lazy.items
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Button
 import androidx.compose.material3.Card
-import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.OutlinedTextField
@@ -75,7 +74,7 @@ internal fun StatusPagesScreen(token: String, lock: AppLock, activity: FragmentA
                 Text(stringResource(R.string.reload))
             }
         }
-        if (loading) CircularProgressIndicator()
+        if (loading) BusyIndicator()
         if (error != null) ApiErrorText(error!!)
         result?.let { data ->
             if (data.statusPages.isEmpty()) Text(stringResource(R.string.empty_status_pages))
@@ -209,7 +208,7 @@ private fun StatusPageIncidentsDialog(
                         Text(stringResource(R.string.new_incident))
                     }
                 }
-                if (loading) CircularProgressIndicator()
+                if (loading) BusyIndicator()
                 if (error != null) ApiErrorText(error!!)
                 if (feedback.isNotEmpty()) Text(feedback)
                 result?.let { data ->

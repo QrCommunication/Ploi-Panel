@@ -23,7 +23,6 @@ import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Button
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
-import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.FilterChip
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedButton
@@ -163,7 +162,7 @@ internal fun LocalChecksScreen() {
                 }
             }
         }
-        if (checking) item { CircularProgressIndicator(Modifier.padding(8.dp)) }
+        if (checking) item { BusyIndicator(Modifier.padding(8.dp)) }
         if (targets.isEmpty()) item {
             Text(stringResource(R.string.local_checks_empty), style = MaterialTheme.typography.bodyLarge)
         }

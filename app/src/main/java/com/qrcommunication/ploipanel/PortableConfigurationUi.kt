@@ -11,7 +11,6 @@ import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Button
-import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.OutlinedTextField
@@ -65,7 +64,7 @@ internal fun ConfigurationTransferSection(
                 Text(stringResource(R.string.config_import))
             }
         }
-        if (busy) CircularProgressIndicator()
+        if (busy) BusyIndicator()
         if (error != 0) Text(stringResource(error), color = MaterialTheme.colorScheme.error)
         if (transferStatus != 0) Text(stringResource(transferStatus), color =
             if (transferStatus == R.string.config_export_error || transferStatus == R.string.config_import_error)

@@ -11,7 +11,6 @@ import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Button
-import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.OutlinedTextField
@@ -73,7 +72,7 @@ internal fun LoadBalancerScreen(token: String, server: Server, lock: AppLock, ac
         verticalArrangement = Arrangement.spacedBy(10.dp)
     ) {
         Text(stringResource(R.string.load_balancer_hint), style = MaterialTheme.typography.bodyMedium)
-        if (busy) CircularProgressIndicator()
+        if (busy) BusyIndicator()
         if (error != null) ApiErrorText(error!!)
         if (feedback.isNotEmpty()) Text(feedback)
         FlowRow(horizontalArrangement = Arrangement.spacedBy(8.dp), verticalArrangement = Arrangement.spacedBy(4.dp)) {
