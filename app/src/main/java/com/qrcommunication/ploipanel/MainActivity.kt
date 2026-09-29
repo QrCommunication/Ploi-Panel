@@ -242,6 +242,9 @@ private fun PanelHome(
         PortableConfigurationManager(SharedPreferencesProfilePrefs(context), KeystoreTokenCipher(),
             KeystoreTokenCipher("ploi-panel.deploy-templates"))
     }
+    val offlineCache = remember {
+        OfflineCache(SharedPreferencesProfilePrefs(context), KeystoreTokenCipher(OFFLINE_CACHE_ALIAS))
+    }
     var profilesVersion by remember { mutableIntStateOf(0) }
     val profiles = remember(profilesVersion) { store.profiles() }
     var draftLabel by remember { mutableStateOf("") }
@@ -262,6 +265,7 @@ private fun PanelHome(
     var creating by remember { mutableStateOf(false) }
     var showMonitored by remember { mutableStateOf(false) }
     var servers by remember { mutableStateOf<ServerPage?>(null) }
+    var serversCachedAt by remember { mutableStateOf<Long?>(null) }
     var error by remember { mutableStateOf<Throwable?>(null) }
     var loading by remember { mutableStateOf(false) }
     var deepLinkError by remember { mutableStateOf(false) }
@@ -322,15 +326,30 @@ private fun PanelHome(
     LaunchedEffect(token, page, refresh, panelTab) {
         val active = token ?: return@LaunchedEffect
         if (panelTab != 0) return@LaunchedEffect
+        val profileId = activeProfile?.first?.id
         loading = true
         servers = null
+        serversCachedAt = null
         error = null
         try {
-            servers = withContext(Dispatchers.IO) { PloiApi.servers(active, page) }
+            val fresh = withContext(Dispatchers.IO) { PloiApi.servers(active, page) }
+            servers = fresh
+            if (profileId != null) {
+                // Best effort: a cache write failure must never break a successful read.
+                withContext(Dispatchers.IO) {
+                    runCatching { offlineCache.saveServers(profileId, page, fresh) }
+                }
+            }
         } catch (cancelled: CancellationException) {
             throw cancelled
         } catch (failure: Exception) {
             servers = null
+            // Offline only: an HTTP answer is a real account signal and must stay visible.
+            val cached = if (profileId != null && shouldServeCache(failure)) {
+                withContext(Dispatchers.IO) { runCatching { offlineCache.servers(profileId, page) }.getOrNull() }
+            } else null
+            servers = cached?.page
+            serversCachedAt = cached?.fetchedAt
             error = failure
         } finally {
             loading = false
@@ -552,7 +571,7 @@ private fun PanelHome(
                             }
                             expanded -> Row(horizontalArrangement = Arrangement.spacedBy(16.dp)) {
                                 Column(Modifier.weight(1f)) {
-                                    ServerList(servers, loading, error, page, onPage = { page = it; selected = null }, onRefresh = { refresh++ },
+                                    ServerList(servers, loading, error, page, serversCachedAt, onPage = { page = it; selected = null }, onRefresh = { refresh++ },
                                         onSelect = { selected = it }, onCreate = { creating = true }, onMonitored = { showMonitored = true })
                                 }
                                 Column(Modifier.weight(1f)) {
@@ -575,7 +594,7 @@ private fun PanelHome(
                                     )
                                 }
                             }
-                            else -> ServerList(servers, loading, error, page, onPage = { page = it; selected = null }, onRefresh = { refresh++ },
+                            else -> ServerList(servers, loading, error, page, serversCachedAt, onPage = { page = it; selected = null }, onRefresh = { refresh++ },
                                 onSelect = { selected = it }, onCreate = { creating = true }, onMonitored = { showMonitored = true })
                         }
                     }
@@ -632,10 +651,13 @@ internal fun ApiErrorText(failure: Throwable) {
 
 @Composable
 private fun ServerList(
-    pageData: ServerPage?, loading: Boolean, error: Throwable?, page: Int,
+    pageData: ServerPage?, loading: Boolean, error: Throwable?, page: Int, cachedAt: Long?,
     onPage: (Int) -> Unit, onRefresh: () -> Unit, onSelect: (Server) -> Unit,
     onCreate: () -> Unit, onMonitored: () -> Unit
 ) {
+    // Cached rows are a past observation: opening a server would need live calls we cannot make,
+    // and creating one would act on an account state we have not read. Reload stays available.
+    val offline = cachedAt != null
     LazyColumn(
         modifier = Modifier.fillMaxSize(),
         verticalArrangement = Arrangement.spacedBy(12.dp),
@@ -643,20 +665,21 @@ private fun ServerList(
     ) {
         item {
             FlowRow(horizontalArrangement = Arrangement.spacedBy(8.dp), verticalArrangement = Arrangement.spacedBy(4.dp)) {
-                Button(onClick = onCreate) { Text(stringResource(R.string.new_server)) }
-                OutlinedButton(onClick = onMonitored) { Text(stringResource(R.string.monitored_overview)) }
+                Button(onClick = onCreate, enabled = !offline) { Text(stringResource(R.string.new_server)) }
+                OutlinedButton(onClick = onMonitored, enabled = !offline) { Text(stringResource(R.string.monitored_overview)) }
                 OutlinedButton(onClick = onRefresh, enabled = !loading) { Text(stringResource(R.string.reload)) }
             }
         }
         if (loading) item { BusyIndicator(Modifier.padding(24.dp)) }
         if (error != null) item { ApiErrorText(error) }
+        if (cachedAt != null) item { OfflineCacheBanner(cachedAt) }
         if (pageData != null) {
             item { ServerPageHero(pageData) }
             if (pageData.servers.isEmpty()) item {
                 Text(stringResource(R.string.dashboard_empty), style = MaterialTheme.typography.bodyLarge)
             }
             items(pageData.servers, key = { it.id }) { server ->
-                ServerItemCard(server) { onSelect(server) }
+                ServerItemCard(server, enabled = !offline) { onSelect(server) }
             }
             item {
                 FlowRow(

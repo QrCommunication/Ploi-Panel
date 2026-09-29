@@ -30,6 +30,9 @@
     <string name="error_other">API error (%1$d).</string>
     <string name="select_server">Select a server to see its monitoring.</string>
     <string name="stale_warning">Ploi samples may be delayed; the latest sample time is shown below.</string>
+    <string name="offline_cache_title">Offline reading</string>
+    <string name="offline_cache_body">Servers saved on this device on %1$s. Ploi is unreachable: this list may no longer match the account, and actions stay disabled until a read succeeds.</string>
+    <string name="offline_cache_banner">Offline reading. Servers saved on this device on %1$s. Ploi is unreachable: this list may no longer match the account, and actions stay disabled until a read succeeds.</string>
     <string name="metric_cpu">CPU</string>
     <string name="metric_ram">RAM</string>
     <string name="metric_disk">Disk</string>

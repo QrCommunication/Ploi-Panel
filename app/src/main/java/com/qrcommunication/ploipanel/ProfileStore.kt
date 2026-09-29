@@ -95,6 +95,7 @@ internal class ProfileStore(private val prefs: ProfilePrefs, private val cipher:
         persist(profiles().filterNot { it.id == id })
         prefs.write(TOKEN_PREFIX + id, null)
         prefs.write(DeployScriptTemplateStore.key(id), null)
+        prefs.write(OfflineCache.key(id), null)
         prefs.write(com.qrcommunication.ploipanel.ssh.SshKeyVault.key(id), null)
         prefs.write(com.qrcommunication.ploipanel.ssh.SshHostTrustStore.key(id), null)
         if (prefs.read(KEY_ACTIVE) == id) prefs.write(KEY_ACTIVE, null)

@@ -13,6 +13,7 @@
 - [Vérifications locales de sites](docs/local-checks.md) par HTTP(S), indépendantes des moniteurs de l'API Ploi : cibles, codes acceptés, état/latence et alertes panne/rétablissement facultatives. WorkManager a un plancher de **15 minutes**, pas une fréquence garantie ; hors ligne, appareil éteint ou restrictions Android empêchent les alertes.
 - [Export/import chiffré de configuration](docs/portable-configuration.md) avec phrase de passe distincte du PIN via sélecteur de fichiers Android. L'archive contient profils, jetons, modèles locaux de scripts et préférences langue/thème ; elle **n'inclut pas** PIN, widgets, historiques, contrôles HTTP locaux, clés privées SSH ni hôtes épinglés. La restauration sur un second appareil reste à vérifier physiquement.
 - [Gestion SSH limitée](docs/ssh.md) : import de clés, confiance/empreintes d'hôtes et sonde de clé d'hôte par poignée de main ; **aucun terminal SSH, aucune authentification SSH ni commande distante**.
+- [Lecture hors ligne](docs/offline-cache.md) : les pages de serveurs lues avec succès sont conservées **chiffrées** sur l'appareil, par profil. Si Ploi devient injoignable, la dernière liste connue reste consultable avec **l'horodatage de sa lecture** et les actions désactivées. Le cache **ne masque jamais** une réponse de l'API (jeton invalide, scope manquant, limite atteinte) et ne couvre pour l'instant **que** les pages de serveurs ; aucune écriture hors ligne n'est mise en file.
 
 ## Non inclus / à valider
 

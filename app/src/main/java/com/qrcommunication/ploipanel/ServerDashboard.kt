@@ -21,6 +21,8 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.res.pluralStringResource
 import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.semantics.clearAndSetSemantics
+import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
@@ -72,11 +74,43 @@ internal fun ServerPageHero(page: ServerPage) {
     }
 }
 
+/**
+ * Says, in words, that the rows below were read from the device cache at a given time and that the
+ * account may have changed since. The colour alone would say nothing to a screen reader, so the
+ * whole banner is announced as one sentence.
+ */
 @Composable
-internal fun ServerItemCard(server: Server, onClick: () -> Unit) {
+internal fun OfflineCacheBanner(fetchedAt: Long) {
+    val colors = MaterialTheme.colorScheme
+    val timestamp = formatCacheTimestamp(fetchedAt)
+    val message = stringResource(R.string.offline_cache_banner, timestamp)
+    Surface(
+        shape = MaterialTheme.shapes.medium,
+        color = colors.tertiaryContainer,
+        modifier = Modifier.fillMaxWidth().clearAndSetSemantics { contentDescription = message }
+    ) {
+        Column(Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(4.dp)) {
+            Text(
+                stringResource(R.string.offline_cache_title),
+                style = MaterialTheme.typography.titleSmall,
+                fontWeight = FontWeight.Bold,
+                color = colors.onTertiaryContainer
+            )
+            Text(
+                stringResource(R.string.offline_cache_body, timestamp),
+                style = MaterialTheme.typography.bodySmall,
+                color = colors.onTertiaryContainer
+            )
+        }
+    }
+}
+
+@Composable
+internal fun ServerItemCard(server: Server, enabled: Boolean = true, onClick: () -> Unit) {
     val colors = MaterialTheme.colorScheme
     Card(
         onClick = onClick,
+        enabled = enabled,
         modifier = Modifier.fillMaxWidth(),
         shape = MaterialTheme.shapes.medium,
         colors = CardDefaults.cardColors(containerColor = colors.surface),

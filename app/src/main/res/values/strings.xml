@@ -30,6 +30,9 @@
     <string name="error_other">Erreur API (%1$d).</string>
     <string name="select_server">Sélectionnez un serveur pour afficher son monitoring.</string>
     <string name="stale_warning">Les mesures Ploi peuvent être différées ; l’heure de la dernière mesure est indiquée ci-dessous.</string>
+    <string name="offline_cache_title">Lecture hors ligne</string>
+    <string name="offline_cache_body">Serveurs enregistrés sur cet appareil le %1$s. Ploi est injoignable : cette liste peut ne plus correspondre au compte, et les actions sont désactivées jusqu’à une lecture réussie.</string>
+    <string name="offline_cache_banner">Lecture hors ligne. Serveurs enregistrés sur cet appareil le %1$s. Ploi est injoignable : cette liste peut ne plus correspondre au compte, et les actions sont désactivées jusqu’à une lecture réussie.</string>
     <string name="metric_cpu">CPU</string>
     <string name="metric_ram">RAM</string>
     <string name="metric_disk">Disque</string>
