@@ -65,7 +65,7 @@ class ResponsiveLayoutContractTest {
         assertTrue(main.contains("servers = null"))
         assertTrue(main.contains("ServerPageHero(pageData)"))
         // Rows still render through the shared card; offline mode only disables its click target.
-        assertTrue(main.contains("ServerItemCard(server, enabled = !offline)"))
+        assertTrue(main.contains("ServerItemCard(server, enabled = !offline,"))
         assertTrue(main.contains("Box(Modifier.weight(1f).fillMaxWidth())"))
         assertTrue(detail.contains("Box(Modifier.weight(1f).fillMaxWidth())"))
     }

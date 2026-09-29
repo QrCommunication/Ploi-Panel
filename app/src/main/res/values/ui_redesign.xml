@@ -97,4 +97,19 @@
     <string name="settings_profiles_description">Chaque profil garde son jeton chiffré sur cet appareil.</string>
     <string name="settings_security_description">Code PIN, biométrie et verrouillage automatique</string>
     <string name="settings_about_body">Vos jetons restent chiffrés sur cet appareil et les appels partent directement vers l’API Ploi.</string>
+    <string name="pin_length_counter">Longueur autorisée %2$d à %3$d, saisie : %1$d</string>
+    <string name="pin_problem_length">Le code doit compter de 4 à 12 chiffres.</string>
+    <string name="pin_problem_repeated">Code trop simple : un seul chiffre répété (ex. 111111).</string>
+    <string name="pin_problem_sequence">Code trop simple : suite continue (ex. 123456 ou 654321).</string>
+    <string name="recheck_title">Nouveau test de connexion</string>
+    <string name="recheck_running">Test en cours : statut Ploi et connexion depuis ce téléphone…</string>
+    <string name="recheck_ploi_status">Statut relu chez Ploi : %1$s</string>
+    <string name="recheck_ploi_failed">Relecture Ploi impossible : %1$s</string>
+    <string name="recheck_device_ok">Ce téléphone joint le port %1$d (%2$d ms)</string>
+    <string name="recheck_device_refused">Ce téléphone atteint le serveur, connexion refusée sur le port %1$d</string>
+    <string name="recheck_device_timeout">Ce téléphone ne joint pas le port %1$d (délai dépassé)</string>
+    <string name="recheck_device_failed">Ce téléphone ne joint pas le port %1$d (réseau ou adresse)</string>
+    <string name="recheck_device_no_ip">Test depuis le téléphone impossible : aucune adresse IP</string>
+    <string name="recheck_checked_at">Testé à %1$s</string>
+    <string name="recheck_retest">Retester</string>
 </resources>

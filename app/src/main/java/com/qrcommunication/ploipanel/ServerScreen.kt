@@ -157,6 +157,20 @@ internal fun ServerDetailScreen(
 ) {
     var section by remember(server.id, token) { mutableStateOf<ServerSection?>(null) }
     BackHandler(enabled = section != null) { section = null }
+    // Opening a server Ploi lists as unreachable re-tests it immediately (fresh Ploi status +
+    // this phone's TCP test); Retest repeats it on demand. Nothing runs for healthy servers.
+    var recheck by remember(server.id, token) { mutableStateOf<Recheck?>(null) }
+    var rechecking by remember(server.id, token) { mutableStateOf(false) }
+    var recheckRun by remember(server.id, token) { mutableIntStateOf(if (needsRecheck(server.status)) 1 else 0) }
+    LaunchedEffect(server.id, token, recheckRun) {
+        if (recheckRun == 0) return@LaunchedEffect
+        rechecking = true
+        try {
+            recheck = withContext(Dispatchers.IO) { recheckServer(token, server) }
+        } finally {
+            rechecking = false
+        }
+    }
     Column(Modifier.fillMaxSize()) {
         val current = section
         if (current == null) {
@@ -165,7 +179,15 @@ internal fun ServerDetailScreen(
                 verticalArrangement = Arrangement.spacedBy(PanelSpacing.md),
                 contentPadding = PaddingValues(bottom = PanelSpacing.xl)
             ) {
-                item { ServerHero(server, onMonitoring = { section = ServerSection.MONITORING }) }
+                item {
+                    ServerHero(
+                        server, status = recheck?.ploiStatus ?: server.status,
+                        onMonitoring = { section = ServerSection.MONITORING }
+                    )
+                }
+                if (recheckRun > 0 || needsRecheck(server.status)) item {
+                    RecheckPanel(recheck, rechecking, onRetest = { recheckRun++ })
+                }
                 items(ServerCategory.entries, key = { it.name }) { category ->
                     SectionCard(
                         title = stringResource(category.title),
@@ -235,7 +257,7 @@ internal fun ServerDetailScreen(
 
 /** Identity of the server and its two most used actions. */
 @Composable
-private fun ServerHero(server: Server, onMonitoring: () -> Unit) {
+private fun ServerHero(server: Server, status: String, onMonitoring: () -> Unit) {
     val colors = MaterialTheme.colorScheme
     Surface(
         shape = MaterialTheme.shapes.large, color = colors.primaryContainer, contentColor = colors.onPrimaryContainer,
@@ -251,7 +273,7 @@ private fun ServerHero(server: Server, onMonitoring: () -> Unit) {
                     if (server.ipAddress.isNotBlank()) Text(server.ipAddress, style = panelMonoStyle)
                 }
             }
-            StatusPill(server.status)
+            StatusPill(status)
             FlowRow(horizontalArrangement = Arrangement.spacedBy(PanelSpacing.sm), verticalArrangement = Arrangement.spacedBy(PanelSpacing.xs)) {
                 if (server.ipAddress.isNotBlank()) Button(onClick = { openServerTerminal(server) }) {
                     Icon(Icons.Outlined.Terminal, contentDescription = null, modifier = Modifier.size(18.dp))

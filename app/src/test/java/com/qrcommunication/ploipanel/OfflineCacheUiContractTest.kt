@@ -68,7 +68,7 @@ class OfflineCacheUiContractTest {
         assertTrue("The monitored overview needs a live call",
             activity.contains("onClick = onMonitored, enabled = !offline"))
         assertTrue("Opening a cached server would need live detail calls",
-            activity.contains("ServerItemCard(server, enabled = !offline)"))
+            activity.contains("ServerItemCard(server, enabled = !offline,"))
         assertTrue("Reload must stay available so the user can leave offline mode",
             activity.contains("onClick = onRefresh, enabled = !loading"))
         assertTrue(activity.contains("OfflineCacheBanner(cachedAt)"))

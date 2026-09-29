@@ -107,10 +107,17 @@ internal fun OfflineCacheBanner(fetchedAt: Long) {
 /**
  * One server row: name, IP in monospace, a worded status pill and a one-tap SSH terminal.
  * [enabled] = false (offline cache) disables opening the server; the terminal shortcut follows it.
+ * For a server Ploi reports as unreachable, the row shows the latest recheck (fresh Ploi status and
+ * this phone's TCP test, labelled separately) and a Retest button.
  */
 @Composable
-internal fun ServerItemCard(server: Server, enabled: Boolean = true, onClick: () -> Unit) {
+internal fun ServerItemCard(
+    server: Server, enabled: Boolean = true,
+    recheck: Recheck? = null, rechecking: Boolean = false, onRecheck: (() -> Unit)? = null,
+    onClick: () -> Unit
+) {
     val colors = MaterialTheme.colorScheme
+    val shownStatus = recheck?.ploiStatus ?: server.status
     Card(
         onClick = onClick,
         enabled = enabled,
@@ -122,28 +129,36 @@ internal fun ServerItemCard(server: Server, enabled: Boolean = true, onClick: ()
         ),
         border = BorderStroke(1.dp, colors.outlineVariant)
     ) {
-        Row(
-            Modifier.fillMaxWidth().padding(start = PanelSpacing.lg, top = PanelSpacing.md, bottom = PanelSpacing.md, end = PanelSpacing.xs),
-            verticalAlignment = Alignment.CenterVertically,
-            horizontalArrangement = Arrangement.spacedBy(PanelSpacing.md)
-        ) {
-            IconBadge(Icons.Outlined.Dns, container = colors.primaryContainer, content = colors.onPrimaryContainer)
-            Column(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(PanelSpacing.xs)) {
-                Text(server.name, style = MaterialTheme.typography.titleMedium, maxLines = 1, overflow = TextOverflow.Ellipsis)
-                Text(
-                    server.ipAddress.ifBlank { stringResource(R.string.server_card_no_ip) },
-                    style = if (server.ipAddress.isBlank()) MaterialTheme.typography.bodySmall else panelMonoStyle,
-                    color = colors.onSurfaceVariant, maxLines = 1, overflow = TextOverflow.Ellipsis
-                )
-                StatusPill(server.status)
-            }
-            if (server.ipAddress.isNotBlank()) IconButton(
-                onClick = { TerminalNavigator.open(SshTarget(server.ipAddress, SSH_DEFAULT_PORT, server.id, server.name)) },
-                enabled = enabled
+        Column(Modifier.fillMaxWidth()) {
+            Row(
+                Modifier.fillMaxWidth().padding(start = PanelSpacing.lg, top = PanelSpacing.md, bottom = PanelSpacing.md, end = PanelSpacing.xs),
+                verticalAlignment = Alignment.CenterVertically,
+                horizontalArrangement = Arrangement.spacedBy(PanelSpacing.md)
             ) {
-                Icon(Icons.Outlined.Terminal, contentDescription = stringResource(R.string.server_card_terminal, server.name))
+                IconBadge(Icons.Outlined.Dns, container = colors.primaryContainer, content = colors.onPrimaryContainer)
+                Column(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(PanelSpacing.xs)) {
+                    Text(server.name, style = MaterialTheme.typography.titleMedium, maxLines = 1, overflow = TextOverflow.Ellipsis)
+                    Text(
+                        server.ipAddress.ifBlank { stringResource(R.string.server_card_no_ip) },
+                        style = if (server.ipAddress.isBlank()) MaterialTheme.typography.bodySmall else panelMonoStyle,
+                        color = colors.onSurfaceVariant, maxLines = 1, overflow = TextOverflow.Ellipsis
+                    )
+                    StatusPill(shownStatus)
+                }
+                if (server.ipAddress.isNotBlank()) IconButton(
+                    onClick = { TerminalNavigator.open(SshTarget(server.ipAddress, SSH_DEFAULT_PORT, server.id, server.name)) },
+                    enabled = enabled
+                ) {
+                    Icon(Icons.Outlined.Terminal, contentDescription = stringResource(R.string.server_card_terminal, server.name))
+                }
+                Icon(Icons.AutoMirrored.Outlined.KeyboardArrowRight, contentDescription = null, tint = colors.onSurfaceVariant)
             }
-            Icon(Icons.AutoMirrored.Outlined.KeyboardArrowRight, contentDescription = null, tint = colors.onSurfaceVariant)
+            if (onRecheck != null && enabled && (needsRecheck(server.status) || recheck != null || rechecking)) {
+                RecheckPanel(
+                    recheck, rechecking, onRetest = onRecheck,
+                    modifier = Modifier.padding(start = PanelSpacing.md, end = PanelSpacing.md, bottom = PanelSpacing.md)
+                )
+            }
         }
     }
 }
