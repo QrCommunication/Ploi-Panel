@@ -34,6 +34,8 @@ import com.qrcommunication.ploipanel.ssh.KnownHostsImport
 import com.qrcommunication.ploipanel.ssh.SshHostKey
 import com.qrcommunication.ploipanel.ssh.SshHostTrustStore
 import com.qrcommunication.ploipanel.ssh.SshKeyEntry
+import com.qrcommunication.ploipanel.ssh.SshBookmarkStore
+import com.qrcommunication.ploipanel.ssh.SshKeyMaterial
 import com.qrcommunication.ploipanel.ssh.SshKeyVault
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.Dispatchers
@@ -43,7 +45,7 @@ import java.text.DateFormat
 import java.util.Date
 
 /** Keystore alias dedicated to the SSH key vault; never reused for Ploi tokens or templates. */
-private const val SSH_VAULT_ALIAS = "ploi-panel.ssh-keys"
+private const val SSH_VAULT_ALIAS = SSH_VAULT_KEYSTORE_ALIAS
 
 /** Maps vault/trust-store failures to operator-readable messages without leaking internals. */
 private fun mapSshError(failure: Throwable): Int = when (failure.message) {
@@ -54,6 +56,7 @@ private fun mapSshError(failure: Throwable): Int = when (failure.message) {
     "Expected key type and key data" -> R.string.ssh_error_public_line
     "Encrypted PEM keys are unsupported",
     "Passphrase-protected keys are unsupported" -> R.string.ssh_error_encrypted_pem
+    "Public key required" -> R.string.ssh_error_public_required
     else -> if (failure is IllegalStateException) R.string.ssh_error_vault
         else R.string.ssh_error_malformed_key
 }
@@ -63,7 +66,7 @@ private fun mapSshError(failure: Throwable): Int = when (failure.message) {
  * PEM is never read back for display) and pinned host keys (TOFU). Destructive actions stay
  * explicit; key deletion is gated by a fresh PIN/biometric confirmation. The host probe opens
  * [SshHostProbeDialog], the only connection-time UI allowed to trust or re-pin a host key.
- * No authenticated SSH session or terminal exists yet.
+ * Interactive sessions live in [SshTerminalScreen]; this screen never opens one.
  */
 @Composable
 internal fun SshDeviceSection(profileId: String?, lock: AppLock, activity: FragmentActivity) {
@@ -136,6 +139,9 @@ internal fun SshDeviceSection(profileId: String?, lock: AppLock, activity: Fragm
                             stringResource(R.string.ssh_key_added, dateFormat.format(Date(entry.createdAtEpochMillis))),
                             style = MaterialTheme.typography.bodySmall
                         )
+                        if (entry.passphraseProtected) Text(
+                            stringResource(R.string.ssh_key_passphrase_protected), style = MaterialTheme.typography.bodySmall
+                        )
                         if (entry.keyType == "ssh-rsa") Text(
                             stringResource(R.string.ssh_weak_rsa), color = MaterialTheme.colorScheme.error,
                             style = MaterialTheme.typography.bodySmall
@@ -194,8 +200,18 @@ internal fun SshDeviceSection(profileId: String?, lock: AppLock, activity: Fragm
     if (importingKey) SshKeyImportDialog(
         onDismiss = { importingKey = false },
         onImport = { label, publicLine, privatePem ->
-            val (keyType, publicKey) = SshKeyVault.parsePublicKeyLine(publicLine)
-            vault.import(profileId, label, keyType, privatePem, publicKey)
+            // The public key is derived from the PEM when possible; a pasted line must match it.
+            val inspection = SshKeyMaterial.inspect(privatePem)
+            val (keyType, publicKey) = if (publicLine.isNotBlank()) {
+                SshKeyVault.parsePublicKeyLine(publicLine)
+            } else {
+                inspection.keyType to (inspection.publicKeyBase64 ?: throw IllegalArgumentException("Public key required"))
+            }
+            require(keyType == inspection.keyType) { "Public key does not match ${inspection.keyType}" }
+            if (inspection.publicKeyBase64 != null) {
+                require(inspection.publicKeyBase64 == publicKey.trim()) { "Public key does not match private key" }
+            }
+            vault.import(profileId, label, keyType, privatePem, publicKey, passphraseProtected = inspection.encrypted)
         },
         onImported = {
             importingKey = false
@@ -227,6 +243,7 @@ internal fun SshDeviceSection(profileId: String?, lock: AppLock, activity: Fragm
                 keysError = 0
                 try {
                     vault.remove(profileId, entry.id)
+                    SshBookmarkStore(SharedPreferencesProfilePrefs(context), profileId).forgetKey(entry.id)
                     feedback = R.string.ssh_key_deleted
                     keysVersion++
                 } catch (failure: Exception) {
@@ -332,7 +349,7 @@ private fun SshKeyImportDialog(
                         busy = false
                     }
                 }
-            }, enabled = !busy && label.isNotBlank() && publicLine.isNotBlank() && privatePem.isNotBlank()) {
+            }, enabled = !busy && label.isNotBlank() && privatePem.isNotBlank()) {
                 Text(stringResource(R.string.ssh_key_import))
             }
         },

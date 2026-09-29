@@ -1,7 +1,7 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
     <string name="ssh_device_title">SSH on this device</string>
-    <string name="ssh_device_hint">Private keys and host fingerprints scoped to this profile, stored on the device (keys encrypted). Host verification (SSH handshake, no credential) is available; sessions/terminal are not yet.</string>
+    <string name="ssh_device_hint">Private keys and host fingerprints scoped to this profile, stored on the device (keys encrypted). Host verification happens here; interactive sessions open in the “SSH terminal” tab.</string>
     <string name="ssh_device_need_profile">Activate a profile to manage its SSH keys and trusted hosts.</string>
     <string name="ssh_keys_heading">Imported private keys</string>
     <string name="ssh_keys_empty">No key imported for this profile.</string>
@@ -9,7 +9,7 @@
     <string name="ssh_weak_rsa">ssh-rsa (SHA-1): for legacy hosts only.</string>
     <string name="ssh_key_import">Import a key</string>
     <string name="ssh_key_label">Key name</string>
-    <string name="ssh_key_public_line">Public key (OpenSSH line)</string>
+    <string name="ssh_key_public_line">Public key (OpenSSH line, optional)</string>
     <string name="ssh_key_public_hint">ssh-ed25519 AAAA… comment</string>
     <string name="ssh_key_private_pem">Private key (PEM)</string>
     <string name="ssh_key_imported">Key imported and encrypted.</string>
@@ -31,7 +31,7 @@
     <string name="ssh_error_invalid_label">Invalid key name.</string>
     <string name="ssh_error_duplicate_label">A key already uses this name.</string>
     <string name="ssh_error_limit">Maximum number of keys reached.</string>
-    <string name="ssh_error_encrypted_pem">Passphrase-protected PEM keys are not supported.</string>
+    <string name="ssh_error_encrypted_pem">Encrypted PKCS#8 keys are not supported: convert the key to OpenSSH format (ssh-keygen -p -f key).</string>
     <string name="ssh_error_malformed_key">Unreadable private or public key.</string>
     <string name="ssh_error_vault">Unreadable SSH vault: corrupted data or missing encryption key.</string>
     <string name="ssh_probe_title">Check a host</string>
@@ -51,4 +51,45 @@
     <string name="ssh_probe_repin">Re-pin the new key</string>
     <string name="ssh_probe_repin_confirm">Replace the pin for %1$s with the presented key? Confirm only if you verified the new fingerprint out of band.</string>
     <string name="ssh_probe_repinned">Pin replaced for this profile.</string>
+    <string name="ssh_error_public_required">No public key found in this PEM: also paste the OpenSSH public line.</string>
+    <string name="ssh_key_passphrase_protected">Passphrase-protected (asked at each connection, never saved).</string>
+    <string name="ssh_term_tab">SSH terminal</string>
+    <string name="ssh_term_new">+ New session</string>
+    <string name="ssh_term_tab_closed">%1$s (closed)</string>
+    <string name="ssh_term_intro">Direct phone-to-server SSH terminal, with no intermediary. The host key is checked against this profile’s pinned fingerprints before any credential is sent; an unknown or changed host blocks the connection.</string>
+    <string name="ssh_term_saved">Saved destinations</string>
+    <string name="ssh_term_saved_empty">No destination yet. Open a session from a server or with “New session”.</string>
+    <string name="ssh_term_auth_key">Key authentication</string>
+    <string name="ssh_term_auth_password">Password</string>
+    <string name="ssh_term_connect">Connect</string>
+    <string name="ssh_term_forget">Forget</string>
+    <string name="ssh_term_connect_title">SSH connection</string>
+    <string name="ssh_term_label">Session name</string>
+    <string name="ssh_term_user">User</string>
+    <string name="ssh_term_auth">Authentication</string>
+    <string name="ssh_term_password">Password (not saved)</string>
+    <string name="ssh_term_passphrase">Key passphrase (not saved)</string>
+    <string name="ssh_term_generate">Generate an Ed25519 key</string>
+    <string name="ssh_term_generate_hint">The private key is created on this phone and sealed in the encrypted vault; it never leaves the device.</string>
+    <string name="ssh_term_generated">Key generated and selected. Authorize it on the server before connecting.</string>
+    <string name="ssh_term_install_key">Authorize key on this server (Ploi)</string>
+    <string name="ssh_term_install_hint">Adds public key “%1$s” to the server through the Ploi API (server SSH keys). Propagation may take a few seconds.</string>
+    <string name="ssh_term_system_user">System user</string>
+    <string name="ssh_term_install_confirm">Authorize key “%1$s” for user %2$s? It grants shell access to this server.</string>
+    <string name="ssh_term_installed">Key sent to Ploi. Connect with the chosen system user.</string>
+    <string name="ssh_term_security_note">Agent and X11 forwarding are disabled. Passwords and passphrases stay in memory only for the connection attempt.</string>
+    <string name="ssh_term_error_unknown_host">Host not pinned: use “Verify a host”, compare the fingerprint, pin it, then reconnect. No credential was sent.</string>
+    <string name="ssh_term_error_mismatch">WARNING: the host key changed. Connection blocked before any authentication; verify out of band before re-pinning.</string>
+    <string name="ssh_term_error_auth">The server refused authentication (user, password or unauthorized key).</string>
+    <string name="ssh_term_error_passphrase">Wrong key passphrase.</string>
+    <string name="ssh_term_error_unreachable">Server unreachable (network, port or firewall).</string>
+    <string name="ssh_term_error_invalid">Invalid host, port or user.</string>
+    <string name="ssh_term_error_protocol">SSH negotiation failed with this server.</string>
+    <string name="ssh_term_paste">Paste</string>
+    <string name="ssh_term_copy">Copy</string>
+    <string name="ssh_term_disconnect">Disconnect</string>
+    <string name="ssh_term_closed_user">Session closed.</string>
+    <string name="ssh_term_closed_remote">Connection ended by the server or lost.</string>
+    <string name="ssh_term_keyboard">Keyboard</string>
+    <string name="ssh_term_open_server">Open SSH terminal</string>
 </resources>

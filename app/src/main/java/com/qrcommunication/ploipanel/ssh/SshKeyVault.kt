@@ -16,6 +16,8 @@ internal data class SshKeyEntry(
     val keyType: String,
     val publicKeyBase64: String,
     val createdAtEpochMillis: Long,
+    /** The stored PEM is itself passphrase-protected; the passphrase is asked per connection, never stored. */
+    val passphraseProtected: Boolean = false,
 )
 
 /**
@@ -24,8 +26,10 @@ internal data class SshKeyEntry(
  * never reaches storage, logs or Android Auto Backup. `ssh-rsa` is accepted for legacy
  * hosts; callers must surface its weakness like [SshHostKey.isWeakSignature].
  *
- * Key generation, passphrase-protected PEM blocks and agent forwarding are intentionally
- * out of scope for now; encrypted PEM input is rejected with an explicit error.
+ * Passphrase-protected OpenSSH and legacy PEM keys may be stored when the caller declares them
+ * ([import] `passphraseProtected`); the passphrase itself is never persisted. PKCS#8
+ * `ENCRYPTED PRIVATE KEY` blocks stay rejected (JSch cannot open them). Agent forwarding is out
+ * of scope.
  */
 internal class SshKeyVault(private val prefs: ProfilePrefs, private val cipher: TokenCipher) {
     companion object {
@@ -52,7 +56,7 @@ internal class SshKeyVault(private val prefs: ProfilePrefs, private val cipher: 
             return PREFIX + profileId
         }
 
-        internal fun validatePrivateKeyPem(pem: String): String {
+        internal fun validatePrivateKeyPem(pem: String, allowEncrypted: Boolean = false): String {
             val trimmed = pem.trim()
             require(trimmed.length <= MAX_PRIVATE_KEY_BYTES) { "Private key too large" }
             val begin = PEM_BEGIN.find(trimmed)
@@ -65,7 +69,7 @@ internal class SshKeyVault(private val prefs: ProfilePrefs, private val cipher: 
             val body = trimmed.substring(begin.value.length, trimmed.length - endMarker.length)
             val lines = body.lines().map(String::trim).filter(String::isNotEmpty)
             require(lines.isNotEmpty()) { "Empty PEM private key body" }
-            if (lines.first().startsWith("Proc-Type:") && lines.first().contains("ENCRYPTED")) {
+            if (!allowEncrypted && lines.first().startsWith("Proc-Type:") && lines.first().contains("ENCRYPTED")) {
                 throw IllegalArgumentException("Passphrase-protected keys are unsupported")
             }
             val payload = lines.filterNot { it.contains(':') }.joinToString("")
@@ -113,14 +117,17 @@ internal class SshKeyVault(private val prefs: ProfilePrefs, private val cipher: 
         privateKeyPem: String,
         publicKeyBase64: String,
         createdAtEpochMillis: Long = System.currentTimeMillis(),
+        passphraseProtected: Boolean = false,
     ): SshKeyEntry {
         val cleaned = validateLabel(label, list(profileId))
         require(keyType in PRIVATE_KEY_TYPES) { "Unsupported key type" }
-        val pem = validatePrivateKeyPem(privateKeyPem)
+        val pem = validatePrivateKeyPem(privateKeyPem, allowEncrypted = passphraseProtected)
         val publicKey = validatePublicKey(keyType, publicKeyBase64)
         val current = load(profileId)
         require(current.size < MAX_KEYS) { "Too many SSH keys" }
-        val entry = SshKeyEntry(UUID.randomUUID().toString(), cleaned, keyType, publicKey, createdAtEpochMillis)
+        val entry = SshKeyEntry(
+            UUID.randomUUID().toString(), cleaned, keyType, publicKey, createdAtEpochMillis, passphraseProtected
+        )
         persist(profileId, current + StoredKey(entry, pem))
         return entry
     }
@@ -165,6 +172,7 @@ internal class SshKeyVault(private val prefs: ProfilePrefs, private val cipher: 
                     row.getString("keyType"),
                     row.getString("publicKey"),
                     row.getLong("createdAt"),
+                    row.optBoolean("passphraseProtected", false),
                 )
                 require(entry.keyType in PRIVATE_KEY_TYPES)
                 require(entry.label.lowercase(Locale.ROOT).isNotEmpty())
@@ -191,6 +199,7 @@ internal class SshKeyVault(private val prefs: ProfilePrefs, private val cipher: 
                         .put("keyType", stored.entry.keyType)
                         .put("publicKey", stored.entry.publicKeyBase64)
                         .put("createdAt", stored.entry.createdAtEpochMillis)
+                        .put("passphraseProtected", stored.entry.passphraseProtected)
                         .put("privateKey", stored.privatePem)
                 )
             }

@@ -69,6 +69,9 @@ internal fun ServerDetailScreen(
                 maxLines = 1, color = MaterialTheme.colorScheme.onSurface)
             Text(server.ipAddress, style = MaterialTheme.typography.bodySmall,
                 color = MaterialTheme.colorScheme.onSurfaceVariant)
+            if (server.ipAddress.isNotBlank()) OutlinedButton(onClick = {
+                TerminalNavigator.open(SshTarget(server.ipAddress, SSH_DEFAULT_PORT, server.id, server.name))
+            }) { Text(stringResource(R.string.ssh_term_open_server)) }
         }
         LazyRow(
             modifier = Modifier.fillMaxWidth(),
@@ -196,6 +199,11 @@ private fun ServerInfoTab(
             if (current.type.isNotBlank()) Text(stringResource(R.string.detail_type, current.type))
             if (current.ipAddress.isNotBlank()) Text(stringResource(R.string.detail_ip, current.ipAddress))
             if (current.sshPort > 0) Text(stringResource(R.string.detail_ssh_port, current.sshPort))
+            if (current.ipAddress.isNotBlank()) OutlinedButton(onClick = {
+                TerminalNavigator.open(
+                    SshTarget(current.ipAddress, current.sshPort.takeIf { it > 0 } ?: SSH_DEFAULT_PORT, current.id, current.name)
+                )
+            }) { Text(stringResource(R.string.ssh_term_open_server)) }
             if (current.phpVersion.isNotBlank()) Text(stringResource(R.string.detail_php, current.phpVersion))
             if (current.mysqlVersion.isNotBlank()) Text(stringResource(R.string.detail_mysql, current.mysqlVersion))
             Text(stringResource(R.string.detail_sites_count, current.sitesCount))

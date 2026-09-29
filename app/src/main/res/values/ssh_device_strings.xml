@@ -1,7 +1,7 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
     <string name="ssh_device_title">SSH sur cet appareil</string>
-    <string name="ssh_device_hint">Clés privées et empreintes d’hôtes propres à ce profil, stockées sur l’appareil (clés chiffrées). La vérification d’un hôte (poignée de main SSH, sans identifiant) est disponible ; la session/terminal ne l’est pas encore.</string>
+    <string name="ssh_device_hint">Clés privées et empreintes d’hôtes propres à ce profil, stockées sur l’appareil (clés chiffrées). La vérification d’un hôte se fait ici ; les sessions interactives s’ouvrent dans l’onglet « Terminal SSH ».</string>
     <string name="ssh_device_need_profile">Activez un profil pour gérer ses clés SSH et ses hôtes de confiance.</string>
     <string name="ssh_keys_heading">Clés privées importées</string>
     <string name="ssh_keys_empty">Aucune clé importée pour ce profil.</string>
@@ -9,7 +9,7 @@
     <string name="ssh_weak_rsa">ssh-rsa (SHA-1) : réservé aux hôtes anciens.</string>
     <string name="ssh_key_import">Importer une clé</string>
     <string name="ssh_key_label">Nom de la clé</string>
-    <string name="ssh_key_public_line">Clé publique (ligne OpenSSH)</string>
+    <string name="ssh_key_public_line">Clé publique (ligne OpenSSH, facultative)</string>
     <string name="ssh_key_public_hint">ssh-ed25519 AAAA… commentaire</string>
     <string name="ssh_key_private_pem">Clé privée (PEM)</string>
     <string name="ssh_key_imported">Clé importée et chiffrée.</string>
@@ -31,7 +31,7 @@
     <string name="ssh_error_invalid_label">Nom de clé invalide.</string>
     <string name="ssh_error_duplicate_label">Une clé porte déjà ce nom.</string>
     <string name="ssh_error_limit">Nombre maximal de clés atteint.</string>
-    <string name="ssh_error_encrypted_pem">Les clés PEM protégées par phrase de passe ne sont pas prises en charge.</string>
+    <string name="ssh_error_encrypted_pem">Format chiffré PKCS#8 non pris en charge : convertissez la clé au format OpenSSH (ssh-keygen -p -f clé).</string>
     <string name="ssh_error_malformed_key">Clé privée ou publique illisible.</string>
     <string name="ssh_error_vault">Coffre SSH illisible : données corrompues ou clé de chiffrement absente.</string>
     <string name="ssh_probe_title">Vérifier un hôte</string>
@@ -51,4 +51,45 @@
     <string name="ssh_probe_repin">Ré-épingler la nouvelle clé</string>
     <string name="ssh_probe_repin_confirm">Remplacer l’épingle de %1$s par la clé présentée ? Confirmez uniquement si vous avez vérifié la nouvelle empreinte hors bande.</string>
     <string name="ssh_probe_repinned">Épingle remplacée pour ce profil.</string>
+    <string name="ssh_error_public_required">Clé publique introuvable dans ce PEM : collez aussi la ligne publique OpenSSH.</string>
+    <string name="ssh_key_passphrase_protected">Protégée par phrase de passe (demandée à chaque connexion, jamais enregistrée).</string>
+    <string name="ssh_term_tab">Terminal SSH</string>
+    <string name="ssh_term_new">+ Nouvelle session</string>
+    <string name="ssh_term_tab_closed">%1$s (fermée)</string>
+    <string name="ssh_term_intro">Terminal SSH direct téléphone → serveur, sans intermédiaire. La clé d’hôte est vérifiée contre les empreintes épinglées de ce profil avant tout envoi d’identifiant ; un hôte inconnu ou modifié bloque la connexion.</string>
+    <string name="ssh_term_saved">Destinations enregistrées</string>
+    <string name="ssh_term_saved_empty">Aucune destination. Ouvrez une session depuis un serveur ou avec « Nouvelle session ».</string>
+    <string name="ssh_term_auth_key">Authentification par clé</string>
+    <string name="ssh_term_auth_password">Mot de passe</string>
+    <string name="ssh_term_connect">Se connecter</string>
+    <string name="ssh_term_forget">Oublier</string>
+    <string name="ssh_term_connect_title">Connexion SSH</string>
+    <string name="ssh_term_label">Nom de la session</string>
+    <string name="ssh_term_user">Utilisateur</string>
+    <string name="ssh_term_auth">Authentification</string>
+    <string name="ssh_term_password">Mot de passe (non enregistré)</string>
+    <string name="ssh_term_passphrase">Phrase de passe de la clé (non enregistrée)</string>
+    <string name="ssh_term_generate">Générer une clé Ed25519</string>
+    <string name="ssh_term_generate_hint">La clé privée est créée sur ce téléphone et scellée dans le coffre chiffré ; elle ne quitte jamais l’appareil.</string>
+    <string name="ssh_term_generated">Clé générée et sélectionnée. Autorisez-la sur le serveur avant de vous connecter.</string>
+    <string name="ssh_term_install_key">Autoriser la clé sur ce serveur (Ploi)</string>
+    <string name="ssh_term_install_hint">Ajoute la clé publique « %1$s » au serveur via l’API Ploi (clés SSH du serveur). La propagation peut prendre quelques secondes.</string>
+    <string name="ssh_term_system_user">Utilisateur système</string>
+    <string name="ssh_term_install_confirm">Autoriser la clé « %1$s » pour l’utilisateur %2$s ? Elle donnera un accès shell à ce serveur.</string>
+    <string name="ssh_term_installed">Clé envoyée à Ploi. Connectez-vous avec l’utilisateur système choisi.</string>
+    <string name="ssh_term_security_note">Transfert d’agent et X11 désactivés. Mots de passe et phrases de passe restent en mémoire le temps de la connexion uniquement.</string>
+    <string name="ssh_term_error_unknown_host">Hôte non épinglé : utilisez « Vérifier un hôte », comparez l’empreinte, épinglez puis reconnectez-vous. Aucun identifiant n’a été envoyé.</string>
+    <string name="ssh_term_error_mismatch">ALERTE : la clé de l’hôte a changé. Connexion bloquée avant toute authentification ; vérifiez hors bande avant de ré-épingler.</string>
+    <string name="ssh_term_error_auth">Authentification refusée par le serveur (utilisateur, mot de passe ou clé non autorisée).</string>
+    <string name="ssh_term_error_passphrase">Phrase de passe de la clé incorrecte.</string>
+    <string name="ssh_term_error_unreachable">Serveur injoignable (réseau, port ou pare-feu).</string>
+    <string name="ssh_term_error_invalid">Hôte, port ou utilisateur invalide.</string>
+    <string name="ssh_term_error_protocol">Négociation SSH impossible avec ce serveur.</string>
+    <string name="ssh_term_paste">Coller</string>
+    <string name="ssh_term_copy">Copier</string>
+    <string name="ssh_term_disconnect">Déconnecter</string>
+    <string name="ssh_term_closed_user">Session fermée.</string>
+    <string name="ssh_term_closed_remote">Connexion terminée par le serveur ou perdue.</string>
+    <string name="ssh_term_keyboard">Clavier</string>
+    <string name="ssh_term_open_server">Ouvrir un terminal SSH</string>
 </resources>

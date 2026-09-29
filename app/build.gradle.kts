@@ -88,8 +88,11 @@ dependencies {
     implementation("androidx.activity:activity-compose:1.11.0")
     implementation("androidx.biometric:biometric:1.1.0")
     implementation("androidx.work:work-runtime-ktx:2.10.5")
-    // SSH transport for the handshake-only host key probe (TOFU confirmation at connection time).
+    // SSH transport: connection-time host key probe and interactive shell sessions.
     implementation("com.github.mwiede:jsch:2.28.7")
+    // JSch's Bouncy Castle providers give Ed25519/X25519 on every supported API level (JCA only
+    // exposes them on recent Android releases).
+    implementation("org.bouncycastle:bcprov-jdk18on:1.86")
     implementation(platform("androidx.compose:compose-bom:2025.12.00"))
     implementation("androidx.compose.ui:ui")
     implementation("androidx.compose.material3:material3")
@@ -97,4 +100,8 @@ dependencies {
     debugImplementation("androidx.compose.ui:ui-tooling")
     testImplementation("junit:junit:4.13.2")
     testImplementation("org.json:json:20260814")
+    // In-process SSH server: end-to-end tests of host key checks, auth and PTY shell.
+    testImplementation("org.apache.sshd:sshd-core:2.20.0")
+    testImplementation("net.i2p.crypto:eddsa:0.3.0")
+    testImplementation("org.slf4j:slf4j-nop:2.0.17")
 }

@@ -46,6 +46,7 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.SideEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableIntStateOf
@@ -286,6 +287,11 @@ private fun PanelHome(
         onLanguageChanged(restored.language())
     }
 
+    val terminalRequest by TerminalNavigator.requests.collectAsState()
+    LaunchedEffect(terminalRequest, globalBatchRunning) {
+        if (terminalRequest != null && token != null && !globalBatchRunning) panelTab = 10
+    }
+
     LaunchedEffect(importUri, token, transferStatus, globalBatchRunning) {
         if ((importUri != null || transferStatus != 0) && token != null && !globalBatchRunning) panelTab = 7
     }
@@ -464,6 +470,7 @@ private fun PanelHome(
                                     7 -> stringResource(R.string.settings_tab)
                                     8 -> stringResource(R.string.deploy_global_tab)
                                     9 -> stringResource(R.string.local_checks_tab)
+                                    10 -> stringResource(R.string.ssh_term_tab)
                                     else -> stringResource(if (creating) R.string.new_server else R.string.servers)
                                 },
                                 style = MaterialTheme.typography.titleLarge, fontWeight = FontWeight.Bold
@@ -496,7 +503,7 @@ private fun PanelHome(
                 }
                 val sections = listOf(
                     0 to R.string.servers, 8 to R.string.deploy_global_tab,
-                    9 to R.string.local_checks_tab,
+                    9 to R.string.local_checks_tab, 10 to R.string.ssh_term_tab,
                     1 to R.string.providers, 2 to R.string.account, 3 to R.string.scripts_tab,
                     4 to R.string.status_pages_tab, 5 to R.string.webserver_templates_tab,
                     6 to R.string.projects_tab, 7 to R.string.settings_tab
@@ -533,6 +540,9 @@ private fun PanelHome(
                             onRunningChange = { globalBatchRunning = it })
                     }
                     9 -> LocalChecksScreen()
+                    10 -> activeProfile?.first?.id?.let { profileId ->
+                        SshTerminalScreen(profileId, token, lock, activity)
+                    }
                     7 -> SettingsScreen(
                         store = store, profiles = profiles, active = activeProfile?.first,
                         lock = lock, activity = activity, theme = theme, language = language,

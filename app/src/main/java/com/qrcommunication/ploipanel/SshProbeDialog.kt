@@ -49,11 +49,13 @@ internal fun SshHostProbeDialog(
     lock: AppLock,
     activity: FragmentActivity,
     onDismiss: () -> Unit,
-    onPinnedChanged: () -> Unit
+    onPinnedChanged: () -> Unit,
+    initialHost: String = "",
+    initialPort: Int = SshHostTrustStore.DEFAULT_PORT
 ) {
     val scope = rememberCoroutineScope()
-    var host by remember { mutableStateOf("") }
-    var port by remember { mutableStateOf(SshHostTrustStore.DEFAULT_PORT.toString()) }
+    var host by remember { mutableStateOf(initialHost) }
+    var port by remember { mutableStateOf(initialPort.toString()) }
     var busy by remember { mutableStateOf(false) }
     var error by remember { mutableIntStateOf(0) }
     var feedback by remember { mutableIntStateOf(0) }
