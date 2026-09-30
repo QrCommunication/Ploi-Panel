@@ -379,17 +379,22 @@ private fun ServerInfoTab(
         detail?.let { current ->
             SectionCard(title = current.name, icon = Icons.Outlined.Dns) {
                 StatusPill(current.status)
-                Text(stringResource(R.string.server_status, current.status), style = MaterialTheme.typography.bodyMedium)
-                if (current.type.isNotBlank()) InfoLine(stringResource(R.string.detail_type, current.type))
-                if (current.ipAddress.isNotBlank()) InfoLine(stringResource(R.string.detail_ip, current.ipAddress), mono = true)
-                if (current.sshPort > 0) InfoLine(stringResource(R.string.detail_ssh_port, current.sshPort), mono = true)
-                if (current.phpVersion.isNotBlank()) InfoLine(stringResource(R.string.detail_php, current.phpVersion))
-                if (current.mysqlVersion.isNotBlank()) InfoLine(stringResource(R.string.detail_mysql, current.mysqlVersion))
-                InfoLine(stringResource(R.string.detail_sites_count, current.sitesCount))
-                InfoLine(stringResource(if (current.monitoring) R.string.detail_monitoring_on else R.string.detail_monitoring_off))
-                if (current.providerName.isNotBlank()) InfoLine(stringResource(R.string.detail_provider, current.providerName))
-                if (current.description.isNotBlank()) InfoLine(stringResource(R.string.detail_description, current.description))
-                if (current.createdAt.isNotBlank()) InfoLine(stringResource(R.string.detail_created, current.createdAt))
+                // Grouped facts instead of "Label : value" lines; machine values in monospace.
+                FlowRow(horizontalArrangement = Arrangement.spacedBy(PanelSpacing.xl),
+                    verticalArrangement = Arrangement.spacedBy(PanelSpacing.md)) {
+                    if (current.ipAddress.isNotBlank()) Fact(stringResource(R.string.fact_ip), current.ipAddress, mono = true)
+                    if (current.sshPort > 0) Fact(stringResource(R.string.fact_ssh_port), current.sshPort.toString(), mono = true)
+                    if (current.type.isNotBlank()) Fact(stringResource(R.string.fact_type), current.type)
+                    if (current.phpVersion.isNotBlank()) Fact("PHP", current.phpVersion, mono = true)
+                    if (current.mysqlVersion.isNotBlank()) Fact("MySQL", current.mysqlVersion, mono = true)
+                    Fact(stringResource(R.string.fact_sites), current.sitesCount.toString())
+                    Fact(stringResource(R.string.fact_monitoring),
+                        stringResource(if (current.monitoring) R.string.fact_yes else R.string.fact_no))
+                    if (current.providerName.isNotBlank()) Fact(stringResource(R.string.fact_provider), current.providerName)
+                    if (current.createdAt.isNotBlank()) Fact(stringResource(R.string.fact_created), formatSampleTime(current.createdAt))
+                }
+                if (current.description.isNotBlank()) Text(current.description, style = MaterialTheme.typography.bodyMedium,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant)
                 if (current.ipAddress.isNotBlank()) FilledTonalButton(onClick = {
                     TerminalNavigator.open(
                         SshTarget(current.ipAddress, current.sshPort.takeIf { it > 0 } ?: SSH_DEFAULT_PORT, current.id, current.name)
@@ -524,8 +529,11 @@ private fun ServerInfoTab(
 }
 
 @Composable
-private fun InfoLine(text: String, mono: Boolean = false) {
-    Text(text, style = if (mono) panelMonoStyle else MaterialTheme.typography.bodyMedium)
+private fun Fact(label: String, value: String, mono: Boolean = false) {
+    Column {
+        Text(label, style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+        Text(value, style = if (mono) panelMonoStyle else MaterialTheme.typography.bodyMedium)
+    }
 }
 
 /** Edit dialog for PATCH /servers/{id}: name always, optional IP + SSH port (sent together). */
@@ -610,31 +618,20 @@ private fun ServerLogsTab(token: String, serverId: Long) {
     }
 
     Column(Modifier.fillMaxSize().padding(vertical = PanelSpacing.sm), verticalArrangement = Arrangement.spacedBy(PanelSpacing.md)) {
-        OutlinedButton(onClick = { refresh++ }, enabled = !loading) {
-            Icon(Icons.Outlined.Refresh, contentDescription = null, modifier = Modifier.size(18.dp))
-            Text(stringResource(R.string.reload), Modifier.padding(start = PanelSpacing.sm))
-        }
+        ListToolbar(onRefresh = { refresh++ }, refreshEnabled = !loading)
         if (loading) LoadingState()
         if (error != null) ErrorState(error!!, onRetry = { refresh++ }, retryEnabled = !loading)
         result?.let { data ->
             if (data.logs.isEmpty()) EmptyState(Icons.AutoMirrored.Outlined.ReceiptLong, stringResource(R.string.empty_logs))
-            FlowRow(horizontalArrangement = Arrangement.spacedBy(PanelSpacing.sm), verticalArrangement = Arrangement.spacedBy(PanelSpacing.xs)) {
-                OutlinedButton(onClick = { page-- }, enabled = page > 1) { Text(stringResource(R.string.previous)) }
-                Text(
-                    stringResource(R.string.page, data.currentPage.toString(), data.lastPage.toString()),
-                    Modifier.padding(top = PanelSpacing.md), style = MaterialTheme.typography.labelLarge
-                )
-                OutlinedButton(onClick = { page++ }, enabled = data.hasNext) { Text(stringResource(R.string.next)) }
-            }
+            PageBar(data.currentPage, data.lastPage, data.hasNext, onPrevious = { page-- }, onNext = { page++ })
             LazyColumn(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(PanelSpacing.sm)) {
                 items(data.logs) { entry ->
-                    SectionCard {
-                        Text(entry.description, style = MaterialTheme.typography.bodyLarge)
-                        Text(entry.createdAt, style = MaterialTheme.typography.labelMedium,
-                            color = MaterialTheme.colorScheme.onSurfaceVariant)
-                        if (entry.content.isNotBlank()) {
-                            Text(entry.content, style = panelMonoStyle)
-                        }
+                    ResourceCard(
+                        title = entry.description, icon = Icons.AutoMirrored.Outlined.ReceiptLong,
+                        subtitle = formatSampleTime(entry.createdAt)
+                    ) {
+                        // Command output collapsed to a few lines; "Show all" expands it in place.
+                        if (entry.content.isNotBlank()) ExpandableMono(entry.content.trim())
                     }
                 }
             }

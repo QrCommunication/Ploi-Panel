@@ -4,13 +4,13 @@ import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxWidth
-import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.outlined.NotificationAdd
+import androidx.compose.material.icons.outlined.Notifications
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Button
-import androidx.compose.material3.Card
-import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.RadioButton
 import androidx.compose.material3.Text
@@ -22,9 +22,9 @@ import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
+import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.res.stringResource
-import androidx.compose.ui.unit.dp
 import androidx.fragment.app.FragmentActivity
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.Dispatchers
@@ -107,42 +107,33 @@ internal fun BackupChannelsDialog(
         text = {
             Column(
                 Modifier.verticalScroll(rememberScrollState()),
-                verticalArrangement = Arrangement.spacedBy(10.dp)
+                verticalArrangement = Arrangement.spacedBy(PanelSpacing.md)
             ) {
-                OutlinedButton(onClick = { attaching = true }, enabled = !busy) {
-                    Text(stringResource(R.string.attach_backup_channel))
-                }
-                if (loading) BusyIndicator()
-                if (error != null) ApiErrorText(error!!)
-                if (feedback.isNotEmpty()) Text(feedback)
+                CardAction(
+                    stringResource(R.string.attach_backup_channel), icon = Icons.Outlined.NotificationAdd,
+                    enabled = !busy, onClick = { attaching = true }
+                )
+                if (loading) LoadingState(rows = 1)
+                if (error != null) ErrorState(error!!)
+                if (feedback.isNotEmpty()) SuccessBanner(feedback)
                 channels?.let { list ->
-                    if (list.isEmpty()) Text(stringResource(R.string.empty_backup_channels))
+                    if (list.isEmpty()) EmptyState(Icons.Outlined.Notifications, stringResource(R.string.empty_backup_channels))
                     list.forEach { channel ->
-                        Card(modifier = Modifier.fillMaxWidth()) {
-                            Column(Modifier.padding(12.dp), verticalArrangement = Arrangement.spacedBy(4.dp)) {
-                                Text(
-                                    channel.label.ifBlank { channel.type },
-                                    style = MaterialTheme.typography.titleMedium
-                                )
-                                Text(
-                                    stringResource(
-                                        R.string.backup_channel_location,
-                                        stringResource(backupLocationLabel(channel.location))
-                                    )
-                                )
-                                if (channel.createdAt.isNotBlank()) {
-                                    Text(stringResource(R.string.detail_created, channel.createdAt))
-                                }
-                                OutlinedButton(
-                                    onClick = { pendingDetach = channel.id to channel.location },
-                                    enabled = !busy
-                                ) {
-                                    Text(
-                                        stringResource(R.string.detach_backup_channel),
-                                        color = MaterialTheme.colorScheme.error
-                                    )
-                                }
-                            }
+                        ResourceCard(
+                            title = channel.label.ifBlank { channel.type }, icon = Icons.Outlined.Notifications,
+                            facts = listOfNotNull(
+                                ResourceFact(
+                                    stringResource(R.string.backup_channel_location_label),
+                                    stringResource(backupLocationLabel(channel.location))
+                                ),
+                                channel.createdAt.takeIf { it.isNotBlank() }?.let { ResourceFact(stringResource(R.string.g2_created_label), it) }
+                            )
+                        ) {
+                            DangerAction(
+                                stringResource(R.string.detach_backup_channel),
+                                onClick = { pendingDetach = channel.id to channel.location },
+                                enabled = !busy
+                            )
                         }
                     }
                 }
@@ -190,7 +181,7 @@ private fun AttachBackupChannelDialog(
         text = {
             Column(
                 Modifier.verticalScroll(rememberScrollState()),
-                verticalArrangement = Arrangement.spacedBy(10.dp)
+                verticalArrangement = Arrangement.spacedBy(PanelSpacing.md)
             ) {
                 PagedOptionPicker(
                     key = token, label = stringResource(R.string.backup_channel_label),
@@ -199,19 +190,19 @@ private fun AttachBackupChannelDialog(
                         PickerOptions(it.channels, it.currentPage, it.lastPage)
                     } }
                 ) { channel ->
-                        Row(Modifier.fillMaxWidth()) {
+                        Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
                             RadioButton(
                                 selected = channelId == channel.id,
                                 onClick = { channelId = channel.id }
                             )
-                            Text(channel.label.ifBlank { channel.type }, Modifier.padding(top = 12.dp))
+                            Text(channel.label.ifBlank { channel.type })
                         }
                 }
-                Text(stringResource(R.string.backup_channel_location_label))
+                SectionHeader(stringResource(R.string.backup_channel_location_label))
                 BACKUP_CHANNEL_LOCATIONS.forEach { candidate ->
-                    Row(Modifier.fillMaxWidth()) {
+                    Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
                         RadioButton(selected = location == candidate, onClick = { location = candidate })
-                        Text(stringResource(backupLocationLabel(candidate)), Modifier.padding(top = 12.dp))
+                        Text(stringResource(backupLocationLabel(candidate)))
                     }
                 }
             }

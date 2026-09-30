@@ -43,6 +43,21 @@ class LiveApiShapesTest {
         assertEquals(listOf("10", "20"), samples.map { it.cpu })
     }
 
+    @Test fun projectsWithEmbeddedServerObjectsParse() {
+        // Live shape (the documented one lists bare IDs): this used to fail as "malformed payload".
+        val json = """{"data":[{"id":13421,"title":"Praticonnect","servers":[
+            {"id":105361,"name":"praticonnect","status":"active","ip":"62.0.0.1"},
+            {"id":110501,"name":"praticonnect-staging","status":"active","ip":"62.0.0.2"}],
+            "sites":[],"created_at":"2026-03-07 11:25:55"},
+            {"id":8606,"title":"Giga Apps","servers":[7,8],"sites":[{"id":3,"root_domain":"a.example"}],"created_at":""}],
+            "meta":{"current_page":1,"last_page":1}}"""
+        val page = PloiApi.parseProjects(json)
+        assertEquals(listOf(105361L, 110501L), page.projects[0].serverIds)
+        assertEquals("praticonnect-staging", page.projects[0].serverNames[110501L])
+        assertEquals(listOf(7L, 8L), page.projects[1].serverIds)
+        assertEquals("a.example", page.projects[1].sites.single().rootDomain)
+    }
+
     @Test fun zoneLessMonitorTimestampIsUtc() {
         // "/monitor" sends 2026-09-29 23:42:15.000 for a reading shown as 01:42 in CEST.
         val millis = sampleTime("2026-09-29 23:42:15.000")

@@ -2,15 +2,18 @@ package com.qrcommunication.ploipanel
 
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
-import androidx.compose.foundation.layout.Row
-import androidx.compose.foundation.layout.FlowRow
+import androidx.compose.foundation.layout.PaddingValues
+import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
-import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.outlined.Domain
+import androidx.compose.material.icons.outlined.Https
+import androidx.compose.material.icons.outlined.NoEncryption
+import androidx.compose.material.icons.outlined.SettingsEthernet
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Button
-import androidx.compose.material3.Card
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.OutlinedTextField
@@ -84,52 +87,38 @@ internal fun TenantsScreen(token: String, serverId: Long, siteId: Long, lock: Ap
         }
     }
 
-    Column(Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(10.dp)) {
-        FlowRow(horizontalArrangement = Arrangement.spacedBy(8.dp), verticalArrangement = Arrangement.spacedBy(4.dp)) {
-            OutlinedButton(onClick = { refresh++ }, enabled = !loading && !busy) {
-                Text(stringResource(R.string.reload))
-            }
-            OutlinedButton(onClick = { creating = true }, enabled = !busy) {
-                Text(stringResource(R.string.new_tenant))
-            }
+    LazyColumn(
+        Modifier.fillMaxSize(),
+        verticalArrangement = Arrangement.spacedBy(PanelSpacing.md),
+        contentPadding = PaddingValues(vertical = PanelSpacing.sm)
+    ) {
+        item {
+            ListToolbar(
+                onRefresh = { refresh++ }, refreshEnabled = !loading && !busy,
+                primaryLabel = stringResource(R.string.new_tenant), onPrimary = { creating = true }, primaryEnabled = !busy,
+                summary = result?.let { stringResource(R.string.items_count, it.tenants.size) }
+            )
         }
-        if (loading) BusyIndicator()
-        if (error != null) ApiErrorText(error!!)
-        if (feedback.isNotEmpty()) Text(feedback)
+        if (loading) item { LoadingState(rows = 2) }
+        error?.let { failure -> item { ErrorState(failure, onRetry = { refresh++ }, retryEnabled = !loading && !busy) } }
+        if (feedback.isNotEmpty()) item { SuccessBanner(feedback) }
         result?.let { data ->
-            if (data.main.isNotBlank()) Text(stringResource(R.string.tenant_main, data.main))
-            if (data.tenants.isEmpty()) Text(stringResource(R.string.empty_tenants))
-            LazyColumn(verticalArrangement = Arrangement.spacedBy(8.dp)) {
-                items(data.tenants, key = { it }) { tenant ->
-                    Card(modifier = Modifier.fillMaxWidth()) {
-                        Column(Modifier.padding(12.dp), verticalArrangement = Arrangement.spacedBy(6.dp)) {
-                            Text(tenant, style = MaterialTheme.typography.titleMedium)
-                            FlowRow(horizontalArrangement = Arrangement.spacedBy(8.dp), verticalArrangement = Arrangement.spacedBy(4.dp)) {
-                                OutlinedButton(
-                                    onClick = {
-                                        runAction(doneMessage) {
-                                            PloiApi.requestTenantCertificate(token, serverId, siteId, tenant)
-                                        }
-                                    },
-                                    enabled = !busy
-                                ) { Text(stringResource(R.string.tenant_request_certificate)) }
-                                OutlinedButton(onClick = { confirmRevoke = tenant }, enabled = !busy) {
-                                    Text(stringResource(R.string.tenant_revoke_certificate))
-                                }
-                            }
-                            FlowRow(horizontalArrangement = Arrangement.spacedBy(8.dp), verticalArrangement = Arrangement.spacedBy(4.dp)) {
-                                OutlinedButton(onClick = { nginxTenant = tenant }, enabled = !busy) {
-                                    Text(stringResource(R.string.tenant_nginx))
-                                }
-                                OutlinedButton(onClick = { confirmDelete = tenant }, enabled = !busy) {
-                                    Text(
-                                        stringResource(R.string.delete_tenant),
-                                        color = MaterialTheme.colorScheme.error
-                                    )
-                                }
-                            }
+            if (data.main.isNotBlank()) item {
+                SiteFacts(listOf(ResourceFact(stringResource(R.string.g3_site_main_domain), data.main, mono = true)))
+            }
+            if (data.tenants.isEmpty()) item { EmptyState(Icons.Outlined.Domain, stringResource(R.string.empty_tenants)) }
+            items(data.tenants, key = { it }) { tenant ->
+                ResourceCard(title = tenant, monoTitle = true, icon = Icons.Outlined.Domain) {
+                    CardAction(stringResource(R.string.tenant_request_certificate), icon = Icons.Outlined.Https, enabled = !busy, onClick = {
+                        runAction(doneMessage) {
+                            PloiApi.requestTenantCertificate(token, serverId, siteId, tenant)
                         }
-                    }
+                    })
+                    CardAction(stringResource(R.string.tenant_revoke_certificate), icon = Icons.Outlined.NoEncryption,
+                        enabled = !busy, onClick = { confirmRevoke = tenant })
+                    CardAction(stringResource(R.string.tenant_nginx), icon = Icons.Outlined.SettingsEthernet,
+                        enabled = !busy, onClick = { nginxTenant = tenant })
+                    DangerAction(stringResource(R.string.delete_tenant), onClick = { confirmDelete = tenant }, enabled = !busy)
                 }
             }
         }
@@ -241,12 +230,13 @@ private fun TenantNginxDialog(
         onDismissRequest = onDismiss,
         title = { Text(stringResource(R.string.tenant_nginx_title, tenant)) },
         text = {
-            Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+            Column(verticalArrangement = Arrangement.spacedBy(PanelSpacing.sm)) {
                 if (content == null && error == null) BusyIndicator()
-                if (error != null) ApiErrorText(error!!)
+                if (error != null) ErrorState(error!!)
                 if (content != null) {
                     OutlinedTextField(
                         value = draft, onValueChange = { draft = it },
+                        textStyle = panelMonoStyle,
                         modifier = Modifier.fillMaxWidth()
                     )
                 }

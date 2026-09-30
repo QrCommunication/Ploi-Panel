@@ -101,6 +101,8 @@ internal fun bindStatus(context: Context, view: RemoteViews, id: Int, rawStatus:
         }
     )
     view.setViewVisibility(id, View.VISIBLE)
-    view.setTextViewText(id, "● ${context.getString(statusKindLabel(kind))}")
+    // Same precise wording as the app ("Injoignable"), falling back to the grouped kind.
+    val label = com.qrcommunication.ploipanel.knownStatusLabel(rawStatus) ?: statusKindLabel(kind)
+    view.setTextViewText(id, "● ${context.getString(label)}")
     view.setTextColor(id, color)
 }

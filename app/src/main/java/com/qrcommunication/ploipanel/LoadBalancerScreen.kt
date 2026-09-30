@@ -2,13 +2,19 @@ package com.qrcommunication.ploipanel
 
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
-import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.FlowRow
+import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.foundation.verticalScroll
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.outlined.AddLink
+import androidx.compose.material.icons.outlined.Dns
+import androidx.compose.material.icons.outlined.Https
+import androidx.compose.material.icons.outlined.LinkOff
+import androidx.compose.material.icons.outlined.VerifiedUser
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Button
 import androidx.compose.material3.MaterialTheme
@@ -24,7 +30,6 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.input.KeyboardType
-import androidx.compose.ui.unit.dp
 import androidx.fragment.app.FragmentActivity
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.Dispatchers
@@ -68,27 +73,41 @@ internal fun LoadBalancerScreen(token: String, server: Server, lock: AppLock, ac
     }
 
     Column(
-        Modifier.padding(16.dp).verticalScroll(rememberScrollState()),
-        verticalArrangement = Arrangement.spacedBy(10.dp)
+        Modifier.fillMaxSize().verticalScroll(rememberScrollState()).padding(vertical = PanelSpacing.sm),
+        verticalArrangement = Arrangement.spacedBy(PanelSpacing.md)
     ) {
-        Text(stringResource(R.string.load_balancer_hint), style = MaterialTheme.typography.bodyMedium)
+        Text(
+            stringResource(R.string.load_balancer_hint), style = MaterialTheme.typography.bodyMedium,
+            color = MaterialTheme.colorScheme.onSurfaceVariant
+        )
         if (busy) BusyIndicator()
-        if (error != null) ApiErrorText(error!!)
-        if (feedback.isNotEmpty()) Text(feedback)
-        FlowRow(horizontalArrangement = Arrangement.spacedBy(8.dp), verticalArrangement = Arrangement.spacedBy(4.dp)) {
-            OutlinedButton(onClick = { attachDialog = true }, enabled = !busy) {
-                Text(stringResource(R.string.lb_attach))
-            }
-            OutlinedButton(onClick = { detachDialog = true }, enabled = !busy) {
-                Text(stringResource(R.string.lb_detach))
+        error?.let { failure -> ErrorState(failure) }
+        if (feedback.isNotEmpty()) SuccessBanner(feedback)
+        SectionCard(
+            title = stringResource(R.string.g1_lb_backends_title),
+            description = stringResource(R.string.g1_lb_backends_description),
+            icon = Icons.Outlined.Dns
+        ) {
+            FlowRow(
+                horizontalArrangement = Arrangement.spacedBy(PanelSpacing.sm),
+                verticalArrangement = Arrangement.spacedBy(PanelSpacing.xs)
+            ) {
+                CardAction(stringResource(R.string.lb_attach), icon = Icons.Outlined.AddLink, enabled = !busy, onClick = { attachDialog = true })
+                CardAction(stringResource(R.string.lb_detach), icon = Icons.Outlined.LinkOff, enabled = !busy, onClick = { detachDialog = true })
             }
         }
-        FlowRow(horizontalArrangement = Arrangement.spacedBy(8.dp), verticalArrangement = Arrangement.spacedBy(4.dp)) {
-            OutlinedButton(onClick = { certDialog = true }, enabled = !busy) {
-                Text(stringResource(R.string.lb_request_certificate))
-            }
-            OutlinedButton(onClick = { revokeDialog = true }, enabled = !busy) {
-                Text(stringResource(R.string.lb_revoke_certificate), color = MaterialTheme.colorScheme.error)
+        SectionCard(
+            title = stringResource(R.string.g1_lb_certificates_title),
+            description = stringResource(R.string.g1_lb_certificates_description),
+            icon = Icons.Outlined.VerifiedUser
+        ) {
+            FlowRow(
+                horizontalArrangement = Arrangement.spacedBy(PanelSpacing.sm),
+                verticalArrangement = Arrangement.spacedBy(PanelSpacing.xs)
+            ) {
+                CardAction(stringResource(R.string.lb_request_certificate), icon = Icons.Outlined.Https, enabled = !busy, onClick = { certDialog = true })
+                // Revocation is destructive: styled as danger and still gated by SensitiveConfirmDialog below.
+                DangerAction(stringResource(R.string.lb_revoke_certificate), onClick = { revokeDialog = true }, enabled = !busy)
             }
         }
     }
@@ -157,7 +176,7 @@ private fun ServerIdDialog(title: Int, busy: Boolean, onSubmit: (Long) -> Unit, 
         onDismissRequest = onDismiss,
         title = { Text(stringResource(title)) },
         text = {
-            Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
+            Column(verticalArrangement = Arrangement.spacedBy(PanelSpacing.md)) {
                 OutlinedTextField(
                     value = serverId, onValueChange = { serverId = it.filter(Char::isDigit) },
                     label = { Text(stringResource(R.string.lb_server_id_label)) },
@@ -190,7 +209,7 @@ private fun DomainDialog(title: Int, busy: Boolean, onSubmit: (String) -> Unit, 
         onDismissRequest = onDismiss,
         title = { Text(stringResource(title)) },
         text = {
-            Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
+            Column(verticalArrangement = Arrangement.spacedBy(PanelSpacing.md)) {
                 OutlinedTextField(
                     value = domain, onValueChange = { domain = it },
                     label = { Text(stringResource(R.string.lb_domain_label)) },

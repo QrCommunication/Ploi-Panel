@@ -2,17 +2,21 @@ package com.qrcommunication.ploipanel
 
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
-import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.FlowRow
+import androidx.compose.foundation.layout.PaddingValues
+import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
-import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.outlined.CheckCircle
+import androidx.compose.material.icons.outlined.Download
+import androidx.compose.material.icons.outlined.Https
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Button
-import androidx.compose.material3.Card
+import androidx.compose.material3.FilterChip
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.OutlinedTextField
@@ -27,7 +31,6 @@ import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.res.stringResource
-import androidx.compose.ui.unit.dp
 import androidx.fragment.app.FragmentActivity
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.Dispatchers
@@ -87,78 +90,60 @@ internal fun CertificatesScreen(token: String, serverId: Long, siteId: Long, loc
         }
     }
 
-    Column(Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(10.dp)) {
-        FlowRow(horizontalArrangement = Arrangement.spacedBy(8.dp), verticalArrangement = Arrangement.spacedBy(4.dp)) {
-            OutlinedButton(onClick = { refresh++ }, enabled = !loading && !busy) {
-                Text(stringResource(R.string.reload))
-            }
-            OutlinedButton(onClick = { creating = true }, enabled = !busy) {
-                Text(stringResource(R.string.new_certificate))
-            }
+    LazyColumn(
+        Modifier.fillMaxSize(),
+        verticalArrangement = Arrangement.spacedBy(PanelSpacing.md),
+        contentPadding = PaddingValues(vertical = PanelSpacing.sm)
+    ) {
+        item {
+            ListToolbar(
+                onRefresh = { refresh++ }, refreshEnabled = !loading && !busy,
+                primaryLabel = stringResource(R.string.new_certificate), onPrimary = { creating = true }, primaryEnabled = !busy,
+                summary = result?.let { stringResource(R.string.items_count, it.certificates.size) }
+            )
         }
-        if (loading) BusyIndicator()
-        if (error != null) ApiErrorText(error!!)
-        if (feedback.isNotEmpty()) Text(feedback)
+        if (loading) item { LoadingState(rows = 2) }
+        error?.let { failure -> item { ErrorState(failure, onRetry = { refresh++ }, retryEnabled = !loading && !busy) } }
+        if (feedback.isNotEmpty()) item { SuccessBanner(feedback) }
         result?.let { data ->
-            if (data.certificates.isEmpty()) Text(stringResource(R.string.empty_certificates))
-            FlowRow(horizontalArrangement = Arrangement.spacedBy(8.dp), verticalArrangement = Arrangement.spacedBy(4.dp)) {
-                OutlinedButton(onClick = { page-- }, enabled = page > 1) {
-                    Text(stringResource(R.string.previous))
-                }
-                Text(
-                    stringResource(R.string.page, data.currentPage.toString(), data.lastPage.toString()),
-                    Modifier.padding(top = 12.dp)
-                )
-                OutlinedButton(onClick = { page++ }, enabled = data.hasNext) {
-                    Text(stringResource(R.string.next))
-                }
-            }
-            LazyColumn(verticalArrangement = Arrangement.spacedBy(8.dp)) {
-                items(data.certificates, key = { it.id }) { certificate ->
-                    Card(modifier = Modifier.fillMaxWidth()) {
-                        Column(Modifier.padding(12.dp), verticalArrangement = Arrangement.spacedBy(6.dp)) {
-                            Text(certificate.domain, style = MaterialTheme.typography.titleMedium)
-                            Text(stringResource(R.string.certificate_status, certificate.type, certificate.status))
-                            if (certificate.expiresAt.isNotBlank()) {
-                                Text(stringResource(R.string.certificate_expires, certificate.expiresAt))
-                            }
-                            FlowRow(horizontalArrangement = Arrangement.spacedBy(8.dp), verticalArrangement = Arrangement.spacedBy(4.dp)) {
-                                OutlinedButton(
-                                    onClick = {
-                                        busy = true
-                                        error = null
-                                        feedback = ""
-                                        scope.launch {
-                                            try {
-                                                download = withContext(Dispatchers.IO) {
-                                                    PloiApi.downloadCertificate(token, serverId, siteId, certificate.id)
-                                                }
-                                            } catch (cancelled: CancellationException) {
-                                                throw cancelled
-                                            } catch (failure: Exception) {
-                                                error = failure
-                                            } finally {
-                                                busy = false
-                                            }
-                                        }
-                                    },
-                                    enabled = !busy
-                                ) { Text(stringResource(R.string.certificate_download)) }
-                                if (!certificate.active) {
-                                    OutlinedButton(onClick = { confirmActivate = certificate }, enabled = !busy) {
-                                        Text(stringResource(R.string.certificate_activate))
-                                    }
+            if (data.certificates.isEmpty()) item { EmptyState(Icons.Outlined.Https, stringResource(R.string.empty_certificates)) }
+            items(data.certificates, key = { it.id }) { certificate ->
+                ResourceCard(
+                    title = certificate.domain, icon = Icons.Outlined.Https,
+                    subtitle = if (certificate.active) stringResource(R.string.g3_site_certificate_active) else null,
+                    status = certificate.status,
+                    facts = listOfNotNull(
+                        certificate.type.takeIf { it.isNotBlank() }?.let { ResourceFact(stringResource(R.string.g3_site_type), it) },
+                        certificate.expiresAt.takeIf { it.isNotBlank() }?.let { ResourceFact(stringResource(R.string.g3_site_expires), it) }
+                    )
+                ) {
+                    CardAction(stringResource(R.string.certificate_download), icon = Icons.Outlined.Download, enabled = !busy, onClick = {
+                        busy = true
+                        error = null
+                        feedback = ""
+                        scope.launch {
+                            try {
+                                download = withContext(Dispatchers.IO) {
+                                    PloiApi.downloadCertificate(token, serverId, siteId, certificate.id)
                                 }
-                                OutlinedButton(onClick = { confirmDelete = certificate }, enabled = !busy) {
-                                    Text(
-                                        stringResource(R.string.certificate_delete),
-                                        color = MaterialTheme.colorScheme.error
-                                    )
-                                }
+                            } catch (cancelled: CancellationException) {
+                                throw cancelled
+                            } catch (failure: Exception) {
+                                error = failure
+                            } finally {
+                                busy = false
                             }
                         }
+                    })
+                    if (!certificate.active) {
+                        CardAction(stringResource(R.string.certificate_activate), icon = Icons.Outlined.CheckCircle,
+                            enabled = !busy, onClick = { confirmActivate = certificate })
                     }
+                    DangerAction(stringResource(R.string.certificate_delete), onClick = { confirmDelete = certificate }, enabled = !busy)
                 }
+            }
+            item {
+                PageBar(data.currentPage, data.lastPage, data.hasNext, onPrevious = { page-- }, onNext = { page++ }, enabled = !loading)
             }
         }
     }
@@ -180,15 +165,13 @@ internal fun CertificatesScreen(token: String, serverId: Long, siteId: Long, loc
             text = {
                 Column(
                     Modifier.verticalScroll(rememberScrollState()),
-                    verticalArrangement = Arrangement.spacedBy(8.dp)
+                    verticalArrangement = Arrangement.spacedBy(PanelSpacing.sm)
                 ) {
-                    if (certificateDownload.certificatePath.isNotBlank()) {
-                        Text(certificateDownload.certificatePath, style = MaterialTheme.typography.bodySmall)
-                    }
-                    if (certificateDownload.expiresAt.isNotBlank()) {
-                        Text(stringResource(R.string.certificate_expires, certificateDownload.expiresAt))
-                    }
-                    Text(certificateDownload.certificate, style = MaterialTheme.typography.bodySmall)
+                    SiteFacts(listOfNotNull(
+                        certificateDownload.certificatePath.takeIf { it.isNotBlank() }?.let { ResourceFact(stringResource(R.string.g3_site_path), it, mono = true) },
+                        certificateDownload.expiresAt.takeIf { it.isNotBlank() }?.let { ResourceFact(stringResource(R.string.g3_site_expires), it) }
+                    ))
+                    ExpandableMono(certificateDownload.certificate, collapsedLines = 12)
                 }
             },
             confirmButton = {
@@ -239,14 +222,12 @@ private fun CreateCertificateDialog(
         onDismissRequest = onDismiss,
         title = { Text(stringResource(R.string.new_certificate)) },
         text = {
-            Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
-                FlowRow(horizontalArrangement = Arrangement.spacedBy(8.dp), verticalArrangement = Arrangement.spacedBy(4.dp)) {
-                    OutlinedButton(onClick = { custom = false }, enabled = custom) {
-                        Text(stringResource(R.string.certificate_letsencrypt))
-                    }
-                    OutlinedButton(onClick = { custom = true }, enabled = !custom) {
-                        Text(stringResource(R.string.certificate_custom))
-                    }
+            Column(verticalArrangement = Arrangement.spacedBy(PanelSpacing.md)) {
+                FlowRow(horizontalArrangement = Arrangement.spacedBy(PanelSpacing.sm), verticalArrangement = Arrangement.spacedBy(PanelSpacing.xs)) {
+                    FilterChip(selected = !custom, onClick = { custom = false },
+                        label = { Text(stringResource(R.string.certificate_letsencrypt)) })
+                    FilterChip(selected = custom, onClick = { custom = true },
+                        label = { Text(stringResource(R.string.certificate_custom)) })
                 }
                 OutlinedTextField(
                     value = certificate, onValueChange = { certificate = it },

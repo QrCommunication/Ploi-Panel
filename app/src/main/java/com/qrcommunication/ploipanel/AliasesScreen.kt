@@ -2,15 +2,15 @@ package com.qrcommunication.ploipanel
 
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
-import androidx.compose.foundation.layout.Row
-import androidx.compose.foundation.layout.FlowRow
+import androidx.compose.foundation.layout.PaddingValues
+import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
-import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.outlined.Link
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Button
-import androidx.compose.material3.Card
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.OutlinedTextField
@@ -82,37 +82,29 @@ internal fun AliasesScreen(token: String, serverId: Long, siteId: Long, lock: Ap
         }
     }
 
-    Column(Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(10.dp)) {
-        FlowRow(horizontalArrangement = Arrangement.spacedBy(8.dp), verticalArrangement = Arrangement.spacedBy(4.dp)) {
-            OutlinedButton(onClick = { refresh++ }, enabled = !loading && !busy) {
-                Text(stringResource(R.string.reload))
-            }
-            OutlinedButton(onClick = { creating = true }, enabled = !busy) {
-                Text(stringResource(R.string.new_alias))
-            }
+    LazyColumn(
+        Modifier.fillMaxSize(),
+        verticalArrangement = Arrangement.spacedBy(PanelSpacing.md),
+        contentPadding = PaddingValues(vertical = PanelSpacing.sm)
+    ) {
+        item {
+            ListToolbar(
+                onRefresh = { refresh++ }, refreshEnabled = !loading && !busy,
+                primaryLabel = stringResource(R.string.new_alias), onPrimary = { creating = true }, primaryEnabled = !busy,
+                summary = result?.let { stringResource(R.string.items_count, it.aliases.size) }
+            )
         }
-        if (loading) BusyIndicator()
-        if (error != null) ApiErrorText(error!!)
-        if (feedback.isNotEmpty()) Text(feedback)
+        if (loading) item { LoadingState(rows = 2) }
+        error?.let { failure -> item { ErrorState(failure, onRetry = { refresh++ }, retryEnabled = !loading && !busy) } }
+        if (feedback.isNotEmpty()) item { SuccessBanner(feedback) }
         result?.let { data ->
-            if (data.main.isNotBlank()) Text(stringResource(R.string.alias_main, data.main))
-            if (data.aliases.isEmpty()) Text(stringResource(R.string.empty_aliases))
-            LazyColumn(verticalArrangement = Arrangement.spacedBy(8.dp)) {
-                items(data.aliases, key = { it }) { alias ->
-                    Card(modifier = Modifier.fillMaxWidth()) {
-                        Row(
-                            Modifier.fillMaxWidth().padding(12.dp),
-                            horizontalArrangement = Arrangement.SpaceBetween
-                        ) {
-                            Text(alias, style = MaterialTheme.typography.titleMedium, modifier = Modifier.padding(top = 12.dp))
-                            OutlinedButton(onClick = { confirmDelete = alias }, enabled = !busy) {
-                                Text(
-                                    stringResource(R.string.delete_alias),
-                                    color = MaterialTheme.colorScheme.error
-                                )
-                            }
-                        }
-                    }
+            if (data.main.isNotBlank()) item {
+                SiteFacts(listOf(ResourceFact(stringResource(R.string.g3_site_main_domain), data.main, mono = true)))
+            }
+            if (data.aliases.isEmpty()) item { EmptyState(Icons.Outlined.Link, stringResource(R.string.empty_aliases)) }
+            items(data.aliases, key = { it }) { alias ->
+                ResourceCard(title = alias, monoTitle = true, icon = Icons.Outlined.Link) {
+                    DangerAction(stringResource(R.string.delete_alias), onClick = { confirmDelete = alias }, enabled = !busy)
                 }
             }
         }

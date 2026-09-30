@@ -1,18 +1,18 @@
 package com.qrcommunication.ploipanel
 
 import androidx.compose.foundation.layout.Arrangement
-import androidx.compose.foundation.layout.Column
-import androidx.compose.foundation.layout.FlowRow
-import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.PaddingValues
+import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.outlined.MonitorHeart
+import androidx.compose.material.icons.outlined.Timeline
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Button
-import androidx.compose.material3.Card
 import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
@@ -67,79 +67,68 @@ internal fun SiteMonitorsScreen(token: String, serverId: Long, siteId: Long, loc
         }
     }
 
-    Column(Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(10.dp)) {
-        FlowRow(horizontalArrangement = Arrangement.spacedBy(8.dp), verticalArrangement = Arrangement.spacedBy(4.dp)) {
-            OutlinedButton(onClick = { refresh++ }, enabled = !loading && !busy) {
-                Text(stringResource(R.string.reload))
-            }
+    LazyColumn(
+        Modifier.fillMaxSize(),
+        verticalArrangement = Arrangement.spacedBy(PanelSpacing.md),
+        contentPadding = PaddingValues(vertical = PanelSpacing.sm)
+    ) {
+        item {
+            ListToolbar(
+                onRefresh = { refresh++ }, refreshEnabled = !loading && !busy,
+                summary = result?.let { stringResource(R.string.items_count, it.monitors.size) }
+            )
         }
-        if (loading) BusyIndicator()
-        if (error != null) ApiErrorText(error!!)
-        if (feedback.isNotEmpty()) Text(feedback)
+        if (loading) item { LoadingState(rows = 2) }
+        error?.let { failure -> item { ErrorState(failure, onRetry = { refresh++ }, retryEnabled = !loading && !busy) } }
+        if (feedback.isNotEmpty()) item { SuccessBanner(feedback) }
         result?.let { data ->
-            if (data.monitors.isEmpty()) Text(stringResource(R.string.empty_monitors))
-            FlowRow(horizontalArrangement = Arrangement.spacedBy(8.dp), verticalArrangement = Arrangement.spacedBy(4.dp)) {
-                OutlinedButton(onClick = { page-- }, enabled = page > 1) {
-                    Text(stringResource(R.string.previous))
-                }
-                Text(
-                    stringResource(R.string.page, data.currentPage.toString(), data.lastPage.toString()),
-                    Modifier.padding(top = 12.dp)
-                )
-                OutlinedButton(onClick = { page++ }, enabled = data.hasNext) {
-                    Text(stringResource(R.string.next))
-                }
-            }
-            LazyColumn(verticalArrangement = Arrangement.spacedBy(8.dp)) {
-                items(data.monitors, key = { it.id }) { monitor ->
-                    Card(modifier = Modifier.fillMaxWidth()) {
-                        Column(Modifier.padding(12.dp), verticalArrangement = Arrangement.spacedBy(6.dp)) {
-                            Text(monitor.label.ifBlank { "#${monitor.id}" }, style = MaterialTheme.typography.titleMedium)
-                            Text(stringResource(R.string.monitor_uptime, monitor.location, monitor.averageUptime))
-                            monitoringPercent(monitor.averageUptime)?.let { percent ->
-                                val healthy = percent >= UPTIME_HEALTHY_PERCENT
-                                PercentProgress(
-                                    percent,
-                                    if (healthy) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.error,
-                                    description = stringResource(
-                                        if (healthy) R.string.a11y_uptime_healthy else R.string.a11y_uptime_degraded,
-                                        formatPercent(percent).orEmpty()
-                                    )
-                                )
-                            }
-                            FlowRow(horizontalArrangement = Arrangement.spacedBy(8.dp), verticalArrangement = Arrangement.spacedBy(4.dp)) {
-                                OutlinedButton(
-                                    onClick = {
-                                        busy = true
-                                        error = null
-                                        feedback = ""
-                                        scope.launch {
-                                            try {
-                                                val responses = withContext(Dispatchers.IO) {
-                                                    PloiApi.uptimeResponses(token, serverId, siteId, monitor.id)
-                                                }
-                                                uptime = monitor to responses
-                                            } catch (cancelled: CancellationException) {
-                                                throw cancelled
-                                            } catch (failure: Exception) {
-                                                error = failure
-                                            } finally {
-                                                busy = false
-                                            }
-                                        }
-                                    },
-                                    enabled = !busy
-                                ) { Text(stringResource(R.string.monitor_responses)) }
-                                OutlinedButton(onClick = { confirmDelete = monitor }, enabled = !busy) {
-                                    Text(
-                                        stringResource(R.string.delete_monitor),
-                                        color = MaterialTheme.colorScheme.error
-                                    )
+            if (data.monitors.isEmpty()) item { EmptyState(Icons.Outlined.MonitorHeart, stringResource(R.string.empty_monitors)) }
+            items(data.monitors, key = { it.id }) { monitor ->
+                ResourceCard(
+                    title = monitor.label.ifBlank { "#${monitor.id}" }, icon = Icons.Outlined.MonitorHeart,
+                    facts = listOfNotNull(
+                        monitor.location.takeIf { it.isNotBlank() }?.let { ResourceFact(stringResource(R.string.g3_site_location), it) },
+                        monitor.averageUptime.takeIf { it.isNotBlank() }?.let { ResourceFact(stringResource(R.string.g3_site_average_uptime), "$it %", mono = true) }
+                    )
+                ) {
+                    // The uptime bar spans the whole first line of the action area (fillMaxWidth
+                    // inside the card's FlowRow); the buttons wrap below it.
+                    monitoringPercent(monitor.averageUptime)?.let { percent ->
+                        val healthy = percent >= UPTIME_HEALTHY_PERCENT
+                        PercentProgress(
+                            percent,
+                            if (healthy) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.error,
+                            modifier = Modifier.padding(bottom = PanelSpacing.xs),
+                            description = stringResource(
+                                if (healthy) R.string.a11y_uptime_healthy else R.string.a11y_uptime_degraded,
+                                formatPercent(percent).orEmpty()
+                            )
+                        )
+                    }
+                    CardAction(stringResource(R.string.monitor_responses), icon = Icons.Outlined.Timeline, enabled = !busy, onClick = {
+                        busy = true
+                        error = null
+                        feedback = ""
+                        scope.launch {
+                            try {
+                                val responses = withContext(Dispatchers.IO) {
+                                    PloiApi.uptimeResponses(token, serverId, siteId, monitor.id)
                                 }
+                                uptime = monitor to responses
+                            } catch (cancelled: CancellationException) {
+                                throw cancelled
+                            } catch (failure: Exception) {
+                                error = failure
+                            } finally {
+                                busy = false
                             }
                         }
-                    }
+                    })
+                    DangerAction(stringResource(R.string.delete_monitor), onClick = { confirmDelete = monitor }, enabled = !busy)
                 }
+            }
+            item {
+                PageBar(data.currentPage, data.lastPage, data.hasNext, onPrevious = { page-- }, onNext = { page++ }, enabled = !loading)
             }
         }
     }
@@ -151,9 +140,11 @@ internal fun SiteMonitorsScreen(token: String, serverId: Long, siteId: Long, loc
             text = {
                 LazyColumn(
                     Modifier.heightIn(max = 440.dp),
-                    verticalArrangement = Arrangement.spacedBy(4.dp)
+                    verticalArrangement = Arrangement.spacedBy(PanelSpacing.xs)
                 ) {
-                    if (responses.isEmpty()) item { Text(stringResource(R.string.empty_uptime_responses)) }
+                    if (responses.isEmpty()) item {
+                        Text(stringResource(R.string.empty_uptime_responses), color = MaterialTheme.colorScheme.onSurfaceVariant)
+                    }
                     item { ResponseTimeTrend(responses) }
                     items(responses) { response ->
                         Text(
@@ -162,7 +153,7 @@ internal fun SiteMonitorsScreen(token: String, serverId: Long, siteId: Long, loc
                                 response.createdAt,
                                 String.format(Locale.US, "%.3f", response.responseTime)
                             ),
-                            style = MaterialTheme.typography.bodySmall
+                            style = panelMonoStyle
                         )
                     }
                 }

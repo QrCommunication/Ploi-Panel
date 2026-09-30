@@ -2,8 +2,14 @@ package com.qrcommunication.ploipanel
 
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.PaddingValues
+import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.outlined.Backup
+import androidx.compose.material.icons.outlined.Edit
+import androidx.compose.material.icons.outlined.Notifications
+import androidx.compose.material.icons.outlined.PlayArrow
 import androidx.compose.foundation.layout.Row
-import androidx.compose.foundation.layout.FlowRow
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.lazy.LazyColumn
@@ -13,7 +19,6 @@ import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Button
-import androidx.compose.material3.Card
 import androidx.compose.material3.Checkbox
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedButton
@@ -104,94 +109,55 @@ internal fun DatabaseBackupsScreen(token: String, serverId: Long, lock: AppLock,
         }
     }
 
-    Column(Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(10.dp)) {
-        FlowRow(horizontalArrangement = Arrangement.spacedBy(8.dp), verticalArrangement = Arrangement.spacedBy(4.dp)) {
-            OutlinedButton(onClick = { refresh++ }, enabled = !loading && !busy) {
-                Text(stringResource(R.string.reload))
-            }
-            OutlinedButton(onClick = { creating = true }, enabled = !busy) {
-                Text(stringResource(R.string.new_database_backup))
-            }
+    LazyColumn(
+        Modifier.fillMaxSize(),
+        verticalArrangement = Arrangement.spacedBy(PanelSpacing.md),
+        contentPadding = PaddingValues(vertical = PanelSpacing.sm)
+    ) {
+        item {
+            ListToolbar(
+                onRefresh = { refresh++ }, refreshEnabled = !loading && !busy,
+                primaryLabel = stringResource(R.string.new_database_backup), onPrimary = { creating = true }, primaryEnabled = !busy,
+                summary = result?.let { stringResource(R.string.items_count, it.backups.size) }
+            )
         }
-        if (loading) BusyIndicator()
-        if (error != null) ApiErrorText(error!!)
-        if (feedback.isNotEmpty()) Text(feedback)
+        if (loading) item { LoadingState(rows = 2) }
+        error?.let { failure -> item { ErrorState(failure, onRetry = { refresh++ }, retryEnabled = !loading) } }
+        if (feedback.isNotEmpty()) item { SuccessBanner(plainFromMarkdown(feedback)) }
         result?.let { data ->
-            if (data.backups.isEmpty()) Text(stringResource(R.string.empty_database_backups))
-            FlowRow(horizontalArrangement = Arrangement.spacedBy(8.dp), verticalArrangement = Arrangement.spacedBy(4.dp)) {
-                OutlinedButton(onClick = { page-- }, enabled = page > 1) {
-                    Text(stringResource(R.string.previous))
+            if (data.backups.isEmpty()) item { EmptyState(Icons.Outlined.Backup, stringResource(R.string.empty_database_backups)) }
+            items(data.backups, key = { it.id }) { backup ->
+                val title = backup.label.ifBlank {
+                    backup.backupConfigurationLabel.ifBlank { backup.typeHuman.ifBlank { backup.type } }
                 }
-                Text(
-                    stringResource(R.string.page, data.currentPage.toString(), data.lastPage.toString()),
-                    Modifier.padding(top = 12.dp)
-                )
-                OutlinedButton(onClick = { page++ }, enabled = data.hasNext) {
-                    Text(stringResource(R.string.next))
+                val interval = if (backup.interval == 0) {
+                    stringResource(R.string.backup_interval_nightly)
+                } else {
+                    stringResource(R.string.backup_interval_minutes, backup.interval)
+                }
+                ResourceCard(
+                    title = title, icon = Icons.Outlined.Backup,
+                    subtitle = if (backup.active) null else stringResource(R.string.backup_inactive),
+                    facts = listOfNotNull(
+                        backup.databaseName.takeIf { it.isNotBlank() }?.let { ResourceFact(stringResource(R.string.database_label), it, mono = true) },
+                        backup.typeHuman.takeIf { it.isNotBlank() }?.let { ResourceFact(stringResource(R.string.server_type_label), it) },
+                        ResourceFact(stringResource(R.string.g2_interval_label), interval),
+                        ResourceFact(stringResource(R.string.g2_kept_label), backup.keepBackupAmount.toString()),
+                        backup.lastBackupAt.takeIf { it.isNotBlank() }?.let { ResourceFact(stringResource(R.string.g2_last_run_label), it) },
+                        backup.nextBackupAt.takeIf { it.isNotBlank() }?.let { ResourceFact(stringResource(R.string.g2_next_run_label), it) },
+                        backup.createdAt.takeIf { it.isNotBlank() }?.let { ResourceFact(stringResource(R.string.g2_created_label), it) }
+                    )
+                ) {
+                    CardAction(stringResource(R.string.run_backup), icon = Icons.Outlined.PlayArrow, enabled = !busy, onClick = {
+                        runAction(runMessage) { PloiApi.runDatabaseBackup(token, backup.id); "" }
+                    })
+                    CardAction(stringResource(R.string.edit_backup), icon = Icons.Outlined.Edit, enabled = !busy, onClick = { editing = backup })
+                    CardAction(stringResource(R.string.backup_channels), icon = Icons.Outlined.Notifications, enabled = !busy, onClick = { channelsFor = backup })
+                    DangerAction(stringResource(R.string.delete_backup), onClick = { confirmDelete = backup }, enabled = !busy)
                 }
             }
-            LazyColumn(verticalArrangement = Arrangement.spacedBy(8.dp)) {
-                items(data.backups, key = { it.id }) { backup ->
-                    Card(modifier = Modifier.fillMaxWidth()) {
-                        Column(Modifier.padding(12.dp), verticalArrangement = Arrangement.spacedBy(6.dp)) {
-                            val title = backup.label.ifBlank {
-                                backup.backupConfigurationLabel.ifBlank { backup.typeHuman.ifBlank { backup.type } }
-                            }
-                            Text(title, style = MaterialTheme.typography.titleMedium)
-                            if (backup.databaseName.isNotBlank()) {
-                                Text(stringResource(R.string.backup_database, backup.databaseName))
-                            }
-                            if (backup.typeHuman.isNotBlank()) {
-                                Text(stringResource(R.string.backup_type, backup.typeHuman))
-                            }
-                            Text(
-                                if (backup.interval == 0) {
-                                    stringResource(R.string.backup_interval_nightly)
-                                } else {
-                                    stringResource(R.string.backup_interval_minutes, backup.interval)
-                                }
-                            )
-                            Text(stringResource(R.string.backup_keep_count, backup.keepBackupAmount))
-                            if (!backup.active) {
-                                Text(
-                                    stringResource(R.string.backup_inactive),
-                                    color = MaterialTheme.colorScheme.error
-                                )
-                            }
-                            if (backup.lastBackupAt.isNotBlank()) {
-                                Text(stringResource(R.string.backup_last_run, backup.lastBackupAt))
-                            }
-                            if (backup.nextBackupAt.isNotBlank()) {
-                                Text(stringResource(R.string.backup_next_run, backup.nextBackupAt))
-                            }
-                            if (backup.createdAt.isNotBlank()) {
-                                Text(stringResource(R.string.detail_created, backup.createdAt))
-                            }
-                            FlowRow(horizontalArrangement = Arrangement.spacedBy(8.dp), verticalArrangement = Arrangement.spacedBy(4.dp)) {
-                                OutlinedButton(
-                                    onClick = {
-                                        runAction(runMessage) { PloiApi.runDatabaseBackup(token, backup.id); "" }
-                                    },
-                                    enabled = !busy
-                                ) { Text(stringResource(R.string.run_backup)) }
-                                OutlinedButton(onClick = { editing = backup }, enabled = !busy) {
-                                    Text(stringResource(R.string.edit_backup))
-                                }
-                            }
-                            FlowRow(horizontalArrangement = Arrangement.spacedBy(8.dp), verticalArrangement = Arrangement.spacedBy(4.dp)) {
-                                OutlinedButton(onClick = { channelsFor = backup }, enabled = !busy) {
-                                    Text(stringResource(R.string.backup_channels))
-                                }
-                                OutlinedButton(onClick = { confirmDelete = backup }, enabled = !busy) {
-                                    Text(
-                                        stringResource(R.string.delete_backup),
-                                        color = MaterialTheme.colorScheme.error
-                                    )
-                                }
-                            }
-                        }
-                    }
-                }
+            item {
+                PageBar(data.currentPage, data.lastPage, data.hasNext, onPrevious = { page-- }, onNext = { page++ })
             }
         }
     }

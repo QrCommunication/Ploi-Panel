@@ -27,11 +27,17 @@ import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
+import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.res.stringResource
-import androidx.compose.ui.text.font.FontFamily
+import androidx.compose.ui.semantics.heading
+import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.input.KeyboardType
+import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.outlined.Bolt
+import androidx.compose.material.icons.outlined.Code
 import androidx.compose.ui.window.Dialog
 import androidx.compose.ui.window.DialogProperties
 import androidx.fragment.app.FragmentActivity
@@ -112,33 +118,28 @@ internal fun RepositoryDialog(
         text = {
             Column(
                 Modifier.verticalScroll(rememberScrollState()),
-                verticalArrangement = Arrangement.spacedBy(8.dp)
+                verticalArrangement = Arrangement.spacedBy(PanelSpacing.md)
             ) {
                 if (loading) BusyIndicator()
-                if (error != null) ApiErrorText(error!!)
-                if (feedback.isNotEmpty()) Text(feedback)
+                if (error != null) ErrorState(error!!, onRetry = { refresh++ }, retryEnabled = !loading && !busy)
+                if (feedback.isNotEmpty()) SuccessBanner(feedback)
                 repository?.let { repo ->
-                    if (repo.provider.isNotBlank() && repo.provider != "none") {
-                        Text(stringResource(R.string.repository_provider, repo.provider))
-                        if (repo.repositoryName.isNotBlank()) {
-                            Text(stringResource(R.string.repository_name, repo.repositoryName))
-                        }
-                        if (repo.branch.isNotBlank()) Text(stringResource(R.string.repository_branch, repo.branch))
-                    } else {
-                        Text(stringResource(R.string.repository_custom))
-                    }
+                    val linked = repo.provider.isNotBlank() && repo.provider != "none"
                     val yesNo = stringResource(if (repo.quickDeploy) R.string.flag_yes else R.string.flag_no)
-                    Text(stringResource(R.string.repository_quick_deploy, yesNo))
-                    if (repo.lastDeployAt.isNotBlank()) {
-                        Text(stringResource(R.string.site_last_deploy, repo.lastDeployAt))
-                    }
-                    FlowRow(horizontalArrangement = Arrangement.spacedBy(8.dp), verticalArrangement = Arrangement.spacedBy(4.dp)) {
-                        OutlinedButton(onClick = {
+                    if (!linked) Text(stringResource(R.string.repository_custom), style = MaterialTheme.typography.bodyMedium,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant)
+                    SiteFacts(listOfNotNull(
+                        repo.provider.takeIf { linked }?.let { ResourceFact(stringResource(R.string.repository_provider_label), it) },
+                        repo.repositoryName.takeIf { linked && it.isNotBlank() }?.let { ResourceFact(stringResource(R.string.g3_site_repository), it, mono = true) },
+                        repo.branch.takeIf { linked && it.isNotBlank() }?.let { ResourceFact(stringResource(R.string.repository_branch_label), it, mono = true) },
+                        ResourceFact(stringResource(R.string.g3_site_quick_deploy), yesNo),
+                        repo.lastDeployAt.takeIf { it.isNotBlank() }?.let { ResourceFact(stringResource(R.string.g3_site_last_deploy), it) }
+                    ))
+                    FlowRow(horizontalArrangement = Arrangement.spacedBy(PanelSpacing.sm), verticalArrangement = Arrangement.spacedBy(PanelSpacing.xs)) {
+                        CardAction(stringResource(R.string.quick_deploy_toggle), icon = Icons.Outlined.Bolt, enabled = !busy, onClick = {
                             runAction("") { PloiApi.toggleQuickDeploy(token, serverId, siteId) }
-                        }, enabled = !busy) { Text(stringResource(R.string.quick_deploy_toggle)) }
-                        OutlinedButton(onClick = { confirmDelete = true }, enabled = !busy) {
-                            Text(stringResource(R.string.repository_delete), color = MaterialTheme.colorScheme.error)
-                        }
+                        })
+                        DangerAction(stringResource(R.string.repository_delete), onClick = { confirmDelete = true }, enabled = !busy)
                     }
                     CustomDeploymentForm(busy = busy, onEnable = { script ->
                         runAction(customEnabledMessage) {
@@ -147,7 +148,8 @@ internal fun RepositoryDialog(
                     })
                 }
                 if (!loading && missing) {
-                    Text(stringResource(R.string.repository_none))
+                    Text(stringResource(R.string.repository_none), style = MaterialTheme.typography.bodyMedium,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant)
                     InstallRepositoryForm(busy = busy, onInstall = { request ->
                         runAction(installedMessage) { PloiApi.installRepository(token, serverId, siteId, request) }
                     })
@@ -179,8 +181,8 @@ private fun InstallRepositoryForm(busy: Boolean, onInstall: (InstallRepositoryRe
     var installComposer by remember { mutableStateOf(false) }
     var invalid by remember { mutableStateOf(false) }
 
-    Column(verticalArrangement = Arrangement.spacedBy(10.dp)) {
-        Text(stringResource(R.string.repository_install), style = MaterialTheme.typography.titleMedium)
+    Column(verticalArrangement = Arrangement.spacedBy(PanelSpacing.md)) {
+        SectionHeader(stringResource(R.string.repository_install))
         OutlinedTextField(value = provider, onValueChange = { provider = it },
             label = { Text(stringResource(R.string.repository_provider_label)) },
             supportingText = { Text(stringResource(R.string.repository_provider_hint)) },
@@ -225,13 +227,13 @@ private fun InstallRepositoryForm(busy: Boolean, onInstall: (InstallRepositoryRe
 private fun CustomDeploymentForm(busy: Boolean, onEnable: (String) -> Unit) {
     var showForm by remember { mutableStateOf(false) }
     var script by remember { mutableStateOf("") }
-    Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
-        OutlinedButton(onClick = { showForm = !showForm }, enabled = !busy) {
-            Text(stringResource(R.string.custom_deployments_enable))
-        }
+    Column(verticalArrangement = Arrangement.spacedBy(PanelSpacing.sm)) {
+        CardAction(stringResource(R.string.custom_deployments_enable), icon = Icons.Outlined.Code,
+            enabled = !busy, onClick = { showForm = !showForm })
         if (showForm) {
             OutlinedTextField(value = script, onValueChange = { script = it },
                 label = { Text(stringResource(R.string.custom_deployments_script)) },
+                textStyle = panelMonoStyle,
                 modifier = Modifier.fillMaxWidth())
             Button(onClick = {
                 showForm = false
@@ -280,25 +282,33 @@ internal fun DeployScriptDialog(
         onDismissRequest = { if (!saving) { if (content != null && draft != content) confirmDiscard = true else onDismiss() } },
         properties = DialogProperties(usePlatformDefaultWidth = false)
     ) {
-        Surface(Modifier.fillMaxSize().imePadding().padding(12.dp), shape = MaterialTheme.shapes.large) {
-            Column(Modifier.fillMaxSize().padding(16.dp), verticalArrangement = Arrangement.spacedBy(10.dp)) {
-                Text(stringResource(R.string.deploy_script) + " — " + siteDomain,
-                    style = MaterialTheme.typography.titleLarge)
-                Text(stringResource(R.string.deploy_site_editor_hint), style = MaterialTheme.typography.bodySmall)
+        Surface(Modifier.fillMaxSize().imePadding().padding(PanelSpacing.md), shape = MaterialTheme.shapes.large) {
+            Column(Modifier.fillMaxSize().padding(PanelSpacing.lg), verticalArrangement = Arrangement.spacedBy(PanelSpacing.md)) {
+                Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(PanelSpacing.md)) {
+                    IconBadge(Icons.Outlined.Code, size = 36)
+                    Column(Modifier.weight(1f)) {
+                        Text(stringResource(R.string.deploy_script), style = MaterialTheme.typography.titleLarge,
+                            modifier = Modifier.semantics { heading() })
+                        Text(siteDomain, style = panelMonoStyle, color = MaterialTheme.colorScheme.onSurfaceVariant,
+                            maxLines = 1, overflow = TextOverflow.Ellipsis)
+                    }
+                }
+                Text(stringResource(R.string.deploy_site_editor_hint), style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant)
                 if (loading) BusyIndicator()
-                if (error != null) ApiErrorText(error!!)
-                if (feedback.isNotEmpty()) Text(feedback, color = MaterialTheme.colorScheme.primary)
+                if (error != null) ErrorState(error!!)
+                if (feedback.isNotEmpty()) SuccessBanner(feedback)
                 if (content != null) {
                     OutlinedTextField(
                         value = draft, onValueChange = { draft = it; feedback = "" },
                         label = { Text(stringResource(R.string.deploy_script_edit)) },
-                        textStyle = MaterialTheme.typography.bodyMedium.copy(fontFamily = FontFamily.Monospace),
+                        textStyle = panelMonoStyle,
                         enabled = !saving, modifier = Modifier.weight(1f).fillMaxWidth()
                     )
                     Text(stringResource(R.string.deploy_global_length, draft.length, DEPLOY_SCRIPT_MAX_LENGTH),
-                        style = MaterialTheme.typography.bodySmall)
+                        style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
                 } else androidx.compose.foundation.layout.Spacer(Modifier.weight(1f))
-                FlowRow(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                FlowRow(horizontalArrangement = Arrangement.spacedBy(PanelSpacing.sm)) {
                     OutlinedButton(onClick = {
                         if (draft != content && content != null) confirmDiscard = true else onDismiss()
                     }, enabled = !saving) { Text(stringResource(R.string.back)) }
@@ -394,20 +404,21 @@ internal fun EnvDialog(
         text = {
             Column(
                 Modifier.verticalScroll(rememberScrollState()),
-                verticalArrangement = Arrangement.spacedBy(8.dp)
+                verticalArrangement = Arrangement.spacedBy(PanelSpacing.sm)
             ) {
                 if (loading) BusyIndicator()
-                if (error != null) ApiErrorText(error!!)
-                if (feedback.isNotEmpty()) Text(feedback)
+                if (error != null) ErrorState(error!!)
+                if (feedback.isNotEmpty()) SuccessBanner(feedback)
                 content?.let { current ->
                     if (editing) {
                         OutlinedTextField(
                             value = draft, onValueChange = { draft = it },
                             label = { Text(stringResource(R.string.env_edit)) },
+                            textStyle = panelMonoStyle,
                             modifier = Modifier.fillMaxWidth()
                         )
                     } else {
-                        Text(current, style = MaterialTheme.typography.bodySmall)
+                        ExpandableMono(current, collapsedLines = 24)
                     }
                 }
             }

@@ -3,8 +3,8 @@
     <!-- Navigation principale -->
     <string name="nav_servers">Serveurs</string>
     <string name="nav_terminal">Terminal</string>
-    <string name="nav_monitoring">Surveillance</string>
-    <string name="nav_deploy">Déploiement</string>
+    <string name="nav_monitoring">Veille</string>
+    <string name="nav_deploy">Déployer</string>
     <string name="nav_more">Plus</string>
     <string name="nav_locked_during_batch">Navigation bloquée pendant l’application du script de déploiement.</string>
 
@@ -44,10 +44,6 @@
     <string name="server_card_terminal">Terminal SSH vers %1$s</string>
     <string name="server_card_no_ip">Adresse IP non renseignée</string>
     <string name="servers_page_label">Page %1$s sur %2$s</string>
-    <string name="servers_metric_loaded">Sur cette page</string>
-    <string name="servers_metric_active">Actifs</string>
-    <string name="servers_metric_attention">Autres états</string>
-    <string name="servers_hero_title">Vos serveurs</string>
 
     <!-- Détail serveur -->
     <string name="server_category_overview">Vue d’ensemble</string>
@@ -123,4 +119,118 @@
     <string name="show_more">Afficher tout</string>
     <string name="show_less">Réduire</string>
     <string name="items_count">Éléments : %1$d</string>
+    <!-- g1: firewall, crons, system users, SSH keys, insights, load balancer -->
+    <string name="g1_network_rule_port">Port</string>
+    <string name="g1_network_rule_action">Action</string>
+    <string name="g1_network_rule_from">Depuis</string>
+    <string name="g1_crontab_frequency">Fréquence</string>
+    <string name="g1_fact_user">Utilisateur</string>
+    <string name="g1_fact_created">Créé le</string>
+    <string name="g1_system_user_root">Racine</string>
+    <string name="g1_ssh_key_public">Clé publique</string>
+    <string name="g1_insight_priority">Priorité</string>
+    <string name="g1_lb_backends_title">Serveurs backends</string>
+    <string name="g1_lb_backends_description">Attacher ou détacher un serveur par son ID Ploi.</string>
+    <string name="g1_lb_certificates_title">Certificats</string>
+    <string name="g1_lb_certificates_description">Demander ou révoquer le certificat d’un domaine de ce load balancer.</string>
+    <!-- g2: databases, backups, services, containers -->
+    <string name="g2_linked_site_label">Site lié</string>
+    <string name="g2_created_label">Créé le</string>
+    <string name="g2_remote_ip_label">IP distante</string>
+    <string name="g2_interval_label">Fréquence</string>
+    <string name="g2_kept_label">Archives conservées</string>
+    <string name="g2_last_run_label">Dernière exécution</string>
+    <string name="g2_next_run_label">Prochaine exécution</string>
+    <string name="g2_site_label">Site</string>
+    <string name="g2_path_label">Chemin</string>
+    <string name="g2_ploi_status_label">Statut Ploi</string>
+    <string name="g2_php_cli_label">PHP CLI actuel</string>
+    <string name="g2_logs_empty">Aucune ligne de log renvoyée.</string>
+    <!-- g5: device-side screens (watchdog, SSH, transfer, alerts) -->
+    <string name="g5_local_checks_title">Supervision locale des sites</string>
+    <string name="g5_local_checks_fact_http">Code HTTP</string>
+    <string name="g5_local_checks_fact_latency">Latence</string>
+    <string name="g5_local_checks_fact_last">Dernier contrôle</string>
+    <string name="g5_ssh_term_destination">Destination</string>
+    <string name="g5_ssh_term_empty_title">Aucune destination enregistrée</string>
+    <string name="g5_ssh_term_font_smaller">Réduire la taille du texte</string>
+    <string name="g5_ssh_term_font_larger">Agrandir la taille du texte</string>
+    <string name="g5_ssh_fact_type">Type</string>
+    <string name="g5_ssh_fact_fingerprint">Empreinte SHA-256</string>
+    <!-- Account-level screens redesign (g4) -->
+    <string name="g4_account_plan_label">Abonnement</string>
+    <string name="g4_account_expiry_label">Expiration</string>
+    <string name="g4_created_label">Créé le</string>
+    <string name="g4_delay_label">Délai</string>
+    <string name="g4_seconds_value">%1$d s</string>
+    <string name="g4_execution_title">Exécution</string>
+    <string name="g4_exit_code_label">Code de sortie</string>
+    <string name="g4_started_label">Démarré</string>
+    <string name="g4_finished_label">Terminé</string>
+    <string name="g4_next_run_label">Prochaine exécution</string>
+    <string name="g4_last_run_label">Dernière exécution</string>
+    <string name="g4_last_triggered_label">Dernier déclenchement</string>
+    <string name="g4_repositories_show">Voir les dépôts</string>
+    <string name="g4_repositories_hide">Masquer les dépôts</string>
+    <string name="g4_run_as_label">Exécuté en tant que</string>
+    <string name="g4_server_error">Serveur %1$d : %2$s</string>
+    <string name="g4_server_number">Serveur %1$d</string>
+    <string name="g4_server_setup">Configuration du serveur</string>
+    <string name="g4_servers_label">Serveurs</string>
+    <string name="g4_sites_label">Sites</string>
+    <string name="g4_slug_label">Slug</string>
+    <string name="g4_state_label">État</string>
+    <string name="g4_type_label">Type</string>
+    <!-- Site area redesign (g3) -->
+    <string name="g3_site_average_uptime">Uptime moyen</string>
+    <string name="g3_site_certificate_active">Certificat actif</string>
+    <string name="g3_site_created_at">Créé le</string>
+    <string name="g3_site_disk_usage">Espace disque</string>
+    <string name="g3_site_enabled">Activé</string>
+    <string name="g3_site_expires">Expire le</string>
+    <string name="g3_site_health_url">URL de santé</string>
+    <string name="g3_site_installed">Installé</string>
+    <string name="g3_site_jobs">Jobs</string>
+    <string name="g3_site_last_deploy">Dernier déploiement</string>
+    <string name="g3_site_location">Localisation</string>
+    <string name="g3_site_main_domain">Domaine principal</string>
+    <string name="g3_site_path">Chemin</string>
+    <string name="g3_site_project_type">Type de projet</string>
+    <string name="g3_site_protected_path">Chemin protégé</string>
+    <string name="g3_site_queue">Queue</string>
+    <string name="g3_site_quick_deploy">Déploiement rapide</string>
+    <string name="g3_site_repository">Dépôt</string>
+    <string name="g3_site_robots_blocked">Robots bloqués</string>
+    <string name="g3_site_sections">Gérer le site</string>
+    <string name="g3_site_supervisors">Superviseurs</string>
+    <string name="g3_site_system_user">Utilisateur système</string>
+    <string name="g3_site_test_domain">Domaine de test</string>
+    <string name="g3_site_type">Type</string>
+    <string name="g3_site_wait">Attente</string>
+    <string name="g3_site_web_directory">Répertoire web</string>
+    <string name="status_open">À traiter</string>
+    <string name="status_resolved">Résolu</string>
+    <string name="status_ignored">Ignoré</string>
+    <string name="status_paused">En pause</string>
+    <string name="status_failed">Échec</string>
+    <string name="status_running">En cours d’exécution</string>
+    <string name="priority_low">Basse</string>
+    <string name="priority_medium">Moyenne</string>
+    <string name="priority_high">Haute</string>
+    <string name="priority_critical">Critique</string>
+    <string name="fact_ip">Adresse IP</string>
+    <string name="fact_ssh_port">Port SSH</string>
+    <string name="fact_type">Type</string>
+    <string name="fact_sites">Sites</string>
+    <string name="fact_monitoring">Monitoring Ploi</string>
+    <string name="fact_provider">Fournisseur</string>
+    <string name="fact_created">Créé le</string>
+    <string name="fact_yes">Installé</string>
+    <string name="fact_no">Non installé</string>
+    <plurals name="dashboard_servers">
+        <item quantity="one">%1$d serveur</item>
+        <item quantity="other">%1$d serveurs</item>
+    </plurals>
+    <string name="firewall_allow">Autoriser</string>
+    <string name="firewall_deny">Bloquer</string>
 </resources>

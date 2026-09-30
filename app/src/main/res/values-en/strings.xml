@@ -15,10 +15,8 @@
     <string name="disconnect">Sign out</string>
     <string name="next">Next</string>
     <string name="previous">Previous</string>
-    <string name="page">Page %1$s of %2$s</string>
     <string name="monitoring">Monitoring</string>
     <string name="monitoring_unavailable">Monitoring is unavailable for this server or subscription.</string>
-    <string name="server_status">Status: %1$s</string>
     <string name="updated">Sample: %1$s</string>
     <string name="back">Back</string>
     <string name="error_auth">Invalid or expired token (401).</string>
@@ -48,10 +46,6 @@
     <string name="select_site">Select a site to see its details.</string>
     <string name="empty_sites">No sites on this server.</string>
     <string name="back_sites">Back to sites</string>
-    <string name="site_php">PHP: %1$s</string>
-    <string name="site_directory">Web directory: %1$s</string>
-    <string name="site_disk">Disk usage: %1$s</string>
-    <string name="site_health">Health URL: %1$s</string>
     <string name="pin_setup_title">Create your PIN</string>
     <string name="pin_setup_intro">This PIN protects access to your profiles and encrypted tokens. Choose 4 to 12 digits, not a straight run (123456) nor one repeated digit (111111).</string>
     <string name="pin_label">PIN code</string>
@@ -73,8 +67,6 @@
     <string name="biometric_cancel">Use PIN code</string>
     <string name="lock_now">Lock</string>
     <string name="account">Account</string>
-    <string name="account_plan">Plan: %1$s</string>
-    <string name="account_plan_expiry">Expires: %1$s</string>
     <string name="backup_configurations">Backup configurations</string>
     <string name="empty_backup_configurations">No backup configuration linked.</string>
     <string name="notification_channels">Notification channels</string>
@@ -123,22 +115,11 @@
     <string name="confirm_sensitive_biometric">Confirm your identity with biometrics to run this action.</string>
     <string name="confirm_restart_server">Restart server "%1$s"? Wait for the reboot to finish before any other action.</string>
     <string name="confirm_delete_server">Permanently delete server "%1$s"? This action is irreversible and removes all associated data.</string>
-    <string name="detail_type">Type: %1$s</string>
-    <string name="detail_ip">IP: %1$s</string>
-    <string name="detail_ssh_port">SSH port: %1$d</string>
-    <string name="detail_php">PHP: %1$s</string>
-    <string name="detail_mysql">MySQL: %1$s</string>
-    <string name="detail_sites_count">Sites: %1$d</string>
-    <string name="detail_monitoring_on">Ploi monitoring installed</string>
-    <string name="detail_monitoring_off">Ploi monitoring not installed</string>
     <string name="detail_reboot_required">System reboot required.</string>
     <plurals name="detail_updates">
         <item quantity="one">Update: %1$d (including %2$d security)</item>
         <item quantity="other">Updates: %1$d (including %2$d security)</item>
     </plurals>
-    <string name="detail_provider">Provider: %1$s</string>
-    <string name="detail_description">Note: %1$s</string>
-    <string name="detail_created">Created: %1$s</string>
     <string name="new_site">New site</string>
     <string name="create_site_submit">Create site</string>
     <string name="root_domain_label">Root domain</string>
@@ -161,7 +142,6 @@
     <string name="suspend_reason_label">Suspension reason (optional)</string>
     <string name="site_suspended">Site suspended.</string>
     <string name="site_resumed">Site resumed.</string>
-    <string name="test_domain">Test domain: %1$s</string>
     <string name="test_domain_none">No active test domain.</string>
     <string name="enable_test_domain">Enable test domain</string>
     <string name="disable_test_domain">Disable test domain</string>
@@ -191,26 +171,13 @@
     <string name="horizon_recent_jobs">Recent jobs</string>
     <string name="horizon_processes">Processes</string>
     <string name="horizon_paused">Paused masters</string>
-    <string name="horizon_supervisors">supervisor(s)</string>
     <string name="horizon_total">Total</string>
     <string name="flag_yes">Yes</string>
     <string name="flag_no">No</string>
-    <string name="site_project_type">Project type: %1$s</string>
-    <string name="site_system_user">System user: %1$s</string>
-    <string name="site_last_deploy">Last deploy: %1$s</string>
-    <string name="site_created_at">Created: %1$s</string>
-    <string name="site_repository">Repository linked: %1$s</string>
-    <string name="site_zero_downtime">Zero downtime: %1$s</string>
-    <string name="site_robots">Robots blocked: %1$s</string>
-    <string name="site_fastcgi">FastCGI cache: %1$s</string>
     <string name="close">Close</string>
     <string name="repository_title">Git repository</string>
     <string name="repository_none">No repository installed on this site.</string>
     <string name="repository_custom">Custom deployments (no linked Git repository)</string>
-    <string name="repository_provider">Provider: %1$s</string>
-    <string name="repository_name">Repository: %1$s</string>
-    <string name="repository_branch">Branch: %1$s</string>
-    <string name="repository_quick_deploy">Quick deploy: %1$s</string>
     <string name="repository_install">Install a repository</string>
     <string name="repository_provider_label">Provider</string>
     <string name="repository_provider_hint">Documented values: bitbucket, github, gitlab, custom</string>
@@ -254,8 +221,6 @@
     <string name="acknowledge_database">Acknowledge</string>
     <string name="acknowledge_database_hint">Tells Ploi about a database created outside the platform so it appears in the panel.</string>
     <string name="database_acknowledged">Database acknowledged by Ploi.</string>
-    <string name="database_type">Type: %1$s</string>
-    <string name="database_linked_site">Linked site: %1$s</string>
     <string name="duplicate_database">Duplicate</string>
     <string name="duplicate_database_hint">Clones \"%1$s\" into a new database on the same server.</string>
     <string name="duplicate_name_label">Copy name</string>
@@ -283,9 +248,6 @@
     <string name="attach_user_id_label">User ID</string>
     <string name="attach_user_submit">Attach</string>
     <string name="database_user_attached">User attached to the database.</string>
-    <string name="database_user_remote_flag">Remote: %1$s</string>
-    <string name="database_user_remote_ip">Remote IP: %1$s</string>
-    <string name="database_user_readonly_flag">Read-only: %1$s</string>
     <string name="delete_database_user">Delete</string>
     <string name="confirm_delete_database_user">Delete user \"%1$s\"? They will lose access to this database.</string>
     <string name="database_user_deleted">User deleted.</string>
@@ -297,13 +259,10 @@
     <string name="new_file_backup">New file backup</string>
     <string name="backup_no_sites">No site available on this server.</string>
     <string name="backup_sites_label">Sites to back up</string>
-    <string name="backup_site">Site: %1$s</string>
-    <string name="backup_path">Path: %1$s</string>
     <string name="backup_site_path_label">Path to back up for %1$s</string>
     <string name="backup_server_path_label">Server path (/home/user/domain)</string>
     <string name="backup_local_path_label">Local destination path, must start with / (optional)</string>
     <string name="backup_excluded_dirs_label">Excluded directories or files, comma separated (optional)</string>
-    <string name="backup_interval_text">Interval: %1$s</string>
     <string name="backup_interval_unknown">Interval not specified</string>
     <string name="file_backup_create_interval_hint">0 = nightly; otherwise 10, 20, 30, 40, 50, 60, 120, 240, 480, 720 or 1440</string>
     <string name="file_backup_update_interval_hint">0 = nightly; otherwise 60, 120, 240, 480, 720, 1440, 10080 or 43800</string>
@@ -328,13 +287,8 @@
     <string name="backup_excluded_label">Excluded tables, comma separated (optional)</string>
     <string name="create_backup_submit">Create the backup</string>
     <string name="backup_created">Backup configuration created.</string>
-    <string name="backup_type">Type: %1$s</string>
-    <string name="backup_database">Database: %1$s</string>
     <string name="backup_interval_nightly">Nightly</string>
     <string name="backup_interval_minutes">Every %1$d min</string>
-    <string name="backup_keep_count">Kept archives: %1$d</string>
-    <string name="backup_last_run">Last run: %1$s</string>
-    <string name="backup_next_run">Next run: %1$s</string>
     <string name="backup_inactive">Backup inactive</string>
     <string name="run_backup">Run</string>
     <string name="edit_backup">Edit</string>
@@ -345,7 +299,6 @@
     <string name="backup_channels">Channels</string>
     <string name="backup_channels_title">Notification channels of \"%1$s\"</string>
     <string name="empty_backup_channels">No channel attached to this backup.</string>
-    <string name="backup_channel_location">Trigger: %1$s</string>
     <string name="backup_channel_location_label">Trigger</string>
     <string name="location_before_backup">before the backup</string>
     <string name="location_after_backup">after the backup</string>
@@ -365,8 +318,6 @@
     <string name="crontab_frequency_label">Cron frequency (e.g. * * * * *)</string>
     <string name="create_crontab_submit">Create cron job</string>
     <string name="crontab_created">Cron job created.</string>
-    <string name="crontab_frequency">Frequency: %1$s</string>
-    <string name="crontab_user">User: %1$s</string>
     <string name="delete_crontab">Delete</string>
     <string name="confirm_delete_crontab">Permanently delete the cron job "%1$s"? This action cannot be undone.</string>
     <string name="crontab_deleted">Cron job deleted.</string>
@@ -379,10 +330,6 @@
     <string name="daemon_directory_label">Working directory (optional)</string>
     <string name="create_daemon_submit">Create daemon</string>
     <string name="daemon_created">Daemon created.</string>
-    <string name="daemon_status">Status: %1$s</string>
-    <string name="daemon_processes">Processes: %1$d</string>
-    <string name="daemon_user">User: %1$s</string>
-    <string name="daemon_directory">Directory: %1$s</string>
     <string name="restart_daemon">Restart</string>
     <string name="daemon_restarted">Daemon restarted.</string>
     <string name="toggle_pause_daemon">Pause/Resume</string>
@@ -400,10 +347,6 @@
     <string name="network_rule_from_ip_label">Source IP addresses (optional, comma-separated, max 20)</string>
     <string name="create_network_rule_submit">Create rule</string>
     <string name="network_rule_created">Firewall rule created.</string>
-    <string name="network_rule_port">Port: %1$s (%2$s)</string>
-    <string name="network_rule_type">Action: %1$s</string>
-    <string name="network_rule_from_ip">From: %1$s</string>
-    <string name="network_rule_status">Status: %1$s</string>
     <string name="delete_network_rule">Delete</string>
     <string name="confirm_delete_network_rule">Permanently delete the firewall rule "%1$s"? This action cannot be undone.</string>
     <string name="network_rule_deleted">Firewall rule deleted.</string>
@@ -415,8 +358,6 @@
     <string name="system_user_receive_password_label">Receive the sudo password in the response</string>
     <string name="create_system_user_submit">Create user</string>
     <string name="system_user_created">System user created.</string>
-    <string name="system_user_root">Root: %1$s</string>
-    <string name="system_user_created_at">Created: %1$s</string>
     <string name="delete_system_user">Delete</string>
     <string name="confirm_delete_system_user">Permanently delete the system user "%1$s"? This action cannot be undone.</string>
     <string name="system_user_deleted">System user deleted.</string>
@@ -432,7 +373,6 @@
     <string name="script_created">Script created.</string>
     <string name="edit_script_title">Edit "%1$s"</string>
     <string name="script_updated">Script updated.</string>
-    <string name="script_run_as">Runs as: %1$s</string>
     <string name="run_script">Run</string>
     <string name="run_script_title">Run "%1$s" on servers</string>
     <string name="run_script_submit">Run now</string>
@@ -448,11 +388,8 @@
     <string name="new_schedule">New schedule</string>
     <string name="schedule_cron_label">Cron expression (5 fields, e.g. */5 * * * *)</string>
     <string name="schedule_servers_label">Servers to run on</string>
-    <string name="schedule_servers_count">Servers: %1$d</string>
     <string name="schedule_paused">Paused</string>
     <string name="schedule_active">Active</string>
-    <string name="schedule_next_run">Next run: %1$s</string>
-    <string name="schedule_last_run">Last run: %1$s</string>
     <string name="create_schedule_submit">Create schedule</string>
     <string name="edit_schedule_title">Edit schedule</string>
     <string name="schedule_created">Schedule created.</string>
@@ -473,14 +410,10 @@
     <string name="action_trigger_booted">Server booted (server.booted)</string>
     <string name="action_trigger_shutdown">Server shutdown (server.shutdown)</string>
     <string name="action_delay_label">Delay in seconds (0–7200, blank = immediate)</string>
-    <string name="action_delay_value">Delay: %1$d s</string>
-    <string name="action_last_triggered">Last triggered: %1$s</string>
-    <string name="action_server_status">Server %1$d: %2$s</string>
     <string name="action_status_pending">installing</string>
     <string name="action_status_installed">installed</string>
     <string name="action_status_failed">install failed</string>
     <string name="action_status_uninstalling">uninstalling</string>
-    <string name="action_last_error">Error: %1$s</string>
     <string name="create_action_submit">Create action</string>
     <string name="edit_action_title">Edit action</string>
     <string name="action_created">Action created.</string>
@@ -496,15 +429,9 @@
     <string name="one_off_script_tab">Script</string>
     <string name="one_off_script_title">Run a one-off script on this server</string>
     <string name="one_off_script_content_label">Script content (max 7500 characters)</string>
-    <string name="execution_status">Status: %1$s</string>
-    <string name="execution_exit_code">Exit code: %1$d</string>
-    <string name="execution_started_at">Started: %1$s</string>
-    <string name="execution_finished_at">Finished: %1$s</string>
-    <string name="execution_output">Output</string>
     <string name="refresh_execution">Refresh status</string>
     <string name="status_pages_tab">Status</string>
     <string name="empty_status_pages">No status page in this account.</string>
-    <string name="status_page_slug">Slug: %1$s</string>
     <string name="status_page_incidents">Incidents</string>
     <string name="incidents_title">Incidents of “%1$s”</string>
     <string name="empty_incidents">No incident for this status page.</string>
@@ -512,7 +439,6 @@
     <string name="incident_title_label">Incident title</string>
     <string name="incident_description_label">Description (optional)</string>
     <string name="incident_severity_label">Severity</string>
-    <string name="incident_severity_value">Severity: %1$s</string>
     <string name="severity_normal">Normal</string>
     <string name="severity_high">High</string>
     <string name="severity_maintenance">Maintenance</string>
@@ -562,7 +488,6 @@
     <string name="php_install_version">Install a version</string>
     <string name="php_switch_cli">CLI version</string>
     <string name="php_version_label">PHP version (e.g. 8.3)</string>
-    <string name="php_cli_current">Current PHP CLI: %1$s</string>
     <string name="wpcli_section">WP-CLI (server)</string>
     <string name="wpcli_install">Install WP-CLI</string>
     <string name="wpcli_uninstall">Uninstall WP-CLI</string>
@@ -574,7 +499,6 @@
     <string name="ssh_key_deleted">SSH key deleted.</string>
     <string name="new_ssh_key">New SSH key</string>
     <string name="empty_ssh_keys">No SSH key on this server.</string>
-    <string name="ssh_key_user">User: %1$s</string>
     <string name="delete_ssh_key">Delete</string>
     <string name="confirm_delete_ssh_key">Delete the “%1$s” SSH key from this server?</string>
     <string name="ssh_key_name_label">Key name</string>
@@ -590,7 +514,6 @@
     <string name="lb_domain_label">Domain</string>
     <string name="confirm_lb_revoke">Revoke the certificate of “%1$s” on this load balancer?</string>
     <string name="empty_insights">No insight on this server.</string>
-    <string name="insight_status">Status: %1$s · Priority: %2$s</string>
     <string name="insight_detail">Details</string>
     <string name="insight_fix">Fix</string>
     <string name="insight_ignore">Ignore</string>
@@ -602,7 +525,6 @@
     <string name="confirm_insight_delete">Delete the “%1$s” insight?</string>
     <string name="new_container">New container</string>
     <string name="empty_containers">No Docker container on this server.</string>
-    <string name="container_state">Status: %1$s · State: %2$s</string>
     <string name="container_start">Start</string>
     <string name="container_stop">Stop</string>
     <string name="container_logs">Logs</string>
@@ -620,7 +542,6 @@
     <string name="container_link_host">Host (optional)</string>
     <string name="new_queue_worker">New worker</string>
     <string name="empty_queue_workers">No queue worker on this site.</string>
-    <string name="queue_worker_status">Status: %1$s · Processes: %2$d</string>
     <string name="queue_worker_restart">Restart</string>
     <string name="queue_worker_toggle_pause">Pause / Resume</string>
     <string name="queue_worker_delete">Delete</string>
@@ -634,7 +555,6 @@
     <string name="queue_max_tries_label">Max tries (optional)</string>
     <string name="new_redirect">New redirect</string>
     <string name="empty_redirects">No redirect on this site.</string>
-    <string name="redirect_type">Type: %1$s · Status: %2$s</string>
     <string name="delete_redirect">Delete</string>
     <string name="confirm_delete_redirect">Delete the “%1$s” redirect?</string>
     <string name="redirect_from_label">From (path)</string>
@@ -643,8 +563,6 @@
     <string name="redirect_temporary">Temporary</string>
     <string name="new_certificate">New certificate</string>
     <string name="empty_certificates">No certificate on this site.</string>
-    <string name="certificate_status">Type: %1$s · Status: %2$s</string>
-    <string name="certificate_expires">Expires: %1$s</string>
     <string name="certificate_download">Download</string>
     <string name="certificate_download_title">Certificate</string>
     <string name="certificate_activate">Activate</string>
@@ -658,7 +576,6 @@
     <string name="certificate_private_label">Private key</string>
     <string name="new_auth_user">New user</string>
     <string name="empty_auth_users">No authentication user.</string>
-    <string name="auth_user_path">Protected path: %1$s</string>
     <string name="delete_auth_user">Delete</string>
     <string name="confirm_delete_auth_user">Delete the “%1$s” user?</string>
     <string name="auth_user_name_label">Username</string>
@@ -666,13 +583,11 @@
     <string name="auth_user_path_label">Path (optional)</string>
     <string name="new_alias">New alias</string>
     <string name="empty_aliases">No alias on this site.</string>
-    <string name="alias_main">Main domain: %1$s</string>
     <string name="delete_alias">Delete</string>
     <string name="confirm_delete_alias">Delete the “%1$s” alias?</string>
     <string name="alias_domains_label">Domains (comma-separated)</string>
     <string name="new_tenant">New tenant</string>
     <string name="empty_tenants">No tenant on this site.</string>
-    <string name="tenant_main">Main domain: %1$s</string>
     <string name="delete_tenant">Delete</string>
     <string name="confirm_delete_tenant">Delete the “%1$s” tenant?</string>
     <string name="tenant_domains_label">Domains (comma-separated)</string>
@@ -682,7 +597,6 @@
     <string name="tenant_nginx">NGINX</string>
     <string name="tenant_nginx_title">%1$s NGINX</string>
     <string name="empty_monitors">No monitor on this site.</string>
-    <string name="monitor_uptime">Location: %1$s · Average uptime: %2$s %%</string>
     <string name="monitor_responses">Responses</string>
     <string name="monitor_responses_title">%1$s uptime responses</string>
     <string name="empty_uptime_responses">No recorded response.</string>
@@ -690,7 +604,6 @@
     <string name="delete_monitor">Delete</string>
     <string name="confirm_delete_monitor">Delete the “%1$s” monitor?</string>
     <string name="apps_section">Applications</string>
-    <string name="apps_wordpress_state">WordPress installed: %1$s</string>
     <string name="app_install">Install</string>
     <string name="app_uninstall">Uninstall</string>
     <string name="confirm_app_install_wordpress">Install WordPress on this site?</string>
@@ -754,7 +667,6 @@
     <string name="wp_repo_name_only_label">Repository name</string>
     <string name="new_project">New project</string>
     <string name="empty_projects">No project on this account.</string>
-    <string name="project_attachments">Servers: %1$s · Sites: %2$s</string>
     <string name="project_edit">Edit</string>
     <string name="project_delete">Delete</string>
     <string name="confirm_project_delete">Delete the “%1$s” project?</string>
@@ -789,10 +701,6 @@
     <string name="settings_profile_token_invalid">Token unreadable: this profile cannot be activated.</string>
     <string name="monitor_response_time">Response time</string>
     <string name="monitor_response_range">Min %1$s s · Max %2$s s</string>
-    <plurals name="dashboard_page_count">
-        <item quantity="one">%1$d server on this page</item>
-        <item quantity="other">%1$d servers on this page</item>
-    </plurals>
     <string name="dashboard_page_scope">Page %1$s / %2$s · Ploi data</string>
     <string name="dashboard_empty">No servers on this page. Add one or refresh the list.</string>
     <string name="widget_route_unavailable">Cannot open this server from the widget. Check the profile and try again.</string>

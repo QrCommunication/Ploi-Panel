@@ -808,6 +808,10 @@ private fun ServerList(
                                 }
                             } else null,
                             singleLine = true, shape = CircleShape,
+                            // Honest scope: the filter only searches rows already loaded on this page.
+                            supportingText = if (pageData.lastPage > 1) {
+                                { Text(stringResource(R.string.servers_search_scope, loaded.size)) }
+                            } else null,
                             modifier = Modifier.fillMaxWidth()
                         )
                     }

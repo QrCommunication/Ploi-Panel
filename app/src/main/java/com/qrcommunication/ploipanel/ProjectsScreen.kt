@@ -2,23 +2,26 @@ package com.qrcommunication.ploipanel
 
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
-import androidx.compose.foundation.layout.FlowRow
+import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.heightIn
-import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.outlined.Edit
+import androidx.compose.material.icons.outlined.Workspaces
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Button
-import androidx.compose.material3.Card
 import androidx.compose.material3.Checkbox
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Text
+import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
@@ -28,6 +31,7 @@ import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
+import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
@@ -90,61 +94,50 @@ internal fun ProjectsScreen(token: String, lock: AppLock, activity: FragmentActi
         }
     }
 
-    Column(Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(10.dp)) {
-        FlowRow(horizontalArrangement = Arrangement.spacedBy(8.dp), verticalArrangement = Arrangement.spacedBy(4.dp)) {
-            OutlinedButton(onClick = { refresh++ }, enabled = !loading && !busy) {
-                Text(stringResource(R.string.reload))
-            }
-            OutlinedButton(onClick = { creating = true }, enabled = !busy) {
-                Text(stringResource(R.string.new_project))
-            }
+    LazyColumn(
+        Modifier.fillMaxSize(),
+        verticalArrangement = Arrangement.spacedBy(PanelSpacing.md),
+        contentPadding = PaddingValues(vertical = PanelSpacing.sm)
+    ) {
+        item {
+            ListToolbar(
+                onRefresh = { refresh++ }, refreshEnabled = !loading && !busy,
+                primaryLabel = stringResource(R.string.new_project), onPrimary = { creating = true }, primaryEnabled = !busy,
+                summary = result?.let { stringResource(R.string.items_count, it.projects.size) }
+            )
         }
-        if (loading) BusyIndicator()
-        if (error != null) ApiErrorText(error!!)
-        if (feedback.isNotEmpty()) Text(feedback)
+        if (loading) item { LoadingState(rows = 2) }
+        error?.let { failure -> item { ErrorState(failure, onRetry = { refresh++ }, retryEnabled = !loading && !busy) } }
+        if (feedback.isNotEmpty()) item { SuccessBanner(feedback) }
         result?.let { data ->
-            if (data.projects.isEmpty()) Text(stringResource(R.string.empty_projects))
-            FlowRow(horizontalArrangement = Arrangement.spacedBy(8.dp), verticalArrangement = Arrangement.spacedBy(4.dp)) {
-                OutlinedButton(onClick = { page-- }, enabled = page > 1) {
-                    Text(stringResource(R.string.previous))
-                }
-                Text(
-                    stringResource(R.string.page, data.currentPage.toString(), data.lastPage.toString()),
-                    Modifier.padding(top = 12.dp)
-                )
-                OutlinedButton(onClick = { page++ }, enabled = data.hasNext) {
-                    Text(stringResource(R.string.next))
+            if (data.projects.isEmpty()) item { EmptyState(Icons.Outlined.Workspaces, stringResource(R.string.empty_projects)) }
+            items(data.projects, key = { it.id }) { project ->
+                // Live API embeds server objects: show their names, fall back to the bare ID otherwise.
+                val serverLabels = project.serverIds.map { id -> project.serverNames[id] ?: "#$id" }
+                val siteLabels = project.sites.map { site -> site.rootDomain.ifBlank { "#${site.id}" } }
+                ResourceCard(
+                    title = project.title, icon = Icons.Outlined.Workspaces,
+                    facts = listOfNotNull(
+                        ResourceFact(
+                            stringResource(R.string.g4_servers_label),
+                            serverLabels.joinToString(", ").ifEmpty { "0" }
+                        ),
+                        ResourceFact(
+                            stringResource(R.string.g4_sites_label),
+                            siteLabels.joinToString(", ").ifEmpty { "0" }
+                        ),
+                        project.createdAt.takeIf { it.isNotBlank() }?.let {
+                            ResourceFact(stringResource(R.string.g4_created_label), it)
+                        }
+                    )
+                ) {
+                    CardAction(stringResource(R.string.project_edit), icon = Icons.Outlined.Edit, enabled = !busy,
+                        onClick = { editing = project })
+                    DangerAction(stringResource(R.string.project_delete), onClick = { confirmDelete = project }, enabled = !busy)
                 }
             }
-            LazyColumn(verticalArrangement = Arrangement.spacedBy(8.dp)) {
-                items(data.projects, key = { it.id }) { project ->
-                    Card(modifier = Modifier.fillMaxWidth()) {
-                        Column(Modifier.padding(12.dp), verticalArrangement = Arrangement.spacedBy(6.dp)) {
-                            Text(project.title, style = MaterialTheme.typography.titleMedium)
-                            Text(
-                                stringResource(
-                                    R.string.project_attachments,
-                                    project.serverIds.size.toString(),
-                                    project.sites.size.toString()
-                                )
-                            )
-                            if (project.createdAt.isNotBlank()) {
-                                Text(stringResource(R.string.detail_created, project.createdAt))
-                            }
-                            FlowRow(horizontalArrangement = Arrangement.spacedBy(8.dp), verticalArrangement = Arrangement.spacedBy(4.dp)) {
-                                OutlinedButton(onClick = { editing = project }, enabled = !busy) {
-                                    Text(stringResource(R.string.project_edit))
-                                }
-                                OutlinedButton(onClick = { confirmDelete = project }, enabled = !busy) {
-                                    Text(
-                                        stringResource(R.string.project_delete),
-                                        color = MaterialTheme.colorScheme.error
-                                    )
-                                }
-                            }
-                        }
-                    }
-                }
+            item {
+                PageBar(data.currentPage, data.lastPage, data.hasNext, onPrevious = { page-- }, onNext = { page++ })
             }
         }
     }
@@ -200,7 +193,7 @@ private fun ProjectDialog(
         title = { Text(stringResource(if (initial == null) R.string.new_project else R.string.project_edit)) },
         text = {
             Column(Modifier.heightIn(max = 360.dp).verticalScroll(rememberScrollState()),
-                verticalArrangement = Arrangement.spacedBy(12.dp)) {
+                verticalArrangement = Arrangement.spacedBy(PanelSpacing.md)) {
                 OutlinedTextField(
                     value = title, onValueChange = { title = it },
                     label = { Text(stringResource(R.string.project_title_label)) },
@@ -223,13 +216,13 @@ private fun ProjectDialog(
                         PickerOptions(it.servers, it.currentPage, it.lastPage)
                     } }
                 ) { server ->
-                    Row(Modifier.fillMaxWidth()) {
+                    Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
                         Checkbox(
                             checked = server.id in parseProjectIds(servers).orEmpty(),
                             onCheckedChange = { checked -> servers = toggleProjectId(servers, server.id, checked) },
                             enabled = parseProjectIds(servers) != null
                         )
-                        OutlinedButton(onClick = { browsingServer = server.id }) {
+                        TextButton(onClick = { browsingServer = server.id }) {
                             Text(stringResource(R.string.project_browse_server_sites, server.name))
                         }
                     }
@@ -242,13 +235,13 @@ private fun ProjectDialog(
                             PickerOptions(it.sites, it.currentPage, it.lastPage)
                         } }
                     ) { site ->
-                        Row(Modifier.fillMaxWidth()) {
+                        Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
                             Checkbox(
                                 checked = site.id in parseProjectIds(sites).orEmpty(),
                                 onCheckedChange = { checked -> sites = toggleProjectId(sites, site.id, checked) },
                                 enabled = parseProjectIds(sites) != null
                             )
-                            Text(site.domain, Modifier.padding(top = 12.dp))
+                            Text(site.domain, style = MaterialTheme.typography.bodyMedium)
                         }
                     }
                 }

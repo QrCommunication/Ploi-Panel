@@ -63,7 +63,7 @@ class ResponsiveLayoutContractTest {
         assertTrue(dashboard.contains("page.servers.size"))
         assertTrue(dashboard.contains("page.currentPage.toString(), page.lastPage.toString()"))
         assertTrue(main.contains("servers = null"))
-        assertTrue(main.contains("ServerPageHero(pageData)"))
+        assertTrue(Regex("""ServerPageHero\(\s*pageData, rechecks, filter""").containsMatchIn(main))
         // Rows still render through the shared card; offline mode only disables its click target.
         assertTrue(main.contains("ServerItemCard(server, enabled = !offline,"))
         assertTrue(main.contains("Box(Modifier.weight(1f).fillMaxWidth())"))

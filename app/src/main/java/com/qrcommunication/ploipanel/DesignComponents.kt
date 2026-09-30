@@ -24,6 +24,7 @@ import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.ColumnScope
 import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.heightIn
@@ -69,7 +70,7 @@ import androidx.compose.ui.unit.dp
 /** Coarse, honest grouping of Ploi's free-form server status strings. */
 internal enum class ServerStatusKind { HEALTHY, PENDING, ERROR, UNKNOWN }
 
-private val healthyStatuses = setOf("active", "running", "online", "ok", "up", "ready", "enabled")
+private val healthyStatuses = setOf("active", "running", "online", "ok", "up", "ready", "enabled", "resolved", "fixed")
 private val errorStatuses = setOf(
     "failed", "failure", "error", "errored", "offline", "down", "unreachable", "stopped",
     "crashed", "suspended", "disabled", "deleted", "unhealthy"
@@ -82,7 +83,7 @@ internal fun serverStatusKind(raw: String): ServerStatusKind {
         value.isEmpty() -> ServerStatusKind.UNKNOWN
         value in healthyStatuses -> ServerStatusKind.HEALTHY
         value in errorStatuses || value.contains("fail") || value.contains("error") -> ServerStatusKind.ERROR
-        value.endsWith("ing") || value in setOf("pending", "queued", "new", "provision") -> ServerStatusKind.PENDING
+        value.endsWith("ing") || value in setOf("pending", "queued", "new", "provision", "open", "paused") -> ServerStatusKind.PENDING
         else -> ServerStatusKind.UNKNOWN
     }
 }
@@ -94,6 +95,12 @@ internal fun knownStatusLabel(raw: String): Int? = when (raw.trim().lowercase())
     "unreachable", "server unreachable" -> R.string.status_unreachable
     "installing", "server installing" -> R.string.status_installing
     "creating", "building", "provisioning" -> R.string.status_kind_pending
+    "open" -> R.string.status_open
+    "resolved", "fixed" -> R.string.status_resolved
+    "ignored" -> R.string.status_ignored
+    "paused" -> R.string.status_paused
+    "failed" -> R.string.status_failed
+    "running" -> R.string.status_running
     else -> null
 }
 
@@ -375,22 +382,31 @@ internal fun ListToolbar(
     summary: String? = null,
     extra: (@Composable () -> Unit)? = null
 ) {
-    Row(
-        Modifier.fillMaxWidth(),
-        verticalAlignment = Alignment.CenterVertically,
-        horizontalArrangement = Arrangement.spacedBy(PanelSpacing.sm)
-    ) {
-        Text(
-            summary.orEmpty(), style = MaterialTheme.typography.labelLarge,
-            color = MaterialTheme.colorScheme.onSurfaceVariant, modifier = Modifier.weight(1f)
+    // Summary on its own line when there are extra actions, so it is never squeezed letter by letter.
+    Column(Modifier.fillMaxWidth(), verticalArrangement = Arrangement.spacedBy(PanelSpacing.xs)) {
+        if (extra != null && !summary.isNullOrBlank()) Text(
+            summary, style = MaterialTheme.typography.labelLarge, color = MaterialTheme.colorScheme.onSurfaceVariant
         )
-        extra?.invoke()
-        IconButton(onClick = onRefresh, enabled = refreshEnabled) {
-            Icon(Icons.Outlined.Refresh, contentDescription = stringResource(R.string.reload))
-        }
-        if (primaryLabel != null && onPrimary != null) FilledTonalButton(onClick = onPrimary, enabled = primaryEnabled) {
-            Icon(primaryIcon, contentDescription = null, modifier = Modifier.size(18.dp))
-            Text(primaryLabel, Modifier.padding(start = PanelSpacing.sm), maxLines = 1, overflow = TextOverflow.Ellipsis)
+        Row(
+            Modifier.fillMaxWidth(),
+            verticalAlignment = Alignment.CenterVertically,
+            horizontalArrangement = Arrangement.spacedBy(PanelSpacing.sm)
+        ) {
+            if (extra == null) Text(
+                summary.orEmpty(), style = MaterialTheme.typography.labelLarge,
+                color = MaterialTheme.colorScheme.onSurfaceVariant, maxLines = 1, overflow = TextOverflow.Ellipsis,
+                modifier = Modifier.weight(1f)
+            ) else {
+                extra()
+                Spacer(Modifier.weight(1f))
+            }
+            IconButton(onClick = onRefresh, enabled = refreshEnabled) {
+                Icon(Icons.Outlined.Refresh, contentDescription = stringResource(R.string.reload))
+            }
+            if (primaryLabel != null && onPrimary != null) FilledTonalButton(onClick = onPrimary, enabled = primaryEnabled) {
+                Icon(primaryIcon, contentDescription = null, modifier = Modifier.size(18.dp))
+                Text(primaryLabel, Modifier.padding(start = PanelSpacing.sm), maxLines = 1, overflow = TextOverflow.Ellipsis)
+            }
         }
     }
 }
@@ -542,7 +558,7 @@ internal fun plainFromMarkdown(text: String): String = text
 
 /** Long machine output (logs, command output): first lines only, tap to expand. */
 @Composable
-internal fun ExpandableMono(text: String, collapsedLines: Int = 4, modifier: Modifier = Modifier) {
+internal fun ExpandableMono(text: String, modifier: Modifier = Modifier, collapsedLines: Int = 4) {
     var expanded by remember(text) { mutableStateOf(false) }
     val lines = remember(text) { text.lines().size }
     Column(modifier.fillMaxWidth(), verticalArrangement = Arrangement.spacedBy(PanelSpacing.xs)) {

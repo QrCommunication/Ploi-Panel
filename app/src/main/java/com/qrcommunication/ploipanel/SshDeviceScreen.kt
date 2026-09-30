@@ -1,16 +1,32 @@
 package com.qrcommunication.ploipanel
 
 import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.FlowRow
+import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.outlined.Delete
+import androidx.compose.material.icons.outlined.DeleteSweep
+import androidx.compose.material.icons.outlined.Dns
+import androidx.compose.material.icons.outlined.FileDownload
+import androidx.compose.material.icons.outlined.Fingerprint
+import androidx.compose.material.icons.outlined.Info
+import androidx.compose.material.icons.outlined.Key
+import androidx.compose.material.icons.outlined.Lock
+import androidx.compose.material.icons.outlined.WarningAmber
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Button
-import androidx.compose.material3.Card
+import androidx.compose.material3.ButtonDefaults
+import androidx.compose.material3.FilledTonalButton
+import androidx.compose.material3.HorizontalDivider
+import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.OutlinedTextField
@@ -23,7 +39,10 @@ import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
+import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontFamily
@@ -71,7 +90,7 @@ private fun mapSshError(failure: Throwable): Int = when (failure.message) {
 @Composable
 internal fun SshDeviceSection(profileId: String?, lock: AppLock, activity: FragmentActivity) {
     if (profileId == null) {
-        Text(stringResource(R.string.ssh_device_need_profile), style = MaterialTheme.typography.bodySmall)
+        QuietNote(Icons.Outlined.Info, stringResource(R.string.ssh_device_need_profile))
         return
     }
     val context = LocalContext.current
@@ -119,81 +138,77 @@ internal fun SshDeviceSection(profileId: String?, lock: AppLock, activity: Fragm
         }
     }
 
-    Column(Modifier.fillMaxWidth(), verticalArrangement = Arrangement.spacedBy(10.dp)) {
-        Text(stringResource(R.string.ssh_device_hint), style = MaterialTheme.typography.bodySmall)
-        if (feedback != 0) Text(stringResource(feedback), color = MaterialTheme.colorScheme.primary)
+    // Plain column: the Settings screen already wraps this section in a SectionCard.
+    Column(Modifier.fillMaxWidth(), verticalArrangement = Arrangement.spacedBy(PanelSpacing.md)) {
+        Text(
+            stringResource(R.string.ssh_device_hint), style = MaterialTheme.typography.bodySmall,
+            color = MaterialTheme.colorScheme.onSurfaceVariant
+        )
+        if (feedback != 0) SuccessBanner(stringResource(feedback))
 
-        Text(stringResource(R.string.ssh_keys_heading), style = MaterialTheme.typography.titleMedium)
+        SectionHeader(stringResource(R.string.ssh_keys_heading))
         when {
-            keysError != 0 -> Text(stringResource(keysError), color = MaterialTheme.colorScheme.error)
-            keys == null -> BusyIndicator()
-            keys!!.isEmpty() -> Text(
-                stringResource(R.string.ssh_keys_empty), style = MaterialTheme.typography.bodySmall
-            )
+            keysError != 0 -> InlineNotice(stringResource(keysError))
+            keys == null -> Box(Modifier.fillMaxWidth(), contentAlignment = Alignment.Center) { BusyIndicator() }
+            keys!!.isEmpty() -> QuietNote(Icons.Outlined.Key, stringResource(R.string.ssh_keys_empty))
             else -> keys!!.forEach { entry ->
-                Card(Modifier.fillMaxWidth()) {
-                    Column(Modifier.fillMaxWidth().padding(12.dp), verticalArrangement = Arrangement.spacedBy(4.dp)) {
-                        Text(entry.label, style = MaterialTheme.typography.titleSmall)
-                        Text(entry.keyType, style = MaterialTheme.typography.bodySmall)
-                        Text(
-                            stringResource(R.string.ssh_key_added, dateFormat.format(Date(entry.createdAtEpochMillis))),
-                            style = MaterialTheme.typography.bodySmall
-                        )
-                        if (entry.passphraseProtected) Text(
-                            stringResource(R.string.ssh_key_passphrase_protected), style = MaterialTheme.typography.bodySmall
-                        )
-                        if (entry.keyType == "ssh-rsa") Text(
-                            stringResource(R.string.ssh_weak_rsa), color = MaterialTheme.colorScheme.error,
-                            style = MaterialTheme.typography.bodySmall
-                        )
-                        OutlinedButton(onClick = { pendingDelete = entry }) {
-                            Text(stringResource(R.string.ssh_key_delete))
-                        }
-                    }
+                ResourceCard(
+                    title = entry.label,
+                    icon = Icons.Outlined.Key,
+                    subtitle = stringResource(R.string.ssh_key_added, dateFormat.format(Date(entry.createdAtEpochMillis))),
+                    facts = listOf(ResourceFact(stringResource(R.string.g5_ssh_fact_type), entry.keyType, mono = true))
+                ) {
+                    if (entry.passphraseProtected) CardNote(
+                        Icons.Outlined.Lock, stringResource(R.string.ssh_key_passphrase_protected),
+                        MaterialTheme.colorScheme.onSurfaceVariant
+                    )
+                    if (entry.keyType == "ssh-rsa") WeakKeyNote()
+                    DangerAction(stringResource(R.string.ssh_key_delete), onClick = { pendingDelete = entry })
                 }
             }
         }
-        OutlinedButton(onClick = { importingKey = true }, enabled = keys != null) {
-            Text(stringResource(R.string.ssh_key_import))
+        FilledTonalButton(onClick = { importingKey = true }, enabled = keys != null) {
+            Icon(Icons.Outlined.FileDownload, contentDescription = null, modifier = Modifier.size(18.dp))
+            Text(stringResource(R.string.ssh_key_import), Modifier.padding(start = PanelSpacing.sm))
         }
 
-        Text(stringResource(R.string.ssh_hosts_heading), style = MaterialTheme.typography.titleMedium)
+        HorizontalDivider(color = MaterialTheme.colorScheme.outlineVariant)
+        SectionHeader(stringResource(R.string.ssh_hosts_heading))
         when {
-            hostsError != 0 -> Text(stringResource(hostsError), color = MaterialTheme.colorScheme.error)
-            hosts == null -> BusyIndicator()
-            hosts!!.isEmpty() -> Text(
-                stringResource(R.string.ssh_hosts_empty), style = MaterialTheme.typography.bodySmall
-            )
+            hostsError != 0 -> InlineNotice(stringResource(hostsError))
+            hosts == null -> Box(Modifier.fillMaxWidth(), contentAlignment = Alignment.Center) { BusyIndicator() }
+            hosts!!.isEmpty() -> QuietNote(Icons.Outlined.Dns, stringResource(R.string.ssh_hosts_empty))
             else -> hosts!!.forEach { entry ->
-                Card(Modifier.fillMaxWidth()) {
-                    Column(Modifier.fillMaxWidth().padding(12.dp), verticalArrangement = Arrangement.spacedBy(4.dp)) {
-                        Text("${entry.host}:${entry.port}", style = MaterialTheme.typography.titleSmall)
-                        Text(entry.keyType, style = MaterialTheme.typography.bodySmall)
-                        Text(
-                            entry.fingerprint(), style = MaterialTheme.typography.bodySmall,
-                            fontFamily = FontFamily.Monospace
-                        )
-                        if (entry.isWeakSignature) Text(
-                            stringResource(R.string.ssh_weak_rsa), color = MaterialTheme.colorScheme.error,
-                            style = MaterialTheme.typography.bodySmall
-                        )
-                        OutlinedButton(onClick = { pendingRevoke = entry }) {
-                            Text(stringResource(R.string.ssh_host_revoke))
-                        }
-                    }
+                ResourceCard(
+                    title = "${entry.host}:${entry.port}",
+                    monoTitle = true,
+                    icon = Icons.Outlined.Dns,
+                    facts = listOf(
+                        ResourceFact(stringResource(R.string.g5_ssh_fact_type), entry.keyType, mono = true),
+                        ResourceFact(stringResource(R.string.g5_ssh_fact_fingerprint), entry.fingerprint(), mono = true)
+                    )
+                ) {
+                    if (entry.isWeakSignature) WeakKeyNote()
+                    DangerAction(stringResource(R.string.ssh_host_revoke), onClick = { pendingRevoke = entry })
                 }
             }
         }
-        FlowRow(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-            OutlinedButton(onClick = { probing = true }) {
-                Text(stringResource(R.string.ssh_probe_title))
+        FlowRow(
+            horizontalArrangement = Arrangement.spacedBy(PanelSpacing.sm),
+            verticalArrangement = Arrangement.spacedBy(PanelSpacing.xs)
+        ) {
+            FilledTonalButton(onClick = { probing = true }) {
+                Icon(Icons.Outlined.Fingerprint, contentDescription = null, modifier = Modifier.size(18.dp))
+                Text(stringResource(R.string.ssh_probe_title), Modifier.padding(start = PanelSpacing.sm))
             }
-            OutlinedButton(onClick = { importingHosts = true }, enabled = hosts != null) {
-                Text(stringResource(R.string.ssh_hosts_import))
-            }
-            OutlinedButton(onClick = { confirmClear = true }, enabled = hosts != null || hostsError != 0) {
-                Text(stringResource(R.string.ssh_hosts_clear))
-            }
+            CardAction(
+                stringResource(R.string.ssh_hosts_import), icon = Icons.Outlined.FileDownload,
+                enabled = hosts != null, onClick = { importingHosts = true }
+            )
+            DangerAction(
+                stringResource(R.string.ssh_hosts_clear), onClick = { confirmClear = true },
+                enabled = hosts != null || hostsError != 0
+            )
         }
     }
 
@@ -256,12 +271,13 @@ internal fun SshDeviceSection(profileId: String?, lock: AppLock, activity: Fragm
     pendingRevoke?.let { entry ->
         AlertDialog(
             onDismissRequest = { pendingRevoke = null },
+            icon = { Icon(Icons.Outlined.Delete, contentDescription = null, tint = MaterialTheme.colorScheme.error) },
             title = { Text(stringResource(R.string.ssh_host_revoke)) },
             text = {
                 Text(stringResource(R.string.ssh_host_revoke_confirm, "${entry.host}:${entry.port}"))
             },
             confirmButton = {
-                Button(onClick = {
+                Button(colors = dangerButtonColors(), onClick = {
                     pendingRevoke = null
                     hostsError = 0
                     try {
@@ -279,10 +295,11 @@ internal fun SshDeviceSection(profileId: String?, lock: AppLock, activity: Fragm
     }
     if (confirmClear) AlertDialog(
         onDismissRequest = { confirmClear = false },
+        icon = { Icon(Icons.Outlined.DeleteSweep, contentDescription = null, tint = MaterialTheme.colorScheme.error) },
         title = { Text(stringResource(R.string.ssh_hosts_clear)) },
         text = { Text(stringResource(R.string.ssh_hosts_clear_confirm)) },
         confirmButton = {
-            Button(onClick = {
+            Button(colors = dangerButtonColors(), onClick = {
                 confirmClear = false
                 hostsError = 0
                 trustStore.clear()
@@ -310,24 +327,26 @@ private fun SshKeyImportDialog(
     var busy by remember { mutableStateOf(false) }
     AlertDialog(
         onDismissRequest = { if (!busy) onDismiss() },
+        icon = { Icon(Icons.Outlined.Key, contentDescription = null) },
         title = { Text(stringResource(R.string.ssh_key_import)) },
         text = {
             Column(
                 Modifier.fillMaxWidth().heightIn(max = 420.dp).verticalScroll(rememberScrollState()),
-                verticalArrangement = Arrangement.spacedBy(8.dp)
+                verticalArrangement = Arrangement.spacedBy(PanelSpacing.sm)
             ) {
                 OutlinedTextField(label, onValueChange = { label = it },
                     label = { Text(stringResource(R.string.ssh_key_label)) },
                     singleLine = true, enabled = !busy, modifier = Modifier.fillMaxWidth())
                 OutlinedTextField(publicLine, onValueChange = { publicLine = it },
                     label = { Text(stringResource(R.string.ssh_key_public_line)) },
-                    placeholder = { Text(stringResource(R.string.ssh_key_public_hint)) },
+                    placeholder = { Text(stringResource(R.string.ssh_key_public_hint), style = panelMonoStyle) },
+                    textStyle = panelMonoStyle,
                     singleLine = true, enabled = !busy, modifier = Modifier.fillMaxWidth())
                 OutlinedTextField(privatePem, onValueChange = { privatePem = it },
                     label = { Text(stringResource(R.string.ssh_key_private_pem)) },
                     textStyle = MaterialTheme.typography.bodySmall.copy(fontFamily = FontFamily.Monospace),
                     minLines = 4, maxLines = 10, enabled = !busy, modifier = Modifier.fillMaxWidth())
-                if (error != 0) Text(stringResource(error), color = MaterialTheme.colorScheme.error)
+                if (error != 0) InlineNotice(stringResource(error))
                 if (busy) BusyIndicator()
             }
         },
@@ -372,29 +391,28 @@ private fun KnownHostsImportDialog(
     var busy by remember { mutableStateOf(false) }
     AlertDialog(
         onDismissRequest = { if (!busy) onDismiss() },
+        icon = { Icon(Icons.Outlined.Dns, contentDescription = null) },
         title = { Text(stringResource(R.string.ssh_hosts_import)) },
         text = {
             Column(
                 Modifier.fillMaxWidth().heightIn(max = 420.dp).verticalScroll(rememberScrollState()),
-                verticalArrangement = Arrangement.spacedBy(8.dp)
+                verticalArrangement = Arrangement.spacedBy(PanelSpacing.sm)
             ) {
                 val outcome = report
                 if (outcome == null) {
-                    Text(stringResource(R.string.ssh_hosts_import_hint), style = MaterialTheme.typography.bodySmall)
+                    Text(stringResource(R.string.ssh_hosts_import_hint), style = MaterialTheme.typography.bodySmall,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant)
                     OutlinedTextField(text, onValueChange = { text = it },
                         label = { Text("known_hosts") },
                         textStyle = MaterialTheme.typography.bodySmall.copy(fontFamily = FontFamily.Monospace),
                         minLines = 4, maxLines = 10, enabled = !busy, modifier = Modifier.fillMaxWidth())
                     if (busy) BusyIndicator()
                 } else {
-                    Text(stringResource(R.string.ssh_hosts_imported, outcome.imported))
+                    SuccessBanner(stringResource(R.string.ssh_hosts_imported, outcome.imported))
                     if (outcome.errors.isNotEmpty()) {
-                        Text(
-                            stringResource(R.string.ssh_hosts_import_errors),
-                            color = MaterialTheme.colorScheme.error, style = MaterialTheme.typography.titleSmall
-                        )
+                        InlineNotice(stringResource(R.string.ssh_hosts_import_errors))
                         outcome.errors.forEach { line ->
-                            Text(line, style = MaterialTheme.typography.bodySmall, fontFamily = FontFamily.Monospace)
+                            Text(line, style = panelMonoStyle, color = MaterialTheme.colorScheme.error)
                         }
                     }
                 }
@@ -427,3 +445,36 @@ private fun KnownHostsImportDialog(
         }
     )
 }
+
+/** Small muted line with a decorative icon, used for empty lists inside the settings card. */
+@Composable
+private fun QuietNote(icon: ImageVector, text: String) {
+    Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(PanelSpacing.sm)) {
+        Icon(icon, contentDescription = null, tint = MaterialTheme.colorScheme.onSurfaceVariant, modifier = Modifier.size(18.dp))
+        Text(text, style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+    }
+}
+
+/** Full-width note placed first in a card's action row so it wraps onto its own line. */
+@Composable
+private fun CardNote(icon: ImageVector, text: String, tint: Color) {
+    Row(
+        Modifier.fillMaxWidth(),
+        verticalAlignment = Alignment.CenterVertically,
+        horizontalArrangement = Arrangement.spacedBy(PanelSpacing.xs + PanelSpacing.xxs)
+    ) {
+        Icon(icon, contentDescription = null, tint = tint, modifier = Modifier.size(16.dp))
+        Text(text, color = tint, style = MaterialTheme.typography.bodySmall)
+    }
+}
+
+/** ssh-rsa (SHA-1) warning, error-coloured with an icon. */
+@Composable
+private fun WeakKeyNote() = CardNote(
+    Icons.Outlined.WarningAmber, stringResource(R.string.ssh_weak_rsa), MaterialTheme.colorScheme.error
+)
+
+@Composable
+private fun dangerButtonColors() = ButtonDefaults.buttonColors(
+    containerColor = MaterialTheme.colorScheme.error, contentColor = MaterialTheme.colorScheme.onError
+)

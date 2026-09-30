@@ -2,6 +2,17 @@ package com.qrcommunication.ploipanel
 
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.PaddingValues
+import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.outlined.AddLink
+import androidx.compose.material.icons.outlined.ContentCopy
+import androidx.compose.material.icons.outlined.Group
+import androidx.compose.material.icons.outlined.LinkOff
+import androidx.compose.material.icons.outlined.Person
+import androidx.compose.material.icons.outlined.PersonAdd
+import androidx.compose.material.icons.outlined.Storage
+import androidx.compose.material3.TextButton
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.FlowRow
 import androidx.compose.foundation.layout.fillMaxWidth
@@ -13,7 +24,6 @@ import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Button
-import androidx.compose.material3.Card
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.OutlinedTextField
@@ -99,74 +109,47 @@ internal fun DatabasesScreen(token: String, serverId: Long, lock: AppLock, activ
         }
     }
 
-    Column(Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(10.dp)) {
-        FlowRow(horizontalArrangement = Arrangement.spacedBy(8.dp), verticalArrangement = Arrangement.spacedBy(4.dp)) {
-            OutlinedButton(onClick = { refresh++ }, enabled = !loading && !busy) {
-                Text(stringResource(R.string.reload))
-            }
-            OutlinedButton(onClick = { creating = true }, enabled = !busy) {
-                Text(stringResource(R.string.new_database))
-            }
-            OutlinedButton(onClick = { acknowledging = true }, enabled = !busy) {
-                Text(stringResource(R.string.acknowledge_database))
-            }
-        }
-        if (loading) BusyIndicator()
-        if (error != null) ApiErrorText(error!!)
-        if (feedback.isNotEmpty()) Text(feedback)
-        result?.let { data ->
-            if (data.databases.isEmpty()) Text(stringResource(R.string.empty_databases))
-            FlowRow(horizontalArrangement = Arrangement.spacedBy(8.dp), verticalArrangement = Arrangement.spacedBy(4.dp)) {
-                OutlinedButton(onClick = { page-- }, enabled = page > 1) {
-                    Text(stringResource(R.string.previous))
-                }
-                Text(
-                    stringResource(R.string.page, data.currentPage.toString(), data.lastPage.toString()),
-                    Modifier.padding(top = 12.dp)
-                )
-                OutlinedButton(onClick = { page++ }, enabled = data.hasNext) {
-                    Text(stringResource(R.string.next))
-                }
-            }
-            LazyColumn(verticalArrangement = Arrangement.spacedBy(8.dp)) {
-                items(data.databases, key = { it.id }) { database ->
-                    Card(modifier = Modifier.fillMaxWidth()) {
-                        Column(Modifier.padding(12.dp), verticalArrangement = Arrangement.spacedBy(6.dp)) {
-                            Text(database.name, style = MaterialTheme.typography.titleMedium)
-                            if (database.type.isNotBlank()) {
-                                Text(stringResource(R.string.database_type, database.type))
-                            }
-                            if (database.status.isNotBlank()) {
-                                Text(stringResource(R.string.server_status, database.status))
-                            }
-                            if (database.siteDomain.isNotBlank()) {
-                                Text(stringResource(R.string.database_linked_site, database.siteDomain))
-                            }
-                            if (database.createdAt.isNotBlank()) {
-                                Text(stringResource(R.string.detail_created, database.createdAt))
-                            }
-                            FlowRow(horizontalArrangement = Arrangement.spacedBy(8.dp), verticalArrangement = Arrangement.spacedBy(4.dp)) {
-                                OutlinedButton(onClick = { usersFor = database }, enabled = !busy) {
-                                    Text(stringResource(R.string.database_users))
-                                }
-                                OutlinedButton(onClick = { duplicating = database }, enabled = !busy) {
-                                    Text(stringResource(R.string.duplicate_database))
-                                }
-                            }
-                            FlowRow(horizontalArrangement = Arrangement.spacedBy(8.dp), verticalArrangement = Arrangement.spacedBy(4.dp)) {
-                                OutlinedButton(onClick = { confirmForget = database }, enabled = !busy) {
-                                    Text(stringResource(R.string.forget_database))
-                                }
-                                OutlinedButton(onClick = { confirmDelete = database }, enabled = !busy) {
-                                    Text(
-                                        stringResource(R.string.delete_database),
-                                        color = MaterialTheme.colorScheme.error
-                                    )
-                                }
-                            }
-                        }
+    LazyColumn(
+        Modifier.fillMaxSize(),
+        verticalArrangement = Arrangement.spacedBy(PanelSpacing.md),
+        contentPadding = PaddingValues(vertical = PanelSpacing.sm)
+    ) {
+        item {
+            ListToolbar(
+                onRefresh = { refresh++ }, refreshEnabled = !loading && !busy,
+                primaryLabel = stringResource(R.string.new_database), onPrimary = { creating = true }, primaryEnabled = !busy,
+                summary = result?.let { stringResource(R.string.items_count, it.databases.size) },
+                extra = {
+                    TextButton(onClick = { acknowledging = true }, enabled = !busy) {
+                        Text(stringResource(R.string.acknowledge_database), maxLines = 1)
                     }
                 }
+            )
+        }
+        if (loading) item { LoadingState(rows = 2) }
+        error?.let { failure -> item { ErrorState(failure, onRetry = { refresh++ }, retryEnabled = !loading) } }
+        if (feedback.isNotEmpty()) item { SuccessBanner(plainFromMarkdown(feedback)) }
+        result?.let { data ->
+            if (data.databases.isEmpty()) item { EmptyState(Icons.Outlined.Storage, stringResource(R.string.empty_databases)) }
+            items(data.databases, key = { it.id }) { database ->
+                ResourceCard(
+                    title = database.name, monoTitle = true, icon = Icons.Outlined.Storage,
+                    status = database.status,
+                    facts = listOfNotNull(
+                        database.type.takeIf { it.isNotBlank() }?.let { ResourceFact(stringResource(R.string.server_type_label), it) },
+                        database.siteDomain.takeIf { it.isNotBlank() }?.let { ResourceFact(stringResource(R.string.g2_linked_site_label), it, mono = true) },
+                        database.createdAt.takeIf { it.isNotBlank() }?.let { ResourceFact(stringResource(R.string.g2_created_label), it) }
+                    )
+                ) {
+                    CardAction(stringResource(R.string.database_users), icon = Icons.Outlined.Group, enabled = !busy, onClick = { usersFor = database })
+                    CardAction(stringResource(R.string.duplicate_database), icon = Icons.Outlined.ContentCopy, enabled = !busy, onClick = { duplicating = database })
+                    // Forget only unlinks the database from Ploi (data kept); still behind SensitiveConfirmDialog.
+                    CardAction(stringResource(R.string.forget_database), icon = Icons.Outlined.LinkOff, enabled = !busy, onClick = { confirmForget = database })
+                    DangerAction(stringResource(R.string.delete_database), onClick = { confirmDelete = database }, enabled = !busy)
+                }
+            }
+            item {
+                PageBar(data.currentPage, data.lastPage, data.hasNext, onPrevious = { page-- }, onNext = { page++ })
             }
         }
     }
@@ -431,58 +414,33 @@ private fun DatabaseUsersDialog(
         text = {
             Column(
                 Modifier.verticalScroll(rememberScrollState()),
-                verticalArrangement = Arrangement.spacedBy(10.dp)
+                verticalArrangement = Arrangement.spacedBy(PanelSpacing.md)
             ) {
-                FlowRow(horizontalArrangement = Arrangement.spacedBy(8.dp), verticalArrangement = Arrangement.spacedBy(4.dp)) {
-                    OutlinedButton(onClick = { creating = true }, enabled = !busy) {
-                        Text(stringResource(R.string.new_database_user))
-                    }
-                    OutlinedButton(onClick = { attaching = true }, enabled = !busy) {
-                        Text(stringResource(R.string.attach_database_user))
-                    }
+                FlowRow(horizontalArrangement = Arrangement.spacedBy(PanelSpacing.sm), verticalArrangement = Arrangement.spacedBy(PanelSpacing.xs)) {
+                    CardAction(stringResource(R.string.new_database_user), icon = Icons.Outlined.PersonAdd, enabled = !busy, onClick = { creating = true })
+                    CardAction(stringResource(R.string.attach_database_user), icon = Icons.Outlined.AddLink, enabled = !busy, onClick = { attaching = true })
                 }
-                if (loading) BusyIndicator()
-                if (error != null) ApiErrorText(error!!)
-                if (feedback.isNotEmpty()) Text(feedback)
+                if (loading) LoadingState(rows = 1)
+                if (error != null) ErrorState(error!!)
+                if (feedback.isNotEmpty()) SuccessBanner(feedback)
                 result?.let { data ->
-                    if (data.users.isEmpty()) Text(stringResource(R.string.empty_database_users))
-                    if (data.lastPage > 1) {
-                        FlowRow(horizontalArrangement = Arrangement.spacedBy(8.dp), verticalArrangement = Arrangement.spacedBy(4.dp)) {
-                            OutlinedButton(onClick = { page-- }, enabled = page > 1) {
-                                Text(stringResource(R.string.previous))
-                            }
-                            Text(
-                                stringResource(R.string.page, data.currentPage.toString(), data.lastPage.toString()),
-                                Modifier.padding(top = 12.dp)
-                            )
-                            OutlinedButton(onClick = { page++ }, enabled = data.hasNext) {
-                                Text(stringResource(R.string.next))
-                            }
-                        }
-                    }
+                    if (data.users.isEmpty()) EmptyState(Icons.Outlined.Group, stringResource(R.string.empty_database_users))
+                    PageBar(data.currentPage, data.lastPage, data.hasNext, onPrevious = { page-- }, onNext = { page++ })
                     data.users.forEach { user ->
-                        Card(modifier = Modifier.fillMaxWidth()) {
-                            Column(Modifier.padding(12.dp), verticalArrangement = Arrangement.spacedBy(4.dp)) {
-                                Text(user.user, style = MaterialTheme.typography.titleMedium)
-                                val yesNo =
-                                    stringResource(if (user.remote) R.string.flag_yes else R.string.flag_no)
-                                Text(stringResource(R.string.database_user_remote_flag, yesNo))
-                                if (user.remote && user.remoteIp.isNotBlank()) {
-                                    Text(stringResource(R.string.database_user_remote_ip, user.remoteIp))
-                                }
-                                val readonly =
-                                    stringResource(if (user.readonly) R.string.flag_yes else R.string.flag_no)
-                                Text(stringResource(R.string.database_user_readonly_flag, readonly))
-                                if (user.createdAt.isNotBlank()) {
-                                    Text(stringResource(R.string.detail_created, user.createdAt))
-                                }
-                                OutlinedButton(onClick = { confirmDelete = user }, enabled = !busy) {
-                                    Text(
-                                        stringResource(R.string.delete_database_user),
-                                        color = MaterialTheme.colorScheme.error
-                                    )
-                                }
-                            }
+                        val yesNo =
+                            stringResource(if (user.remote) R.string.flag_yes else R.string.flag_no)
+                        val readonly =
+                            stringResource(if (user.readonly) R.string.flag_yes else R.string.flag_no)
+                        ResourceCard(
+                            title = user.user, monoTitle = true, icon = Icons.Outlined.Person,
+                            facts = listOfNotNull(
+                                ResourceFact(stringResource(R.string.database_user_remote), yesNo),
+                                user.remoteIp.takeIf { user.remote && it.isNotBlank() }?.let { ResourceFact(stringResource(R.string.g2_remote_ip_label), it, mono = true) },
+                                ResourceFact(stringResource(R.string.database_user_readonly), readonly),
+                                user.createdAt.takeIf { it.isNotBlank() }?.let { ResourceFact(stringResource(R.string.g2_created_label), it) }
+                            )
+                        ) {
+                            DangerAction(stringResource(R.string.delete_database_user), onClick = { confirmDelete = user }, enabled = !busy)
                         }
                     }
                 }

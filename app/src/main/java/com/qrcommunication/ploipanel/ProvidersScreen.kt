@@ -6,22 +6,27 @@ import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.BoxWithConstraints
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
-import androidx.compose.foundation.layout.FlowRow
-import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
-import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.foundation.lazy.items
-import androidx.compose.material3.Button
-import androidx.compose.material3.Card
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.automirrored.outlined.ArrowBack
+import androidx.compose.material.icons.automirrored.outlined.OpenInNew
+import androidx.compose.material.icons.outlined.Cloud
+import androidx.compose.material.icons.outlined.Memory
+import androidx.compose.material.icons.outlined.Public
+import androidx.compose.material3.HorizontalDivider
+import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.Text
+import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
@@ -29,6 +34,7 @@ import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
+import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.stringResource
@@ -65,20 +71,23 @@ internal fun ProvidersScreen(token: String) {
     BoxWithConstraints(Modifier.fillMaxSize()) {
         val expanded = maxWidth >= 720.dp
         if (expanded) {
-            Row(horizontalArrangement = Arrangement.spacedBy(16.dp)) {
+            Row(horizontalArrangement = Arrangement.spacedBy(PanelSpacing.lg)) {
                 Column(Modifier.weight(1f)) {
                     ProviderList(result, loading, error, page,
                         onPage = { page = it; selectedId = null }, onRefresh = { refresh++ }, onSelect = { selectedId = it })
                 }
                 Column(Modifier.weight(1f)) {
                     val id = selectedId
-                    if (id == null) Text(stringResource(R.string.select_provider))
+                    if (id == null) EmptyState(Icons.Outlined.Cloud, stringResource(R.string.select_provider))
                     else ProviderDetail(token, id)
                 }
             }
         } else if (selectedId != null) {
             Column(Modifier.fillMaxSize()) {
-                OutlinedButton(onClick = { selectedId = null }) { Text(stringResource(R.string.back_providers)) }
+                TextButton(onClick = { selectedId = null }) {
+                    Icon(Icons.AutoMirrored.Outlined.ArrowBack, contentDescription = null, modifier = Modifier.size(18.dp))
+                    Text(stringResource(R.string.back_providers), Modifier.padding(start = PanelSpacing.sm))
+                }
                 Box(Modifier.weight(1f).fillMaxWidth()) { ProviderDetail(token, selectedId!!) }
             }
         } else {
@@ -94,31 +103,36 @@ private fun ProviderList(
     onPage: (Int) -> Unit, onRefresh: () -> Unit, onSelect: (Long) -> Unit
 ) {
     val context = LocalContext.current
-    Column(verticalArrangement = Arrangement.spacedBy(10.dp)) {
-        FlowRow(horizontalArrangement = Arrangement.spacedBy(8.dp), verticalArrangement = Arrangement.spacedBy(4.dp)) {
-            OutlinedButton(onClick = onRefresh, enabled = !loading) { Text(stringResource(R.string.reload)) }
-            Button(onClick = {
-                context.startActivity(Intent(Intent.ACTION_VIEW, "https://ploi.io/profile/server-providers".toUri()))
-            }) { Text(stringResource(R.string.add_provider)) }
+    LazyColumn(
+        Modifier.fillMaxSize(),
+        verticalArrangement = Arrangement.spacedBy(PanelSpacing.md),
+        contentPadding = PaddingValues(vertical = PanelSpacing.sm)
+    ) {
+        item {
+            ListToolbar(
+                onRefresh = onRefresh, refreshEnabled = !loading,
+                primaryLabel = stringResource(R.string.add_provider),
+                onPrimary = {
+                    context.startActivity(Intent(Intent.ACTION_VIEW, "https://ploi.io/profile/server-providers".toUri()))
+                },
+                primaryIcon = Icons.AutoMirrored.Outlined.OpenInNew,
+                summary = data?.let { stringResource(R.string.items_count, it.providers.size) }
+            )
         }
-        if (loading) BusyIndicator()
-        if (error != null) ApiErrorText(error)
+        if (loading) item { LoadingState(rows = 2) }
+        if (error != null) item { ErrorState(error, onRetry = onRefresh, retryEnabled = !loading) }
         if (data != null) {
-            if (data.providers.isEmpty()) Text(stringResource(R.string.empty_providers))
-            FlowRow(horizontalArrangement = Arrangement.spacedBy(8.dp), verticalArrangement = Arrangement.spacedBy(4.dp)) {
-                OutlinedButton(onClick = { onPage(page - 1) }, enabled = page > 1) { Text(stringResource(R.string.previous)) }
-                Text(stringResource(R.string.page, data.currentPage.toString(), data.lastPage.toString()), Modifier.padding(top = 12.dp))
-                OutlinedButton(onClick = { onPage(page + 1) }, enabled = data.hasNext) { Text(stringResource(R.string.next)) }
+            if (data.providers.isEmpty()) item { EmptyState(Icons.Outlined.Cloud, stringResource(R.string.empty_providers)) }
+            items(data.providers, key = { it.id }) { provider ->
+                ResourceCard(
+                    title = provider.displayName, icon = Icons.Outlined.Cloud,
+                    subtitle = provider.name.takeIf { it != provider.displayName },
+                    onClick = { onSelect(provider.id) }
+                )
             }
-            LazyColumn(verticalArrangement = Arrangement.spacedBy(8.dp)) {
-                items(data.providers, key = { it.id }) { provider ->
-                    Card(onClick = { onSelect(provider.id) }, modifier = Modifier.fillMaxWidth()) {
-                        Column(Modifier.padding(16.dp)) {
-                            Text(provider.displayName, style = MaterialTheme.typography.titleMedium)
-                            Text(provider.name)
-                        }
-                    }
-                }
+            item {
+                PageBar(data.currentPage, data.lastPage, data.hasNext,
+                    onPrevious = { onPage(page - 1) }, onNext = { onPage(page + 1) })
             }
         }
     }
@@ -144,18 +158,44 @@ private fun ProviderDetail(token: String, id: Long) {
             loading = false
         }
     }
-    Column(Modifier.fillMaxSize().verticalScroll(rememberScrollState()).padding(16.dp),
-        verticalArrangement = Arrangement.spacedBy(12.dp)) {
-        Text(stringResource(R.string.provider_detail), style = MaterialTheme.typography.titleLarge)
-        if (loading) BusyIndicator()
-        if (error != null) ApiErrorText(error!!)
+    Column(Modifier.fillMaxSize().verticalScroll(rememberScrollState()).padding(vertical = PanelSpacing.sm),
+        verticalArrangement = Arrangement.spacedBy(PanelSpacing.md)) {
+        SectionHeader(stringResource(R.string.provider_detail))
+        if (loading) LoadingState(rows = 2)
+        if (error != null) ErrorState(error!!)
         provider?.let { details ->
             Text(details.displayName, style = MaterialTheme.typography.headlineSmall)
-            Text(stringResource(R.string.plans), style = MaterialTheme.typography.titleMedium)
-            details.plans.forEach { plan -> Text("${plan.name} (${plan.id}) — ${plan.description}") }
-            Spacer(Modifier.height(8.dp))
-            Text(stringResource(R.string.regions), style = MaterialTheme.typography.titleMedium)
-            details.regions.forEach { region -> Text("${region.name} (${region.id})") }
+            SectionCard(title = stringResource(R.string.plans), icon = Icons.Outlined.Memory) {
+                details.plans.forEachIndexed { index, plan ->
+                    if (index > 0) HorizontalDivider(color = MaterialTheme.colorScheme.outlineVariant)
+                    ProviderOptionRow(plan)
+                }
+            }
+            SectionCard(title = stringResource(R.string.regions), icon = Icons.Outlined.Public) {
+                details.regions.forEachIndexed { index, region ->
+                    if (index > 0) HorizontalDivider(color = MaterialTheme.colorScheme.outlineVariant)
+                    ProviderOptionRow(region)
+                }
+            }
         }
+    }
+}
+
+/** One plan or region: human name (+ description) with the machine ID Ploi expects, in monospace. */
+@Composable
+private fun ProviderOptionRow(option: ProviderOption) {
+    Row(
+        Modifier.fillMaxWidth(),
+        verticalAlignment = Alignment.CenterVertically,
+        horizontalArrangement = Arrangement.spacedBy(PanelSpacing.md)
+    ) {
+        Column(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(PanelSpacing.xxs)) {
+            Text(option.name, style = MaterialTheme.typography.bodyLarge)
+            if (option.description.isNotBlank()) Text(
+                option.description, style = MaterialTheme.typography.bodySmall,
+                color = MaterialTheme.colorScheme.onSurfaceVariant
+            )
+        }
+        Text(option.id, style = panelMonoStyle, color = MaterialTheme.colorScheme.onSurfaceVariant)
     }
 }

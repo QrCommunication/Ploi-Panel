@@ -2,19 +2,20 @@ package com.qrcommunication.ploipanel
 
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
-import androidx.compose.foundation.layout.Row
-import androidx.compose.foundation.layout.FlowRow
-import androidx.compose.foundation.layout.fillMaxWidth
-import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.PaddingValues
+import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.outlined.AutoFixHigh
+import androidx.compose.material.icons.outlined.Info
+import androidx.compose.material.icons.outlined.Lightbulb
+import androidx.compose.material.icons.outlined.VisibilityOff
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Button
-import androidx.compose.material3.Card
 import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
@@ -26,7 +27,6 @@ import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.res.stringResource
-import androidx.compose.ui.unit.dp
 import androidx.fragment.app.FragmentActivity
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.Dispatchers
@@ -87,80 +87,66 @@ internal fun InsightsScreen(token: String, serverId: Long, lock: AppLock, activi
         }
     }
 
-    Column(Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(10.dp)) {
-        FlowRow(horizontalArrangement = Arrangement.spacedBy(8.dp), verticalArrangement = Arrangement.spacedBy(4.dp)) {
-            OutlinedButton(onClick = { refresh++ }, enabled = !loading && !busy) {
-                Text(stringResource(R.string.reload))
-            }
+    LazyColumn(
+        Modifier.fillMaxSize(),
+        verticalArrangement = Arrangement.spacedBy(PanelSpacing.md),
+        contentPadding = PaddingValues(vertical = PanelSpacing.sm)
+    ) {
+        item {
+            ListToolbar(
+                onRefresh = { refresh++ }, refreshEnabled = !loading && !busy,
+                summary = result?.let { stringResource(R.string.items_count, it.insights.size) }
+            )
         }
-        if (loading) BusyIndicator()
-        if (error != null) ApiErrorText(error!!)
-        if (feedback.isNotEmpty()) Text(feedback)
+        if (loading) item { LoadingState(rows = 2) }
+        error?.let { failure -> item { ErrorState(failure, onRetry = { refresh++ }, retryEnabled = !loading) } }
+        if (feedback.isNotEmpty()) item { SuccessBanner(feedback) }
         result?.let { data ->
-            if (data.insights.isEmpty()) Text(stringResource(R.string.empty_insights))
-            FlowRow(horizontalArrangement = Arrangement.spacedBy(8.dp), verticalArrangement = Arrangement.spacedBy(4.dp)) {
-                OutlinedButton(onClick = { page-- }, enabled = page > 1) {
-                    Text(stringResource(R.string.previous))
-                }
-                Text(
-                    stringResource(R.string.page, data.currentPage.toString(), data.lastPage.toString()),
-                    Modifier.padding(top = 12.dp)
-                )
-                OutlinedButton(onClick = { page++ }, enabled = data.hasNext) {
-                    Text(stringResource(R.string.next))
-                }
-            }
-            LazyColumn(verticalArrangement = Arrangement.spacedBy(8.dp)) {
-                items(data.insights, key = { it.id }) { insight ->
-                    Card(modifier = Modifier.fillMaxWidth()) {
-                        Column(Modifier.padding(12.dp), verticalArrangement = Arrangement.spacedBy(6.dp)) {
-                            Text(insight.type, style = MaterialTheme.typography.titleMedium)
-                            Text(stringResource(R.string.insight_status, insight.status, insight.priority))
-                            if (insight.description.isNotBlank()) Text(insight.description)
-                            FlowRow(horizontalArrangement = Arrangement.spacedBy(8.dp), verticalArrangement = Arrangement.spacedBy(4.dp)) {
-                                OutlinedButton(
-                                    onClick = {
-                                        busy = true
-                                        error = null
-                                        scope.launch {
-                                            try {
-                                                detail = withContext(Dispatchers.IO) {
-                                                    PloiApi.insightDetail(token, serverId, insight.id)
-                                                }
-                                            } catch (cancelled: CancellationException) {
-                                                throw cancelled
-                                            } catch (failure: Exception) {
-                                                error = failure
-                                            } finally {
-                                                busy = false
-                                            }
-                                        }
-                                    },
-                                    enabled = !busy
-                                ) { Text(stringResource(R.string.insight_detail)) }
-                                if (insight.fixable) {
-                                    OutlinedButton(onClick = { confirmFix = insight }, enabled = !busy) {
-                                        Text(stringResource(R.string.insight_fix))
+            if (data.insights.isEmpty()) item { EmptyState(Icons.Outlined.Lightbulb, stringResource(R.string.empty_insights)) }
+            items(data.insights, key = { it.id }) { insight ->
+                ResourceCard(
+                    title = insight.type, icon = Icons.Outlined.Lightbulb,
+                    subtitle = plainFromMarkdown(insight.description).takeIf { it.isNotBlank() },
+                    status = insight.status,
+                    facts = listOfNotNull(
+                        insight.priority.takeIf { it.isNotBlank() }?.let { ResourceFact(stringResource(R.string.g1_insight_priority), priorityLabel(it)) }
+                    )
+                ) {
+                    CardAction(
+                        stringResource(R.string.insight_detail), icon = Icons.Outlined.Info, enabled = !busy,
+                        onClick = {
+                            busy = true
+                            error = null
+                            scope.launch {
+                                try {
+                                    detail = withContext(Dispatchers.IO) {
+                                        PloiApi.insightDetail(token, serverId, insight.id)
                                     }
-                                }
-                            }
-                            FlowRow(horizontalArrangement = Arrangement.spacedBy(8.dp), verticalArrangement = Arrangement.spacedBy(4.dp)) {
-                                OutlinedButton(
-                                    onClick = {
-                                        runAction(ignoredMessage) { PloiApi.ignoreInsight(token, serverId, insight.id) }
-                                    },
-                                    enabled = !busy && insight.status != "ignored"
-                                ) { Text(stringResource(R.string.insight_ignore)) }
-                                OutlinedButton(onClick = { confirmDelete = insight }, enabled = !busy) {
-                                    Text(
-                                        stringResource(R.string.insight_delete),
-                                        color = MaterialTheme.colorScheme.error
-                                    )
+                                } catch (cancelled: CancellationException) {
+                                    throw cancelled
+                                } catch (failure: Exception) {
+                                    error = failure
+                                } finally {
+                                    busy = false
                                 }
                             }
                         }
+                    )
+                    if (insight.fixable) {
+                        CardAction(stringResource(R.string.insight_fix), icon = Icons.Outlined.AutoFixHigh, enabled = !busy, onClick = { confirmFix = insight })
                     }
+                    CardAction(
+                        stringResource(R.string.insight_ignore), icon = Icons.Outlined.VisibilityOff,
+                        enabled = !busy && insight.status != "ignored",
+                        onClick = {
+                            runAction(ignoredMessage) { PloiApi.ignoreInsight(token, serverId, insight.id) }
+                        }
+                    )
+                    DangerAction(stringResource(R.string.insight_delete), onClick = { confirmDelete = insight }, enabled = !busy)
                 }
+            }
+            item {
+                PageBar(data.currentPage, data.lastPage, data.hasNext, onPrevious = { page-- }, onNext = { page++ })
             }
         }
     }
@@ -172,9 +158,9 @@ internal fun InsightsScreen(token: String, serverId: Long, lock: AppLock, activi
             text = {
                 Column(
                     Modifier.verticalScroll(rememberScrollState()),
-                    verticalArrangement = Arrangement.spacedBy(8.dp)
+                    verticalArrangement = Arrangement.spacedBy(PanelSpacing.sm)
                 ) {
-                    if (insightDetail.description.isNotBlank()) Text(insightDetail.description)
+                    if (insightDetail.description.isNotBlank()) Text(plainFromMarkdown(insightDetail.description))
                     if (insightDetail.html.isNotBlank()) {
                         Text(
                             insightDetail.html.replace(Regex("<[^>]+>"), " ").replace(Regex("\\s+"), " ").trim(),
@@ -184,7 +170,7 @@ internal fun InsightsScreen(token: String, serverId: Long, lock: AppLock, activi
                 }
             },
             confirmButton = {
-                Button(onClick = { detail = null }) { Text(stringResource(R.string.cancel)) }
+                Button(onClick = { detail = null }) { Text(stringResource(R.string.close)) }
             }
         )
     }
@@ -216,4 +202,14 @@ internal fun InsightsScreen(token: String, serverId: Long, lock: AppLock, activi
             onDismiss = { confirmDelete = null }
         )
     }
+}
+
+/** Ploi priority keywords in the user's language; unknown values are shown as sent. */
+@Composable
+private fun priorityLabel(raw: String): String = when (raw.trim().lowercase()) {
+    "low" -> stringResource(R.string.priority_low)
+    "medium", "normal" -> stringResource(R.string.priority_medium)
+    "high" -> stringResource(R.string.priority_high)
+    "critical", "urgent" -> stringResource(R.string.priority_critical)
+    else -> raw
 }

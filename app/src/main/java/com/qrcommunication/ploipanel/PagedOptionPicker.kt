@@ -2,8 +2,13 @@ package com.qrcommunication.ploipanel
 
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
-import androidx.compose.foundation.layout.FlowRow
+import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.outlined.Refresh
+import androidx.compose.material3.Icon
+import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
@@ -14,6 +19,7 @@ import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberUpdatedState
 import androidx.compose.runtime.setValue
+import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
@@ -66,28 +72,32 @@ internal fun <T> PagedOptionPicker(
             loading = false
         }
     }
-    Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
-        Text(label)
+    Column(verticalArrangement = Arrangement.spacedBy(PanelSpacing.xs)) {
+        Text(label, style = MaterialTheme.typography.titleSmall)
         if (loading) {
-            BusyIndicator()
-            Text(stringResource(R.string.backup_loading_options))
+            Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(PanelSpacing.sm)) {
+                BusyIndicator(Modifier.size(20.dp))
+                Text(
+                    stringResource(R.string.backup_loading_options), style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                )
+            }
         }
         error?.let { failure ->
             ApiErrorText(failure)
-            OutlinedButton(onClick = { retry++ }) { Text(stringResource(R.string.picker_retry)) }
+            OutlinedButton(onClick = { retry++ }) {
+                Icon(Icons.Outlined.Refresh, contentDescription = null, modifier = Modifier.size(18.dp))
+                Text(stringResource(R.string.picker_retry), Modifier.padding(start = PanelSpacing.sm))
+            }
         }
         options?.let { data ->
-            if (data.items.isEmpty()) Text(emptyLabel)
+            if (data.items.isEmpty()) Text(
+                emptyLabel, style = MaterialTheme.typography.bodyMedium,
+                color = MaterialTheme.colorScheme.onSurfaceVariant
+            )
             data.items.forEach { row(it) }
-            FlowRow(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                OutlinedButton(onClick = { cursor.previous() }, enabled = cursor.page > 1) {
-                    Text(stringResource(R.string.previous))
-                }
-                Text(stringResource(R.string.page, data.currentPage.toString(), data.lastPage.toString()), Modifier.padding(top = 12.dp))
-                OutlinedButton(onClick = { cursor.next(data) }, enabled = data.hasNext) {
-                    Text(stringResource(R.string.next))
-                }
-            }
+            PageBar(data.currentPage, data.lastPage, data.hasNext,
+                onPrevious = { cursor.previous() }, onNext = { cursor.next(data) })
         }
     }
 }

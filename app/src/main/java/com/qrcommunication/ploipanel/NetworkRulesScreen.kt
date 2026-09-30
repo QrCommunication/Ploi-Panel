@@ -2,15 +2,16 @@ package com.qrcommunication.ploipanel
 
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
-import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.FlowRow
+import androidx.compose.foundation.layout.PaddingValues
+import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
-import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.outlined.Shield
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Button
-import androidx.compose.material3.Card
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.OutlinedTextField
@@ -25,7 +26,6 @@ import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.res.stringResource
-import androidx.compose.ui.unit.dp
 import androidx.fragment.app.FragmentActivity
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.Dispatchers
@@ -87,60 +87,45 @@ internal fun NetworkRulesScreen(token: String, serverId: Long, lock: AppLock, ac
         }
     }
 
-    Column(Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(10.dp)) {
-        FlowRow(horizontalArrangement = Arrangement.spacedBy(8.dp), verticalArrangement = Arrangement.spacedBy(4.dp)) {
-            OutlinedButton(onClick = { refresh++ }, enabled = !loading && !busy) {
-                Text(stringResource(R.string.reload))
-            }
-            OutlinedButton(onClick = { creating = true }, enabled = !busy) {
-                Text(stringResource(R.string.new_network_rule))
-            }
+    LazyColumn(
+        Modifier.fillMaxSize(),
+        verticalArrangement = Arrangement.spacedBy(PanelSpacing.md),
+        contentPadding = PaddingValues(vertical = PanelSpacing.sm)
+    ) {
+        item {
+            ListToolbar(
+                onRefresh = { refresh++ }, refreshEnabled = !loading && !busy,
+                primaryLabel = stringResource(R.string.new_network_rule), onPrimary = { creating = true }, primaryEnabled = !busy,
+                summary = result?.let { stringResource(R.string.items_count, it.rules.size) }
+            )
         }
-        if (loading) BusyIndicator()
-        if (error != null) ApiErrorText(error!!)
-        if (feedback.isNotEmpty()) Text(feedback)
+        if (loading) item { LoadingState(rows = 2) }
+        error?.let { failure -> item { ErrorState(failure, onRetry = { refresh++ }, retryEnabled = !loading) } }
+        if (feedback.isNotEmpty()) item { SuccessBanner(feedback) }
         result?.let { data ->
-            if (data.rules.isEmpty()) Text(stringResource(R.string.empty_network_rules))
-            FlowRow(horizontalArrangement = Arrangement.spacedBy(8.dp), verticalArrangement = Arrangement.spacedBy(4.dp)) {
-                OutlinedButton(onClick = { page-- }, enabled = page > 1) {
-                    Text(stringResource(R.string.previous))
-                }
-                Text(
-                    stringResource(R.string.page, data.currentPage.toString(), data.lastPage.toString()),
-                    Modifier.padding(top = 12.dp)
-                )
-                OutlinedButton(onClick = { page++ }, enabled = data.hasNext) {
-                    Text(stringResource(R.string.next))
+            if (data.rules.isEmpty()) item { EmptyState(Icons.Outlined.Shield, stringResource(R.string.empty_network_rules)) }
+            items(data.rules, key = { it.id }) { rule ->
+                ResourceCard(
+                    title = rule.name, icon = Icons.Outlined.Shield,
+                    status = rule.status,
+                    facts = listOfNotNull(
+                        ResourceFact(stringResource(R.string.g1_network_rule_port), rule.port, mono = true),
+                        rule.protocol.takeIf { it.isNotBlank() }?.let { ResourceFact(stringResource(R.string.network_rule_protocol_label), it.uppercase()) },
+                        ResourceFact(stringResource(R.string.g1_network_rule_action), when (rule.ruleType.trim().lowercase()) {
+                            "allow" -> stringResource(R.string.firewall_allow)
+                            "deny" -> stringResource(R.string.firewall_deny)
+                            else -> rule.ruleType
+                        }),
+                        rule.fromIpAddress.takeIf { it.isNotBlank() }?.let {
+                            ResourceFact(stringResource(R.string.g1_network_rule_from), it, mono = true)
+                        }
+                    )
+                ) {
+                    DangerAction(stringResource(R.string.delete_network_rule), onClick = { confirmDelete = rule }, enabled = !busy)
                 }
             }
-            LazyColumn(verticalArrangement = Arrangement.spacedBy(8.dp)) {
-                items(data.rules, key = { it.id }) { rule ->
-                    Card(modifier = Modifier.fillMaxWidth()) {
-                        Column(Modifier.padding(12.dp), verticalArrangement = Arrangement.spacedBy(6.dp)) {
-                            Text(rule.name, style = MaterialTheme.typography.titleMedium)
-                            Text(
-                                stringResource(
-                                    R.string.network_rule_port,
-                                    rule.port,
-                                    rule.protocol.uppercase().ifBlank { "?" }
-                                )
-                            )
-                            Text(stringResource(R.string.network_rule_type, rule.ruleType))
-                            if (rule.fromIpAddress.isNotBlank()) {
-                                Text(stringResource(R.string.network_rule_from_ip, rule.fromIpAddress))
-                            }
-                            if (rule.status.isNotBlank()) {
-                                Text(stringResource(R.string.network_rule_status, rule.status))
-                            }
-                            OutlinedButton(onClick = { confirmDelete = rule }, enabled = !busy) {
-                                Text(
-                                    stringResource(R.string.delete_network_rule),
-                                    color = MaterialTheme.colorScheme.error
-                                )
-                            }
-                        }
-                    }
-                }
+            item {
+                PageBar(data.currentPage, data.lastPage, data.hasNext, onPrevious = { page-- }, onNext = { page++ })
             }
         }
     }
@@ -187,7 +172,7 @@ private fun CreateNetworkRuleDialog(
         onDismissRequest = onDismiss,
         title = { Text(stringResource(R.string.new_network_rule)) },
         text = {
-            Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
+            Column(verticalArrangement = Arrangement.spacedBy(PanelSpacing.md)) {
                 OutlinedTextField(
                     value = name, onValueChange = { name = it },
                     label = { Text(stringResource(R.string.network_rule_name_label)) },
@@ -199,7 +184,7 @@ private fun CreateNetworkRuleDialog(
                     singleLine = true, modifier = Modifier.fillMaxWidth()
                 )
                 Text(stringResource(R.string.network_rule_protocol_label))
-                FlowRow(horizontalArrangement = Arrangement.spacedBy(8.dp), verticalArrangement = Arrangement.spacedBy(4.dp)) {
+                FlowRow(horizontalArrangement = Arrangement.spacedBy(PanelSpacing.sm), verticalArrangement = Arrangement.spacedBy(PanelSpacing.xs)) {
                     NETWORK_RULE_PROTOCOLS.forEach { option ->
                         OutlinedButton(onClick = { protocol = option }, enabled = protocol != option) {
                             Text(option.uppercase())
@@ -207,7 +192,7 @@ private fun CreateNetworkRuleDialog(
                     }
                 }
                 Text(stringResource(R.string.network_rule_type_label))
-                FlowRow(horizontalArrangement = Arrangement.spacedBy(8.dp), verticalArrangement = Arrangement.spacedBy(4.dp)) {
+                FlowRow(horizontalArrangement = Arrangement.spacedBy(PanelSpacing.sm), verticalArrangement = Arrangement.spacedBy(PanelSpacing.xs)) {
                     NETWORK_RULE_TYPES.forEach { option ->
                         OutlinedButton(onClick = { ruleType = option }, enabled = ruleType != option) {
                             Text(option.uppercase())

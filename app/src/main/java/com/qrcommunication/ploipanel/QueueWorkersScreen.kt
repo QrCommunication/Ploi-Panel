@@ -2,16 +2,18 @@ package com.qrcommunication.ploipanel
 
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
-import androidx.compose.foundation.layout.Row
-import androidx.compose.foundation.layout.FlowRow
+import androidx.compose.foundation.layout.PaddingValues
+import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
-import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.text.KeyboardOptions
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.outlined.PauseCircle
+import androidx.compose.material.icons.outlined.Queue
+import androidx.compose.material.icons.outlined.RestartAlt
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Button
-import androidx.compose.material3.Card
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.OutlinedTextField
@@ -84,52 +86,43 @@ internal fun QueueWorkersScreen(token: String, serverId: Long, siteId: Long, loc
         }
     }
 
-    Column(Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(10.dp)) {
-        FlowRow(horizontalArrangement = Arrangement.spacedBy(8.dp), verticalArrangement = Arrangement.spacedBy(4.dp)) {
-            OutlinedButton(onClick = { refresh++ }, enabled = !loading && !busy) {
-                Text(stringResource(R.string.reload))
-            }
-            OutlinedButton(onClick = { creating = true }, enabled = !busy) {
-                Text(stringResource(R.string.new_queue_worker))
-            }
+    LazyColumn(
+        Modifier.fillMaxSize(),
+        verticalArrangement = Arrangement.spacedBy(PanelSpacing.md),
+        contentPadding = PaddingValues(vertical = PanelSpacing.sm)
+    ) {
+        item {
+            ListToolbar(
+                onRefresh = { refresh++ }, refreshEnabled = !loading && !busy,
+                primaryLabel = stringResource(R.string.new_queue_worker), onPrimary = { creating = true }, primaryEnabled = !busy,
+                summary = result?.let { stringResource(R.string.items_count, it.size) }
+            )
         }
-        if (loading) BusyIndicator()
-        if (error != null) ApiErrorText(error!!)
-        if (feedback.isNotEmpty()) Text(feedback)
+        if (loading) item { LoadingState(rows = 2) }
+        error?.let { failure -> item { ErrorState(failure, onRetry = { refresh++ }, retryEnabled = !loading && !busy) } }
+        if (feedback.isNotEmpty()) item { SuccessBanner(feedback) }
         result?.let { workers ->
-            if (workers.isEmpty()) Text(stringResource(R.string.empty_queue_workers))
-            LazyColumn(verticalArrangement = Arrangement.spacedBy(8.dp)) {
-                items(workers, key = { it.id }) { worker ->
-                    Card(modifier = Modifier.fillMaxWidth()) {
-                        Column(Modifier.padding(12.dp), verticalArrangement = Arrangement.spacedBy(6.dp)) {
-                            Text("${worker.connection} / ${worker.queue}", style = MaterialTheme.typography.titleMedium)
-                            Text(stringResource(R.string.queue_worker_status, worker.status, worker.processes))
-                            FlowRow(horizontalArrangement = Arrangement.spacedBy(8.dp), verticalArrangement = Arrangement.spacedBy(4.dp)) {
-                                OutlinedButton(
-                                    onClick = {
-                                        runAction(doneMessage) {
-                                            PloiApi.restartQueueWorker(token, serverId, siteId, worker.id)
-                                        }
-                                    },
-                                    enabled = !busy
-                                ) { Text(stringResource(R.string.queue_worker_restart)) }
-                                OutlinedButton(
-                                    onClick = {
-                                        runAction(doneMessage) {
-                                            PloiApi.togglePauseQueueWorker(token, serverId, siteId, worker.id)
-                                        }
-                                    },
-                                    enabled = !busy
-                                ) { Text(stringResource(R.string.queue_worker_toggle_pause)) }
-                                OutlinedButton(onClick = { confirmDelete = worker }, enabled = !busy) {
-                                    Text(
-                                        stringResource(R.string.queue_worker_delete),
-                                        color = MaterialTheme.colorScheme.error
-                                    )
-                                }
-                            }
+            if (workers.isEmpty()) item { EmptyState(Icons.Outlined.Queue, stringResource(R.string.empty_queue_workers)) }
+            items(workers, key = { it.id }) { worker ->
+                ResourceCard(
+                    title = worker.queue, monoTitle = true, icon = Icons.Outlined.Queue,
+                    status = worker.status,
+                    facts = listOfNotNull(
+                        worker.connection.takeIf { it.isNotBlank() }?.let { ResourceFact(stringResource(R.string.queue_connection_label), it, mono = true) },
+                        ResourceFact(stringResource(R.string.queue_processes_label), worker.processes.toString())
+                    )
+                ) {
+                    CardAction(stringResource(R.string.queue_worker_restart), icon = Icons.Outlined.RestartAlt, enabled = !busy, onClick = {
+                        runAction(doneMessage) {
+                            PloiApi.restartQueueWorker(token, serverId, siteId, worker.id)
                         }
-                    }
+                    })
+                    CardAction(stringResource(R.string.queue_worker_toggle_pause), icon = Icons.Outlined.PauseCircle, enabled = !busy, onClick = {
+                        runAction(doneMessage) {
+                            PloiApi.togglePauseQueueWorker(token, serverId, siteId, worker.id)
+                        }
+                    })
+                    DangerAction(stringResource(R.string.queue_worker_delete), onClick = { confirmDelete = worker }, enabled = !busy)
                 }
             }
         }

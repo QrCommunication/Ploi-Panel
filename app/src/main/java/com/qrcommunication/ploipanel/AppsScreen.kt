@@ -2,16 +2,20 @@ package com.qrcommunication.ploipanel
 
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
-import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.FlowRow
-import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
-import androidx.compose.material3.Card
-import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.OutlinedButton
-import androidx.compose.material3.Text
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.outlined.Apps
+import androidx.compose.material.icons.automirrored.outlined.Article
+import androidx.compose.material.icons.outlined.CleaningServices
+import androidx.compose.material.icons.outlined.Cloud
+import androidx.compose.material.icons.outlined.Download
+import androidx.compose.material.icons.outlined.PauseCircle
+import androidx.compose.material.icons.outlined.PlayCircle
+import androidx.compose.material.icons.outlined.Speed
+import androidx.compose.material.icons.outlined.Web
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
@@ -20,7 +24,6 @@ import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.res.stringResource
-import androidx.compose.ui.unit.dp
 import androidx.fragment.app.FragmentActivity
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.Dispatchers
@@ -63,70 +66,49 @@ internal fun AppsScreen(
         }
     }
 
+    val yes = stringResource(R.string.flag_yes)
+    val no = stringResource(R.string.flag_no)
     Column(
-        Modifier.padding(16.dp).verticalScroll(rememberScrollState()),
-        verticalArrangement = Arrangement.spacedBy(10.dp)
+        Modifier.padding(vertical = PanelSpacing.sm).verticalScroll(rememberScrollState()),
+        verticalArrangement = Arrangement.spacedBy(PanelSpacing.md)
     ) {
-        if (error != null) ApiErrorText(error!!)
-        if (feedback.isNotEmpty()) Text(feedback)
+        if (error != null) ErrorState(error!!)
+        if (feedback.isNotEmpty()) SuccessBanner(feedback)
 
-        Text(stringResource(R.string.apps_section), style = MaterialTheme.typography.titleMedium)
-        Text(stringResource(R.string.apps_wordpress_state, if (site.projectType == "wordpress") "✓" else "—"))
-        Card(modifier = Modifier.fillMaxWidth()) {
-            Column(Modifier.padding(12.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
-                Text("WordPress", style = MaterialTheme.typography.titleSmall)
-                FlowRow(horizontalArrangement = Arrangement.spacedBy(8.dp), verticalArrangement = Arrangement.spacedBy(4.dp)) {
-                    OutlinedButton(onClick = { confirm = "install_wordpress" }, enabled = !busy) {
-                        Text(stringResource(R.string.app_install))
-                    }
-                    OutlinedButton(onClick = { confirm = "uninstall_wordpress" }, enabled = !busy) {
-                        Text(stringResource(R.string.app_uninstall), color = MaterialTheme.colorScheme.error)
-                    }
-                }
+        SectionCard(title = stringResource(R.string.apps_section), icon = Icons.Outlined.Apps) {
+            ResourceCard(
+                title = "WordPress", icon = Icons.Outlined.Web,
+                facts = listOf(ResourceFact(stringResource(R.string.g3_site_installed), if (site.projectType == "wordpress") yes else no))
+            ) {
+                CardAction(stringResource(R.string.app_install), icon = Icons.Outlined.Download, enabled = !busy,
+                    onClick = { confirm = "install_wordpress" })
+                DangerAction(stringResource(R.string.app_uninstall), onClick = { confirm = "uninstall_wordpress" }, enabled = !busy)
             }
-        }
-        Card(modifier = Modifier.fillMaxWidth()) {
-            Column(Modifier.padding(12.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
-                Text("Nextcloud", style = MaterialTheme.typography.titleSmall)
-                FlowRow(horizontalArrangement = Arrangement.spacedBy(8.dp), verticalArrangement = Arrangement.spacedBy(4.dp)) {
-                    OutlinedButton(onClick = { confirm = "install_nextcloud" }, enabled = !busy) {
-                        Text(stringResource(R.string.app_install))
-                    }
-                    OutlinedButton(onClick = { confirm = "uninstall_nextcloud" }, enabled = !busy) {
-                        Text(stringResource(R.string.app_uninstall), color = MaterialTheme.colorScheme.error)
-                    }
-                }
+            ResourceCard(title = "Nextcloud", icon = Icons.Outlined.Cloud) {
+                CardAction(stringResource(R.string.app_install), icon = Icons.Outlined.Download, enabled = !busy,
+                    onClick = { confirm = "install_nextcloud" })
+                DangerAction(stringResource(R.string.app_uninstall), onClick = { confirm = "uninstall_nextcloud" }, enabled = !busy)
             }
-        }
-        Card(modifier = Modifier.fillMaxWidth()) {
-            Column(Modifier.padding(12.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
-                Text("Statamic", style = MaterialTheme.typography.titleSmall)
-                FlowRow(horizontalArrangement = Arrangement.spacedBy(8.dp), verticalArrangement = Arrangement.spacedBy(4.dp)) {
-                    OutlinedButton(onClick = { confirm = "install_statamic" }, enabled = !busy) {
-                        Text(stringResource(R.string.app_install))
-                    }
-                    OutlinedButton(onClick = { confirm = "uninstall_statamic" }, enabled = !busy) {
-                        Text(stringResource(R.string.app_uninstall), color = MaterialTheme.colorScheme.error)
-                    }
-                }
+            ResourceCard(title = "Statamic", icon = Icons.AutoMirrored.Outlined.Article) {
+                CardAction(stringResource(R.string.app_install), icon = Icons.Outlined.Download, enabled = !busy,
+                    onClick = { confirm = "install_statamic" })
+                DangerAction(stringResource(R.string.app_uninstall), onClick = { confirm = "uninstall_statamic" }, enabled = !busy)
             }
         }
 
-        Text(stringResource(R.string.fastcgi_section), style = MaterialTheme.typography.titleMedium)
-        Text(stringResource(R.string.site_fastcgi, if (site.fastcgiCache) "✓" else "—"))
-        FlowRow(horizontalArrangement = Arrangement.spacedBy(8.dp), verticalArrangement = Arrangement.spacedBy(4.dp)) {
-            OutlinedButton(
-                onClick = { runAction(doneMessage) { PloiApi.enableFastcgiCache(token, serverId, siteId) } },
-                enabled = !busy && !site.fastcgiCache
-            ) { Text(stringResource(R.string.fastcgi_enable)) }
-            OutlinedButton(
-                onClick = { runAction(doneMessage) { PloiApi.disableFastcgiCache(token, serverId, siteId) } },
-                enabled = !busy && site.fastcgiCache
-            ) { Text(stringResource(R.string.fastcgi_disable)) }
-            OutlinedButton(
-                onClick = { runAction(doneMessage) { PloiApi.flushFastcgiCache(token, serverId, siteId) } },
-                enabled = !busy && site.fastcgiCache
-            ) { Text(stringResource(R.string.fastcgi_flush)) }
+        SectionCard(title = stringResource(R.string.fastcgi_section), icon = Icons.Outlined.Speed) {
+            SiteFacts(listOf(ResourceFact(stringResource(R.string.g3_site_enabled), if (site.fastcgiCache) yes else no)))
+            FlowRow(horizontalArrangement = Arrangement.spacedBy(PanelSpacing.sm), verticalArrangement = Arrangement.spacedBy(PanelSpacing.xs)) {
+                CardAction(stringResource(R.string.fastcgi_enable), icon = Icons.Outlined.PlayCircle,
+                    enabled = !busy && !site.fastcgiCache,
+                    onClick = { runAction(doneMessage) { PloiApi.enableFastcgiCache(token, serverId, siteId) } })
+                CardAction(stringResource(R.string.fastcgi_disable), icon = Icons.Outlined.PauseCircle,
+                    enabled = !busy && site.fastcgiCache,
+                    onClick = { runAction(doneMessage) { PloiApi.disableFastcgiCache(token, serverId, siteId) } })
+                CardAction(stringResource(R.string.fastcgi_flush), icon = Icons.Outlined.CleaningServices,
+                    enabled = !busy && site.fastcgiCache,
+                    onClick = { runAction(doneMessage) { PloiApi.flushFastcgiCache(token, serverId, siteId) } })
+            }
         }
     }
 

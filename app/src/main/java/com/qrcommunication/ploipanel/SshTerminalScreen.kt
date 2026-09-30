@@ -9,6 +9,7 @@ import android.os.PersistableBundle
 import androidx.compose.foundation.background
 import androidx.compose.foundation.horizontalScroll
 import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.BoxWithConstraints
 import androidx.compose.foundation.layout.Column
@@ -24,19 +25,36 @@ import androidx.compose.foundation.lazy.LazyRow
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.text.BasicTextField
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.foundation.verticalScroll
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.automirrored.outlined.Login
+import androidx.compose.material.icons.outlined.Close
+import androidx.compose.material.icons.outlined.CloudUpload
+import androidx.compose.material.icons.outlined.ContentCopy
+import androidx.compose.material.icons.outlined.ContentPaste
+import androidx.compose.material.icons.outlined.Fingerprint
+import androidx.compose.material.icons.outlined.Key
+import androidx.compose.material.icons.outlined.LinkOff
+import androidx.compose.material.icons.outlined.Lock
+import androidx.compose.material.icons.outlined.Terminal
+import androidx.compose.material.icons.outlined.TextDecrease
+import androidx.compose.material.icons.outlined.TextIncrease
 import androidx.compose.material3.AlertDialog
+import androidx.compose.material3.ButtonDefaults
+import androidx.compose.material3.FilledTonalButton
+import androidx.compose.material3.Icon
+import androidx.compose.material3.IconButton
+import androidx.compose.material3.Surface
 import androidx.compose.material3.Button
-import androidx.compose.material3.Card
 import androidx.compose.material3.FilterChip
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.RadioButton
 import androidx.compose.material3.Text
-import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
@@ -65,6 +83,7 @@ import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.platform.LocalSoftwareKeyboardController
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.semantics.contentDescription
+import androidx.compose.ui.semantics.heading
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.AnnotatedString
 import androidx.compose.ui.text.SpanStyle
@@ -80,6 +99,7 @@ import androidx.compose.ui.text.input.PasswordVisualTransformation
 import androidx.compose.ui.text.input.TextFieldValue
 import androidx.compose.ui.text.rememberTextMeasurer
 import androidx.compose.ui.text.style.TextDecoration
+import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.text.withStyle
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
@@ -168,23 +188,33 @@ internal fun SshTerminalScreen(profileId: String, token: String, lock: AppLock, 
     }
     val active = sessions.firstOrNull { it.id == activeId } ?: sessions.lastOrNull()
 
-    Column(Modifier.fillMaxSize(), verticalArrangement = Arrangement.spacedBy(8.dp)) {
-        LazyRow(horizontalArrangement = Arrangement.spacedBy(8.dp), modifier = Modifier.fillMaxWidth()) {
+    Column(Modifier.fillMaxSize().padding(top = PanelSpacing.xs), verticalArrangement = Arrangement.spacedBy(PanelSpacing.sm)) {
+        // Session strip: one chip per open session (dot + name, closed ones say so in words).
+        LazyRow(
+            horizontalArrangement = Arrangement.spacedBy(PanelSpacing.sm),
+            verticalAlignment = Alignment.CenterVertically,
+            modifier = Modifier.fillMaxWidth()
+        ) {
             items(sessions, key = { it.id }) { session ->
                 val state by session.state.collectAsState()
+                val open = state is TerminalState.Connected
                 FilterChip(
                     selected = active?.id == session.id,
                     onClick = { activeId = session.id },
+                    leadingIcon = { SessionDot(open) },
                     label = {
                         Text(
-                            if (state is TerminalState.Connected) session.label
-                            else stringResource(R.string.ssh_term_tab_closed, session.label)
+                            if (open) session.label
+                            else stringResource(R.string.ssh_term_tab_closed, session.label),
+                            maxLines = 1, overflow = TextOverflow.Ellipsis
                         )
                     }
                 )
             }
-            item {
-                OutlinedButton(onClick = { connectTarget = null; connectBookmark = null; connecting = true }) {
+            // With no session the saved-destinations card already offers "New session":
+            // show the shortcut here only once at least one session tab exists.
+            if (sessions.isNotEmpty()) item {
+                FilledTonalButton(onClick = { connectTarget = null; connectBookmark = null; connecting = true }) {
                     Text(stringResource(R.string.ssh_term_new))
                 }
             }
@@ -194,7 +224,8 @@ internal fun SshTerminalScreen(profileId: String, token: String, lock: AppLock, 
                 SavedDestinations(
                     saved,
                     onOpen = { connectBookmark = it; connectTarget = null; connecting = true },
-                    onRemove = { bookmarks.remove(it.id); bookmarksVersion++ }
+                    onRemove = { bookmarks.remove(it.id); bookmarksVersion++ },
+                    onNew = { connectTarget = null; connectBookmark = null; connecting = true }
                 )
             } else {
                 TerminalPane(active, onClose = {
@@ -225,27 +256,50 @@ internal fun SshTerminalScreen(profileId: String, token: String, lock: AppLock, 
     )
 }
 
+/** Open/closed marker for a session chip; the chip label says "closed" in words as well. */
 @Composable
-private fun SavedDestinations(saved: List<SshBookmark>, onOpen: (SshBookmark) -> Unit, onRemove: (SshBookmark) -> Unit) {
-    Column(Modifier.fillMaxSize().verticalScroll(rememberScrollState()), verticalArrangement = Arrangement.spacedBy(10.dp)) {
-        Text(stringResource(R.string.ssh_term_intro), style = MaterialTheme.typography.bodyMedium)
-        Text(stringResource(R.string.ssh_term_saved), style = MaterialTheme.typography.titleMedium)
-        if (saved.isEmpty()) Text(stringResource(R.string.ssh_term_saved_empty), style = MaterialTheme.typography.bodySmall)
+private fun SessionDot(open: Boolean) {
+    val color = if (open) PanelTheme.status.success else MaterialTheme.colorScheme.outline
+    Box(Modifier.size(8.dp).background(color, CircleShape))
+}
+
+@Composable
+private fun SavedDestinations(
+    saved: List<SshBookmark>, onOpen: (SshBookmark) -> Unit, onRemove: (SshBookmark) -> Unit, onNew: () -> Unit
+) {
+    Column(
+        Modifier.fillMaxSize().verticalScroll(rememberScrollState()).padding(bottom = PanelSpacing.lg),
+        verticalArrangement = Arrangement.spacedBy(PanelSpacing.md)
+    ) {
+        SectionCard(
+            title = stringResource(R.string.ssh_term_connect_title),
+            description = stringResource(R.string.ssh_term_intro),
+            icon = Icons.Outlined.Terminal
+        ) {
+            Button(onClick = onNew, modifier = Modifier.fillMaxWidth()) { Text(stringResource(R.string.ssh_term_new)) }
+        }
+        SectionHeader(stringResource(R.string.ssh_term_saved))
+        if (saved.isEmpty()) EmptyState(
+            Icons.Outlined.Terminal, stringResource(R.string.g5_ssh_term_empty_title),
+            body = stringResource(R.string.ssh_term_saved_empty)
+        )
         saved.forEach { bookmark ->
-            Card(Modifier.fillMaxWidth()) {
-                Column(Modifier.padding(12.dp), verticalArrangement = Arrangement.spacedBy(4.dp)) {
-                    Text(bookmark.label, style = MaterialTheme.typography.titleSmall)
-                    Text("${bookmark.username}@${bookmark.host}:${bookmark.port}", fontFamily = FontFamily.Monospace,
-                        style = MaterialTheme.typography.bodySmall)
-                    Text(
-                        stringResource(if (bookmark.keyId != null) R.string.ssh_term_auth_key else R.string.ssh_term_auth_password),
-                        style = MaterialTheme.typography.bodySmall
+            ResourceCard(
+                title = bookmark.label,
+                icon = Icons.Outlined.Terminal,
+                subtitle = stringResource(if (bookmark.keyId != null) R.string.ssh_term_auth_key else R.string.ssh_term_auth_password),
+                facts = listOf(
+                    ResourceFact(
+                        stringResource(R.string.g5_ssh_term_destination),
+                        "${bookmark.username}@${bookmark.host}:${bookmark.port}", mono = true
                     )
-                    FlowRow(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                        Button(onClick = { onOpen(bookmark) }) { Text(stringResource(R.string.ssh_term_connect)) }
-                        OutlinedButton(onClick = { onRemove(bookmark) }) { Text(stringResource(R.string.ssh_term_forget)) }
-                    }
+                )
+            ) {
+                FilledTonalButton(onClick = { onOpen(bookmark) }) {
+                    Icon(Icons.AutoMirrored.Outlined.Login, contentDescription = null, modifier = Modifier.size(16.dp))
+                    Text(stringResource(R.string.ssh_term_connect), Modifier.padding(start = PanelSpacing.xs))
                 }
+                DangerAction(stringResource(R.string.ssh_term_forget), onClick = { onRemove(bookmark) })
             }
         }
     }
@@ -342,36 +396,57 @@ private fun SshConnectDialog(
 
     AlertDialog(
         onDismissRequest = { if (!busy) onDismiss() },
+        icon = { Icon(Icons.Outlined.Terminal, contentDescription = null) },
         title = { Text(stringResource(R.string.ssh_term_connect_title)) },
         text = {
             Column(
                 Modifier.fillMaxWidth().heightIn(max = 520.dp).verticalScroll(rememberScrollState()),
-                verticalArrangement = Arrangement.spacedBy(8.dp)
+                verticalArrangement = Arrangement.spacedBy(PanelSpacing.sm)
             ) {
                 OutlinedTextField(label, { label = it }, label = { Text(stringResource(R.string.ssh_term_label)) },
                     singleLine = true, enabled = !busy, modifier = Modifier.fillMaxWidth())
                 OutlinedTextField(host, { host = it.trim() }, label = { Text(stringResource(R.string.ssh_probe_host)) },
-                    singleLine = true, enabled = !busy, modifier = Modifier.fillMaxWidth(),
+                    singleLine = true, enabled = !busy, modifier = Modifier.fillMaxWidth(), textStyle = panelMonoStyle,
                     keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Uri, autoCorrectEnabled = false))
-                Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                Row(horizontalArrangement = Arrangement.spacedBy(PanelSpacing.sm)) {
                     OutlinedTextField(username, { username = it.trim() }, label = { Text(stringResource(R.string.ssh_term_user)) },
                         singleLine = true, enabled = !busy, modifier = Modifier.weight(2f),
                         keyboardOptions = KeyboardOptions(capitalization = KeyboardCapitalization.None, autoCorrectEnabled = false))
                     OutlinedTextField(port, { port = it.filter(Char::isDigit).take(5) }, label = { Text(stringResource(R.string.ssh_probe_port)) },
-                        singleLine = true, enabled = !busy, modifier = Modifier.weight(1f),
+                        singleLine = true, enabled = !busy, modifier = Modifier.weight(1f), textStyle = panelMonoStyle,
                         keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number))
                 }
-                Text(stringResource(R.string.ssh_term_auth), style = MaterialTheme.typography.titleSmall)
-                keys.forEach { entry ->
-                    Row(verticalAlignment = Alignment.CenterVertically) {
-                        RadioButton(selected = !usePassword && keyId == entry.id, enabled = !busy,
-                            onClick = { usePassword = false; keyId = entry.id })
-                        Text("${entry.label} · ${entry.keyType}", style = MaterialTheme.typography.bodyMedium)
+                // Authentication choice grouped on its own surface, keys first then password.
+                Surface(
+                    color = MaterialTheme.colorScheme.surfaceContainerLow, shape = MaterialTheme.shapes.medium,
+                    modifier = Modifier.fillMaxWidth()
+                ) {
+                    Column(Modifier.padding(PanelSpacing.sm)) {
+                        Row(
+                            verticalAlignment = Alignment.CenterVertically,
+                            horizontalArrangement = Arrangement.spacedBy(PanelSpacing.sm),
+                            modifier = Modifier.padding(horizontal = PanelSpacing.xs, vertical = PanelSpacing.xs)
+                        ) {
+                            Icon(Icons.Outlined.Key, contentDescription = null, tint = MaterialTheme.colorScheme.primary,
+                                modifier = Modifier.size(18.dp))
+                            Text(stringResource(R.string.ssh_term_auth), style = MaterialTheme.typography.titleSmall,
+                                modifier = Modifier.semantics { heading() })
+                        }
+                        keys.forEach { entry ->
+                            Row(verticalAlignment = Alignment.CenterVertically) {
+                                RadioButton(selected = !usePassword && keyId == entry.id, enabled = !busy,
+                                    onClick = { usePassword = false; keyId = entry.id })
+                                Column {
+                                    Text(entry.label, style = MaterialTheme.typography.bodyMedium)
+                                    Text(entry.keyType, style = panelMonoStyle, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                                }
+                            }
+                        }
+                        Row(verticalAlignment = Alignment.CenterVertically) {
+                            RadioButton(selected = usePassword || keys.isEmpty(), enabled = !busy, onClick = { usePassword = true })
+                            Text(stringResource(R.string.ssh_term_auth_password), style = MaterialTheme.typography.bodyMedium)
+                        }
                     }
-                }
-                Row(verticalAlignment = Alignment.CenterVertically) {
-                    RadioButton(selected = usePassword || keys.isEmpty(), enabled = !busy, onClick = { usePassword = true })
-                    Text(stringResource(R.string.ssh_term_auth_password))
                 }
                 if (usePassword || selectedKey == null) {
                     OutlinedTextField(password, { password = it }, label = { Text(stringResource(R.string.ssh_term_password)) },
@@ -382,21 +457,28 @@ private fun SshConnectDialog(
                         singleLine = true, enabled = !busy, visualTransformation = PasswordVisualTransformation(),
                         keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Password), modifier = Modifier.fillMaxWidth())
                 }
-                FlowRow(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                    OutlinedButton(onClick = { generating = true }, enabled = !busy) { Text(stringResource(R.string.ssh_term_generate)) }
+                FlowRow(
+                    horizontalArrangement = Arrangement.spacedBy(PanelSpacing.sm),
+                    verticalArrangement = Arrangement.spacedBy(PanelSpacing.xs)
+                ) {
+                    CardAction(stringResource(R.string.ssh_term_generate), icon = Icons.Outlined.Key,
+                        enabled = !busy, onClick = { generating = true })
                     if (serverId != null && selectedKey != null && !usePassword) {
-                        OutlinedButton(onClick = { installing = selectedKey }, enabled = !busy) {
-                            Text(stringResource(R.string.ssh_term_install_key))
-                        }
+                        CardAction(stringResource(R.string.ssh_term_install_key), icon = Icons.Outlined.CloudUpload,
+                            enabled = !busy, onClick = { installing = selectedKey })
                     }
-                    OutlinedButton(onClick = { probing = true }, enabled = !busy && host.isNotBlank()) {
-                        Text(stringResource(R.string.ssh_probe_title))
-                    }
+                    CardAction(stringResource(R.string.ssh_probe_title), icon = Icons.Outlined.Fingerprint,
+                        enabled = !busy && host.isNotBlank(), onClick = { probing = true })
                 }
-                if (feedback != 0) Text(stringResource(feedback), color = MaterialTheme.colorScheme.primary)
-                if (error != 0) Text(stringResource(error), color = MaterialTheme.colorScheme.error)
-                if (busy) BusyIndicator()
-                Text(stringResource(R.string.ssh_term_security_note), style = MaterialTheme.typography.bodySmall)
+                if (feedback != 0) SuccessBanner(stringResource(feedback))
+                if (error != 0) InlineNotice(stringResource(error))
+                if (busy) Box(Modifier.fillMaxWidth(), contentAlignment = Alignment.Center) { BusyIndicator() }
+                Row(horizontalArrangement = Arrangement.spacedBy(PanelSpacing.sm), verticalAlignment = Alignment.Top) {
+                    Icon(Icons.Outlined.Lock, contentDescription = null, tint = MaterialTheme.colorScheme.onSurfaceVariant,
+                        modifier = Modifier.size(16.dp))
+                    Text(stringResource(R.string.ssh_term_security_note), style = MaterialTheme.typography.bodySmall,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant)
+                }
             }
         },
         confirmButton = {
@@ -449,13 +531,15 @@ private fun GenerateKeyDialog(onDismiss: () -> Unit, onGenerate: (String) -> Ssh
     var error by remember { mutableIntStateOf(0) }
     AlertDialog(
         onDismissRequest = { if (!busy) onDismiss() },
+        icon = { Icon(Icons.Outlined.Key, contentDescription = null) },
         title = { Text(stringResource(R.string.ssh_term_generate)) },
         text = {
-            Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
-                Text(stringResource(R.string.ssh_term_generate_hint), style = MaterialTheme.typography.bodySmall)
+            Column(verticalArrangement = Arrangement.spacedBy(PanelSpacing.sm)) {
+                Text(stringResource(R.string.ssh_term_generate_hint), style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant)
                 OutlinedTextField(name, { name = it }, label = { Text(stringResource(R.string.ssh_key_label)) },
                     singleLine = true, enabled = !busy, modifier = Modifier.fillMaxWidth())
-                if (error != 0) Text(stringResource(error), color = MaterialTheme.colorScheme.error)
+                if (error != 0) InlineNotice(stringResource(error))
                 if (busy) BusyIndicator()
             }
         },
@@ -502,10 +586,12 @@ private fun InstallKeyDialog(
     var error by remember { mutableStateOf<Throwable?>(null) }
     AlertDialog(
         onDismissRequest = { if (!busy) onDismiss() },
+        icon = { Icon(Icons.Outlined.CloudUpload, contentDescription = null) },
         title = { Text(stringResource(R.string.ssh_term_install_key)) },
         text = {
-            Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
-                Text(stringResource(R.string.ssh_term_install_hint, key.label), style = MaterialTheme.typography.bodySmall)
+            Column(verticalArrangement = Arrangement.spacedBy(PanelSpacing.sm)) {
+                Text(stringResource(R.string.ssh_term_install_hint, key.label), style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant)
                 OutlinedTextField(systemUser, { systemUser = it.trim() }, label = { Text(stringResource(R.string.ssh_term_system_user)) },
                     singleLine = true, enabled = !busy, modifier = Modifier.fillMaxWidth())
                 error?.let { ApiErrorText(it) }
@@ -598,28 +684,53 @@ private fun TerminalPane(session: TerminalSession, onClose: () -> Unit) {
     val cell = remember(fontSp) { measurer.measure("M", textStyle).size }
 
     Column(Modifier.fillMaxSize(), verticalArrangement = Arrangement.spacedBy(6.dp)) {
-        FlowRow(horizontalArrangement = Arrangement.spacedBy(6.dp), verticalArrangement = Arrangement.spacedBy(4.dp)) {
-            Text(
-                snapshot.title.ifBlank { session.label },
-                style = MaterialTheme.typography.titleSmall,
-                modifier = Modifier.align(Alignment.CenterVertically)
-            )
-            TextButton(onClick = { fontSp = (fontSp - 1).coerceAtLeast(MIN_FONT_SP); prefs.write(FONT_PREF, fontSp.toString()) }) { Text("A−") }
-            TextButton(onClick = { fontSp = (fontSp + 1).coerceAtMost(MAX_FONT_SP); prefs.write(FONT_PREF, fontSp.toString()) }) { Text("A+") }
-            TextButton(onClick = {
+        // Session toolbar: title with state dot, then icon tools and the disconnect action.
+        FlowRow(
+            Modifier.fillMaxWidth(),
+            horizontalArrangement = Arrangement.spacedBy(PanelSpacing.xs),
+            verticalArrangement = Arrangement.spacedBy(PanelSpacing.xs),
+            itemVerticalAlignment = Alignment.CenterVertically
+        ) {
+            Row(
+                Modifier.weight(1f).padding(end = PanelSpacing.sm),
+                verticalAlignment = Alignment.CenterVertically,
+                horizontalArrangement = Arrangement.spacedBy(PanelSpacing.sm)
+            ) {
+                SessionDot(connected)
+                Text(
+                    snapshot.title.ifBlank { session.label },
+                    style = MaterialTheme.typography.titleSmall, maxLines = 1, overflow = TextOverflow.Ellipsis
+                )
+            }
+            IconButton(onClick = { fontSp = (fontSp - 1).coerceAtLeast(MIN_FONT_SP); prefs.write(FONT_PREF, fontSp.toString()) }) {
+                Icon(Icons.Outlined.TextDecrease, contentDescription = stringResource(R.string.g5_ssh_term_font_smaller))
+            }
+            IconButton(onClick = { fontSp = (fontSp + 1).coerceAtMost(MAX_FONT_SP); prefs.write(FONT_PREF, fontSp.toString()) }) {
+                Icon(Icons.Outlined.TextIncrease, contentDescription = stringResource(R.string.g5_ssh_term_font_larger))
+            }
+            IconButton(onClick = {
                 clipboardText(context)?.let { session.send(TerminalInput.paste(it, session.bracketedPaste())) }
-            }, enabled = connected) { Text(stringResource(R.string.ssh_term_paste)) }
-            TextButton(onClick = { copySensitive(context, session.transcript()) }) { Text(stringResource(R.string.ssh_term_copy)) }
-            TextButton(onClick = onClose) {
-                Text(stringResource(if (connected) R.string.ssh_term_disconnect else R.string.ssh_close))
+            }, enabled = connected) {
+                Icon(Icons.Outlined.ContentPaste, contentDescription = stringResource(R.string.ssh_term_paste))
+            }
+            IconButton(onClick = { copySensitive(context, session.transcript()) }) {
+                Icon(Icons.Outlined.ContentCopy, contentDescription = stringResource(R.string.ssh_term_copy))
+            }
+            OutlinedButton(
+                onClick = onClose,
+                contentPadding = PaddingValues(horizontal = PanelSpacing.md),
+                colors = if (connected) ButtonDefaults.outlinedButtonColors(contentColor = MaterialTheme.colorScheme.error)
+                    else ButtonDefaults.outlinedButtonColors()
+            ) {
+                Icon(if (connected) Icons.Outlined.LinkOff else Icons.Outlined.Close, contentDescription = null,
+                    modifier = Modifier.size(16.dp))
+                Text(stringResource(if (connected) R.string.ssh_term_disconnect else R.string.ssh_close),
+                    Modifier.padding(start = PanelSpacing.xs))
             }
         }
         if (!connected) {
             val closed = state as TerminalState.Closed
-            Text(
-                stringResource(if (closed.byUser) R.string.ssh_term_closed_user else R.string.ssh_term_closed_remote),
-                color = MaterialTheme.colorScheme.error, style = MaterialTheme.typography.bodySmall
-            )
+            InlineNotice(stringResource(if (closed.byUser) R.string.ssh_term_closed_user else R.string.ssh_term_closed_remote))
         }
         BoxWithConstraints(
             Modifier.weight(1f).fillMaxWidth().background(Color(TerminalPalette.DEFAULT_BACKGROUND))

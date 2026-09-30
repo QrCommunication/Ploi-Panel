@@ -3,4 +3,6 @@
     <string name="widget_unknown_server">Serveur n°%1$d</string>
     <string name="widget_multi_count">Serveurs : %1$d/%2$d</string>
     <string name="widget_status_dot" translatable="false">●</string>
+    <string name="widget_updated_short">à %1$s</string>
+    <string name="widget_load_short">charge %1$s</string>
 </resources>

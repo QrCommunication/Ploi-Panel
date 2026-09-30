@@ -63,14 +63,18 @@ class OfflineCacheUiContractTest {
     @Test fun cachedRowsDisableEveryActionThatNeedsTheApi() {
         val activity = source("MainActivity")
         assertTrue(activity.contains("val offline = cachedAt != null"))
-        assertTrue("Creating a server must be blocked while offline",
-            activity.contains("onClick = onCreate, enabled = !offline"))
+        assertTrue("Creating a server must be blocked while offline (FAB hidden, empty-state action disabled)",
+            activity.contains("if (!offline) ExtendedFloatingActionButton(") &&
+                activity.contains("actionEnabled = !offline, onAction = onCreate"))
+        val dashboard = source("ServerDashboard")
         assertTrue("The monitored overview needs a live call",
-            activity.contains("onClick = onMonitored, enabled = !offline"))
+            dashboard.contains("IconButton(onClick = onMonitored, enabled = !offline)") &&
+                activity.contains("offline = offline,"))
         assertTrue("Opening a cached server would need live detail calls",
             activity.contains("ServerItemCard(server, enabled = !offline,"))
         assertTrue("Reload must stay available so the user can leave offline mode",
-            activity.contains("onClick = onRefresh, enabled = !loading"))
+            dashboard.contains("IconButton(onClick = onRefresh, enabled = !refreshing)") &&
+                activity.contains("onRetry = onRefresh") && activity.contains("PullToRefreshBox("))
         assertTrue(activity.contains("OfflineCacheBanner(cachedAt)"))
     }
 

@@ -3,18 +3,34 @@ package com.qrcommunication.ploipanel
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.FlowRow
+import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.outlined.Autorenew
+import androidx.compose.material.icons.outlined.Dns
+import androidx.compose.material.icons.outlined.Download
+import androidx.compose.material.icons.outlined.Memory
+import androidx.compose.material.icons.outlined.Php
+import androidx.compose.material.icons.outlined.PlayArrow
+import androidx.compose.material.icons.outlined.Refresh
+import androidx.compose.material.icons.outlined.RestartAlt
+import androidx.compose.material.icons.outlined.Speed
+import androidx.compose.material.icons.outlined.Storage
+import androidx.compose.material.icons.outlined.SwapHoriz
+import androidx.compose.material.icons.outlined.Terminal
+import androidx.compose.material.icons.outlined.ToggleOff
+import androidx.compose.material.icons.outlined.ToggleOn
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Button
-import androidx.compose.material3.Card
 import androidx.compose.material3.FilterChip
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.OutlinedTextField
+import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
@@ -25,6 +41,7 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
 import androidx.fragment.app.FragmentActivity
@@ -102,84 +119,75 @@ internal fun ServicesScreen(token: String, server: Server, lock: AppLock, activi
     }
 
     Column(
-        Modifier.padding(16.dp).verticalScroll(rememberScrollState()),
-        verticalArrangement = Arrangement.spacedBy(10.dp)
+        Modifier.fillMaxSize().verticalScroll(rememberScrollState()).padding(vertical = PanelSpacing.sm),
+        verticalArrangement = Arrangement.spacedBy(PanelSpacing.md)
     ) {
-        FlowRow(horizontalArrangement = Arrangement.spacedBy(8.dp), verticalArrangement = Arrangement.spacedBy(4.dp)) {
-            OutlinedButton(onClick = { refresh++ }, enabled = !loading && !busy) {
-                Text(stringResource(R.string.reload))
+        ListToolbar(onRefresh = { refresh++ }, refreshEnabled = !loading && !busy)
+        if (loading) LoadingState(rows = 2)
+        error?.let { failure -> ErrorState(failure, onRetry = { refresh++ }, retryEnabled = !loading) }
+        if (feedback.isNotEmpty()) SuccessBanner(feedback)
+
+        SectionHeader(stringResource(R.string.services_section))
+        listOf("nginx", "mysql", "redis", "supervisor").forEach { service ->
+            ResourceCard(title = service, monoTitle = true, icon = serviceIcon(service)) {
+                CardAction(stringResource(R.string.restart_service), icon = Icons.Outlined.RestartAlt, enabled = !busy,
+                    onClick = { serviceAction = service to true })
+                CardAction(stringResource(R.string.reload_service), icon = Icons.Outlined.Refresh, enabled = !busy,
+                    onClick = { serviceAction = service to false })
             }
         }
-        if (loading) BusyIndicator()
-        if (error != null) ApiErrorText(error!!)
-        if (feedback.isNotEmpty()) Text(feedback)
 
-        Text(stringResource(R.string.services_section), style = MaterialTheme.typography.titleMedium)
-        listOf("nginx", "mysql", "redis", "supervisor").forEach { service ->
-            Card(modifier = Modifier.fillMaxWidth()) {
-                Column(
-                    Modifier.fillMaxWidth().padding(16.dp),
-                    verticalArrangement = Arrangement.spacedBy(8.dp)
-                ) {
-                    Text(service, style = MaterialTheme.typography.titleMedium)
-                    FlowRow(horizontalArrangement = Arrangement.spacedBy(8.dp), verticalArrangement = Arrangement.spacedBy(4.dp)) {
-                        OutlinedButton(onClick = { serviceAction = service to true }, enabled = !busy) {
-                            Text(stringResource(R.string.restart_service))
-                        }
-                        OutlinedButton(onClick = { serviceAction = service to false }, enabled = !busy) {
-                            Text(stringResource(R.string.reload_service))
+        SectionCard(title = stringResource(R.string.opcache_section), icon = Icons.Outlined.Speed) {
+            FlowRow(horizontalArrangement = Arrangement.spacedBy(PanelSpacing.sm), verticalArrangement = Arrangement.spacedBy(PanelSpacing.xs)) {
+                CardAction(stringResource(R.string.opcache_refresh), icon = Icons.Outlined.Refresh, enabled = !busy,
+                    onClick = { confirmOpcache = "refresh" })
+                CardAction(stringResource(R.string.opcache_enable), icon = Icons.Outlined.ToggleOn, enabled = !busy,
+                    onClick = { confirmOpcache = "enable" })
+                CardAction(stringResource(R.string.opcache_disable), icon = Icons.Outlined.ToggleOff, enabled = !busy,
+                    onClick = { confirmOpcache = "disable" })
+            }
+        }
+
+        SectionCard(title = stringResource(R.string.php_versions_section), icon = Icons.Outlined.Php) {
+            detail?.let { serverDetail ->
+                val cli = serverDetail.phpCliVersion.ifBlank { serverDetail.phpVersion }
+                if (cli.isNotBlank()) Column(verticalArrangement = Arrangement.spacedBy(PanelSpacing.xxs)) {
+                    Text(stringResource(R.string.g2_php_cli_label), style = MaterialTheme.typography.labelSmall,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant)
+                    Text(cli, style = panelMonoStyle)
+                }
+            }
+            phpError?.let { failure -> ErrorState(failure, onRetry = { refresh++ }, retryEnabled = !loading) }
+            versions?.let { installed ->
+                if (installed.isEmpty()) {
+                    Text(stringResource(R.string.empty_php_versions), style = MaterialTheme.typography.bodyMedium,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant)
+                } else {
+                    FlowRow(horizontalArrangement = Arrangement.spacedBy(PanelSpacing.sm), verticalArrangement = Arrangement.spacedBy(PanelSpacing.xs)) {
+                        installed.forEach { version ->
+                            Surface(color = MaterialTheme.colorScheme.surfaceContainerHigh, shape = MaterialTheme.shapes.small) {
+                                Text(version, style = panelMonoStyle,
+                                    modifier = Modifier.padding(horizontal = PanelSpacing.sm, vertical = PanelSpacing.xs))
+                            }
                         }
                     }
                 }
             }
-        }
-        detail?.let { serverDetail ->
-            Text(
-                stringResource(
-                    R.string.php_cli_current,
-                    serverDetail.phpCliVersion.ifBlank { serverDetail.phpVersion }
-                )
-            )
-        }
-
-        Text(stringResource(R.string.opcache_section), style = MaterialTheme.typography.titleMedium)
-        FlowRow(horizontalArrangement = Arrangement.spacedBy(8.dp), verticalArrangement = Arrangement.spacedBy(4.dp)) {
-            OutlinedButton(onClick = { confirmOpcache = "refresh" }, enabled = !busy) {
-                Text(stringResource(R.string.opcache_refresh))
-            }
-            OutlinedButton(onClick = { confirmOpcache = "enable" }, enabled = !busy) {
-                Text(stringResource(R.string.opcache_enable))
-            }
-            OutlinedButton(onClick = { confirmOpcache = "disable" }, enabled = !busy) {
-                Text(stringResource(R.string.opcache_disable))
+            FlowRow(horizontalArrangement = Arrangement.spacedBy(PanelSpacing.sm), verticalArrangement = Arrangement.spacedBy(PanelSpacing.xs)) {
+                CardAction(stringResource(R.string.php_install_version), icon = Icons.Outlined.Download,
+                    enabled = !busy && versions != null, onClick = { phpDialog = true })
+                CardAction(stringResource(R.string.php_switch_cli), icon = Icons.Outlined.SwapHoriz,
+                    enabled = !busy && !versions.isNullOrEmpty(), onClick = { cliDialog = true })
             }
         }
 
-        Text(stringResource(R.string.php_versions_section), style = MaterialTheme.typography.titleMedium)
-        if (phpError != null) ApiErrorText(phpError!!)
-        versions?.let { installed ->
-            if (installed.isEmpty()) Text(stringResource(R.string.empty_php_versions))
-            Text(installed.joinToString(", "))
-        }
-        FlowRow(horizontalArrangement = Arrangement.spacedBy(8.dp), verticalArrangement = Arrangement.spacedBy(4.dp)) {
-            OutlinedButton(onClick = { phpDialog = true }, enabled = !busy && versions != null) {
-                Text(stringResource(R.string.php_install_version))
-            }
-            OutlinedButton(onClick = { cliDialog = true }, enabled = !busy && !versions.isNullOrEmpty()) {
-                Text(stringResource(R.string.php_switch_cli))
-            }
-        }
-
-        Text(stringResource(R.string.wpcli_section), style = MaterialTheme.typography.titleMedium)
-        FlowRow(horizontalArrangement = Arrangement.spacedBy(8.dp), verticalArrangement = Arrangement.spacedBy(4.dp)) {
-            OutlinedButton(onClick = { confirmWpCli = "install" }, enabled = !busy) {
-                Text(stringResource(R.string.wpcli_install))
-            }
-            OutlinedButton(onClick = { confirmWpCli = "uninstall" }, enabled = !busy) {
-                Text(stringResource(R.string.wpcli_uninstall), color = MaterialTheme.colorScheme.error)
-            }
-            OutlinedButton(onClick = { wpCliDialog = true }, enabled = !busy) {
-                Text(stringResource(R.string.wpcli_run))
+        SectionCard(title = stringResource(R.string.wpcli_section), icon = Icons.Outlined.Terminal) {
+            FlowRow(horizontalArrangement = Arrangement.spacedBy(PanelSpacing.sm), verticalArrangement = Arrangement.spacedBy(PanelSpacing.xs)) {
+                CardAction(stringResource(R.string.wpcli_run), icon = Icons.Outlined.PlayArrow, enabled = !busy,
+                    onClick = { wpCliDialog = true })
+                CardAction(stringResource(R.string.wpcli_install), icon = Icons.Outlined.Download, enabled = !busy,
+                    onClick = { confirmWpCli = "install" })
+                DangerAction(stringResource(R.string.wpcli_uninstall), onClick = { confirmWpCli = "uninstall" }, enabled = !busy)
             }
         }
     }
@@ -317,6 +325,14 @@ internal fun ServicesScreen(token: String, server: Server, lock: AppLock, activi
     }
 }
 
+/** Decorative leading icon of a system service row. */
+private fun serviceIcon(service: String): ImageVector = when (service) {
+    "mysql" -> Icons.Outlined.Storage
+    "redis" -> Icons.Outlined.Memory
+    "supervisor" -> Icons.Outlined.Autorenew
+    else -> Icons.Outlined.Dns
+}
+
 @Composable
 private fun PhpVersionDialog(
     title: Int, busy: Boolean, options: List<String> = emptyList(),
@@ -329,7 +345,7 @@ private fun PhpVersionDialog(
         title = { Text(stringResource(title)) },
         text = {
             Column(Modifier.heightIn(max = 360.dp).verticalScroll(rememberScrollState()),
-                verticalArrangement = Arrangement.spacedBy(12.dp)) {
+                verticalArrangement = Arrangement.spacedBy(PanelSpacing.md)) {
                 if (options.isEmpty()) {
                     OutlinedTextField(
                         value = version, onValueChange = { version = it },
@@ -337,7 +353,7 @@ private fun PhpVersionDialog(
                         singleLine = true, modifier = Modifier.fillMaxWidth()
                     )
                 } else {
-                    FlowRow(horizontalArrangement = Arrangement.spacedBy(8.dp), verticalArrangement = Arrangement.spacedBy(4.dp)) {
+                    FlowRow(horizontalArrangement = Arrangement.spacedBy(PanelSpacing.sm), verticalArrangement = Arrangement.spacedBy(PanelSpacing.xs)) {
                         options.forEach { option ->
                             FilterChip(selected = version == option, onClick = { version = option },
                                 label = { Text(option) })

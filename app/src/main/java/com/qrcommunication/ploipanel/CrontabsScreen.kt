@@ -2,15 +2,15 @@ package com.qrcommunication.ploipanel
 
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
-import androidx.compose.foundation.layout.Row
-import androidx.compose.foundation.layout.FlowRow
+import androidx.compose.foundation.layout.PaddingValues
+import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
-import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.outlined.Schedule
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Button
-import androidx.compose.material3.Card
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.OutlinedTextField
@@ -25,7 +25,6 @@ import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.res.stringResource
-import androidx.compose.ui.unit.dp
 import androidx.fragment.app.FragmentActivity
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.Dispatchers
@@ -87,55 +86,37 @@ internal fun CrontabsScreen(token: String, serverId: Long, lock: AppLock, activi
         }
     }
 
-    Column(Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(10.dp)) {
-        FlowRow(horizontalArrangement = Arrangement.spacedBy(8.dp), verticalArrangement = Arrangement.spacedBy(4.dp)) {
-            OutlinedButton(onClick = { refresh++ }, enabled = !loading && !busy) {
-                Text(stringResource(R.string.reload))
-            }
-            OutlinedButton(onClick = { creating = true }, enabled = !busy) {
-                Text(stringResource(R.string.new_crontab))
-            }
+    LazyColumn(
+        Modifier.fillMaxSize(),
+        verticalArrangement = Arrangement.spacedBy(PanelSpacing.md),
+        contentPadding = PaddingValues(vertical = PanelSpacing.sm)
+    ) {
+        item {
+            ListToolbar(
+                onRefresh = { refresh++ }, refreshEnabled = !loading && !busy,
+                primaryLabel = stringResource(R.string.new_crontab), onPrimary = { creating = true }, primaryEnabled = !busy,
+                summary = result?.let { stringResource(R.string.items_count, it.crontabs.size) }
+            )
         }
-        if (loading) BusyIndicator()
-        if (error != null) ApiErrorText(error!!)
-        if (feedback.isNotEmpty()) Text(feedback)
+        if (loading) item { LoadingState(rows = 2) }
+        error?.let { failure -> item { ErrorState(failure, onRetry = { refresh++ }, retryEnabled = !loading) } }
+        if (feedback.isNotEmpty()) item { SuccessBanner(feedback) }
         result?.let { data ->
-            if (data.crontabs.isEmpty()) Text(stringResource(R.string.empty_crontabs))
-            FlowRow(horizontalArrangement = Arrangement.spacedBy(8.dp), verticalArrangement = Arrangement.spacedBy(4.dp)) {
-                OutlinedButton(onClick = { page-- }, enabled = page > 1) {
-                    Text(stringResource(R.string.previous))
-                }
-                Text(
-                    stringResource(R.string.page, data.currentPage.toString(), data.lastPage.toString()),
-                    Modifier.padding(top = 12.dp)
-                )
-                OutlinedButton(onClick = { page++ }, enabled = data.hasNext) {
-                    Text(stringResource(R.string.next))
+            if (data.crontabs.isEmpty()) item { EmptyState(Icons.Outlined.Schedule, stringResource(R.string.empty_crontabs)) }
+            items(data.crontabs, key = { it.id }) { crontab ->
+                ResourceCard(
+                    title = crontab.command, monoTitle = true, icon = Icons.Outlined.Schedule,
+                    facts = listOfNotNull(
+                        ResourceFact(stringResource(R.string.g1_crontab_frequency), crontab.frequency, mono = true),
+                        crontab.user.takeIf { it.isNotBlank() }?.let { ResourceFact(stringResource(R.string.g1_fact_user), it, mono = true) },
+                        crontab.createdAt.takeIf { it.isNotBlank() }?.let { ResourceFact(stringResource(R.string.g1_fact_created), it) }
+                    )
+                ) {
+                    DangerAction(stringResource(R.string.delete_crontab), onClick = { confirmDelete = crontab }, enabled = !busy)
                 }
             }
-            LazyColumn(verticalArrangement = Arrangement.spacedBy(8.dp)) {
-                items(data.crontabs, key = { it.id }) { crontab ->
-                    Card(modifier = Modifier.fillMaxWidth()) {
-                        Column(Modifier.padding(12.dp), verticalArrangement = Arrangement.spacedBy(6.dp)) {
-                            Text(crontab.command, style = MaterialTheme.typography.titleMedium)
-                            Text(stringResource(R.string.crontab_frequency, crontab.frequency))
-                            if (crontab.user.isNotBlank()) {
-                                Text(stringResource(R.string.crontab_user, crontab.user))
-                            }
-                            if (crontab.createdAt.isNotBlank()) {
-                                Text(stringResource(R.string.detail_created, crontab.createdAt))
-                            }
-                            FlowRow(horizontalArrangement = Arrangement.spacedBy(8.dp), verticalArrangement = Arrangement.spacedBy(4.dp)) {
-                                OutlinedButton(onClick = { confirmDelete = crontab }, enabled = !busy) {
-                                    Text(
-                                        stringResource(R.string.delete_crontab),
-                                        color = MaterialTheme.colorScheme.error
-                                    )
-                                }
-                            }
-                        }
-                    }
-                }
+            item {
+                PageBar(data.currentPage, data.lastPage, data.hasNext, onPrevious = { page-- }, onNext = { page++ })
             }
         }
     }
@@ -180,7 +161,7 @@ private fun CreateCrontabDialog(
         onDismissRequest = onDismiss,
         title = { Text(stringResource(R.string.new_crontab)) },
         text = {
-            Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
+            Column(verticalArrangement = Arrangement.spacedBy(PanelSpacing.md)) {
                 OutlinedTextField(
                     value = user, onValueChange = { user = it },
                     label = { Text(stringResource(R.string.crontab_user_label)) },

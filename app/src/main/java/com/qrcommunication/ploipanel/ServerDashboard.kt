@@ -63,8 +63,8 @@ internal fun ServerPageHero(
             Row(verticalAlignment = Alignment.CenterVertically) {
                 Column(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(PanelSpacing.xxs)) {
                     Text(
-                        pluralStringResource(R.plurals.dashboard_page_count, page.servers.size, page.servers.size),
-                        style = MaterialTheme.typography.titleMedium
+                        pluralStringResource(R.plurals.dashboard_servers, page.servers.size, page.servers.size),
+                        style = MaterialTheme.typography.titleLarge
                     )
                     Text(
                         stringResource(R.string.dashboard_page_scope, page.currentPage.toString(), page.lastPage.toString()),

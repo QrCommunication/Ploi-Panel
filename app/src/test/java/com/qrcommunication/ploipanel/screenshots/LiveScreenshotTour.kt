@@ -76,6 +76,7 @@ class LiveScreenshotTour {
     }
 
     private fun waitServers(tour: Tour) {
+        tour.scrollTo(hasText("resto-zen-prod"))
         if (!tour.waitFor(hasText("resto-zen-prod"), 40_000)) {
             tour.shot("FAILED-waiting-servers")
             error("server list did not load")
@@ -122,10 +123,11 @@ class LiveScreenshotTour {
             openSection(tour, R.string.server_section_backups_description, "server-backups")
             openSection(tour, R.string.server_section_insights_description, "server-insights")
         }
+        // Compact: back to the list. Master/detail (>= 720 dp): the list stays visible on the left.
         tour.tap(hasContentDescription(s(R.string.back)), required = false)
 
         // Unreachable server: automatic retest on open.
-        waitServers(tour)
+        tour.scrollTo(hasText("giga-apps"))
         tour.tapText("giga-apps")
         tour.waitFor(hasText(s(R.string.recheck_title)))
         tour.waitGone(hasText(s(R.string.recheck_running)), 30_000)
@@ -133,8 +135,8 @@ class LiveScreenshotTour {
         tour.tap(hasContentDescription(s(R.string.back)), required = false)
 
         // Monitored overview.
-        waitServers(tour)
-        if (tour.tapText(s(R.string.monitored_overview), required = false)) {
+        tour.scrollTo(hasContentDescription(s(R.string.monitored_overview)))
+        if (tour.tap(hasContentDescription(s(R.string.monitored_overview)), required = false)) {
             tour.waitGone(hasContentDescription(s(R.string.a11y_loading)), 25_000)
             tour.shot("monitored")
             tour.tap(hasContentDescription(s(R.string.back)), required = false)

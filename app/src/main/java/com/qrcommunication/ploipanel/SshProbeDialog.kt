@@ -1,16 +1,32 @@
 package com.qrcommunication.ploipanel
 
+import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.heightIn
+import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.outlined.Fingerprint
+import androidx.compose.material.icons.outlined.GppBad
+import androidx.compose.material.icons.outlined.GppMaybe
+import androidx.compose.material.icons.outlined.PushPin
+import androidx.compose.material.icons.outlined.VerifiedUser
+import androidx.compose.material.icons.outlined.WarningAmber
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Button
+import androidx.compose.material3.ButtonDefaults
+import androidx.compose.material3.FilledTonalButton
+import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.OutlinedTextField
+import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
@@ -19,9 +35,14 @@ import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
+import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.graphics.vector.ImageVector
+import androidx.compose.ui.semantics.LiveRegionMode
+import androidx.compose.ui.semantics.liveRegion
+import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.res.stringResource
-import androidx.compose.ui.text.font.FontFamily
+import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.ui.unit.dp
@@ -95,47 +116,43 @@ internal fun SshHostProbeDialog(
 
     AlertDialog(
         onDismissRequest = { if (!busy) onDismiss() },
+        icon = { Icon(Icons.Outlined.Fingerprint, contentDescription = null) },
         title = { Text(stringResource(R.string.ssh_probe_title)) },
         text = {
             Column(
                 Modifier.fillMaxWidth().heightIn(max = 460.dp).verticalScroll(rememberScrollState()),
-                verticalArrangement = Arrangement.spacedBy(8.dp)
+                verticalArrangement = Arrangement.spacedBy(PanelSpacing.sm)
             ) {
-                Text(stringResource(R.string.ssh_probe_hint), style = MaterialTheme.typography.bodySmall)
-                OutlinedTextField(
-                    host, onValueChange = { host = it; assessment = null; feedback = 0 },
-                    label = { Text(stringResource(R.string.ssh_probe_host)) },
-                    singleLine = true, enabled = !busy, modifier = Modifier.fillMaxWidth()
-                )
-                OutlinedTextField(
-                    port, onValueChange = { port = it.filter(Char::isDigit).take(5); assessment = null; feedback = 0 },
-                    label = { Text(stringResource(R.string.ssh_probe_port)) },
-                    singleLine = true, enabled = !busy, modifier = Modifier.fillMaxWidth(),
-                    keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number)
-                )
-                if (error != 0) Text(stringResource(error), color = MaterialTheme.colorScheme.error)
-                if (feedback != 0) Text(stringResource(feedback), color = MaterialTheme.colorScheme.primary)
-                if (busy) BusyIndicator()
+                Text(stringResource(R.string.ssh_probe_hint), style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant)
+                Row(horizontalArrangement = Arrangement.spacedBy(PanelSpacing.sm)) {
+                    OutlinedTextField(
+                        host, onValueChange = { host = it; assessment = null; feedback = 0 },
+                        label = { Text(stringResource(R.string.ssh_probe_host)) },
+                        singleLine = true, enabled = !busy, modifier = Modifier.weight(2f), textStyle = panelMonoStyle
+                    )
+                    OutlinedTextField(
+                        port, onValueChange = { port = it.filter(Char::isDigit).take(5); assessment = null; feedback = 0 },
+                        label = { Text(stringResource(R.string.ssh_probe_port)) },
+                        singleLine = true, enabled = !busy, modifier = Modifier.weight(1f), textStyle = panelMonoStyle,
+                        keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number)
+                    )
+                }
+                if (error != 0) InlineNotice(stringResource(error))
+                if (feedback != 0) SuccessBanner(stringResource(feedback))
+                if (busy) Box(Modifier.fillMaxWidth(), contentAlignment = Alignment.Center) { BusyIndicator() }
                 when (val outcome = assessment) {
                     is SshProbeAssessment.Trusted -> {
-                        Text(
-                            stringResource(R.string.ssh_probe_trusted),
-                            color = MaterialTheme.colorScheme.primary
-                        )
+                        ProbeVerdict(ProbeTone.OK, Icons.Outlined.VerifiedUser, stringResource(R.string.ssh_probe_trusted))
                         ProbeFingerprint(outcome.presented)
-                        if (outcome.presented.isWeakSignature) Text(
-                            stringResource(R.string.ssh_weak_rsa),
-                            color = MaterialTheme.colorScheme.error,
-                            style = MaterialTheme.typography.bodySmall
+                        if (outcome.presented.isWeakSignature) ProbeVerdict(
+                            ProbeTone.DANGER, Icons.Outlined.WarningAmber, stringResource(R.string.ssh_weak_rsa)
                         )
                     }
                     is SshProbeAssessment.FirstContact -> {
-                        Text(
-                            stringResource(R.string.ssh_probe_first),
-                            color = MaterialTheme.colorScheme.error
-                        )
+                        ProbeVerdict(ProbeTone.CAUTION, Icons.Outlined.GppMaybe, stringResource(R.string.ssh_probe_first))
                         ProbeFingerprint(outcome.presented)
-                        OutlinedButton(onClick = {
+                        FilledTonalButton(onClick = {
                             error = 0
                             try {
                                 trustStore.trust(
@@ -148,13 +165,13 @@ internal fun SshHostProbeDialog(
                             } catch (failure: Exception) {
                                 error = R.string.ssh_error_vault
                             }
-                        }) { Text(stringResource(R.string.ssh_probe_pin)) }
+                        }) {
+                            Icon(Icons.Outlined.PushPin, contentDescription = null, modifier = Modifier.size(18.dp))
+                            Text(stringResource(R.string.ssh_probe_pin), Modifier.padding(start = PanelSpacing.sm))
+                        }
                     }
                     is SshProbeAssessment.KeyMismatch -> {
-                        Text(
-                            stringResource(R.string.ssh_probe_mismatch),
-                            color = MaterialTheme.colorScheme.error
-                        )
+                        ProbeVerdict(ProbeTone.DANGER, Icons.Outlined.GppBad, stringResource(R.string.ssh_probe_mismatch))
                         Text(
                             stringResource(R.string.ssh_probe_mismatch_old),
                             style = MaterialTheme.typography.titleSmall
@@ -162,10 +179,16 @@ internal fun SshHostProbeDialog(
                         ProbeFingerprint(outcome.pinned)
                         Text(
                             stringResource(R.string.ssh_probe_mismatch_new),
-                            style = MaterialTheme.typography.titleSmall
+                            style = MaterialTheme.typography.titleSmall,
+                            color = MaterialTheme.colorScheme.error
                         )
-                        ProbeFingerprint(outcome.presented)
-                        OutlinedButton(onClick = { pendingRepin = outcome }) {
+                        ProbeFingerprint(outcome.presented, mismatch = true)
+                        // Re-pin stays a secondary, error-outlined action behind a fresh PIN/biometric gate.
+                        OutlinedButton(
+                            onClick = { pendingRepin = outcome },
+                            colors = ButtonDefaults.outlinedButtonColors(contentColor = MaterialTheme.colorScheme.error),
+                            border = BorderStroke(1.dp, MaterialTheme.colorScheme.error)
+                        ) {
                             Text(stringResource(R.string.ssh_probe_repin))
                         }
                     }
@@ -213,11 +236,47 @@ internal fun SshHostProbeDialog(
     }
 }
 
+private enum class ProbeTone { OK, CAUTION, DANGER }
+
+/** Verdict banner: icon + sentence on a tinted surface; the words carry the meaning. */
 @Composable
-private fun ProbeFingerprint(key: SshHostKey) {
-    Text(key.keyType, style = MaterialTheme.typography.bodySmall)
-    Text(
-        key.fingerprint(), style = MaterialTheme.typography.bodySmall,
-        fontFamily = FontFamily.Monospace
-    )
+private fun ProbeVerdict(tone: ProbeTone, icon: ImageVector, message: String) {
+    val status = PanelTheme.status
+    val colors = MaterialTheme.colorScheme
+    val (container, content) = when (tone) {
+        ProbeTone.OK -> status.successContainer to status.onSuccessContainer
+        ProbeTone.CAUTION -> status.warningContainer to status.onWarningContainer
+        ProbeTone.DANGER -> colors.errorContainer to colors.onErrorContainer
+    }
+    Surface(
+        color = container, contentColor = content, shape = MaterialTheme.shapes.medium,
+        modifier = Modifier.fillMaxWidth().semantics { liveRegion = LiveRegionMode.Polite }
+    ) {
+        Row(Modifier.padding(PanelSpacing.md), horizontalArrangement = Arrangement.spacedBy(PanelSpacing.sm)) {
+            Icon(icon, contentDescription = null, modifier = Modifier.size(20.dp))
+            Text(
+                message, style = MaterialTheme.typography.bodyMedium,
+                fontWeight = if (tone == ProbeTone.DANGER) FontWeight.SemiBold else null
+            )
+        }
+    }
+}
+
+/** Key type and SHA-256 fingerprint in monospace; a mismatching key gets an error outline. */
+@Composable
+private fun ProbeFingerprint(key: SshHostKey, mismatch: Boolean = false) {
+    val colors = MaterialTheme.colorScheme
+    Surface(
+        color = colors.surfaceContainerHigh, shape = MaterialTheme.shapes.small,
+        border = if (mismatch) BorderStroke(1.dp, colors.error) else null,
+        modifier = Modifier.fillMaxWidth()
+    ) {
+        Column(Modifier.padding(PanelSpacing.sm), verticalArrangement = Arrangement.spacedBy(PanelSpacing.xxs)) {
+            Text(key.keyType, style = MaterialTheme.typography.labelSmall, color = colors.onSurfaceVariant)
+            Text(
+                key.fingerprint(), style = panelMonoStyle,
+                color = if (mismatch) colors.error else colors.onSurface
+            )
+        }
+    }
 }

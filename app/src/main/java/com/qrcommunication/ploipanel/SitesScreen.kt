@@ -8,9 +8,11 @@ import androidx.compose.foundation.layout.BoxWithConstraints
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.FlowRow
+import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.rememberScrollState
@@ -19,15 +21,54 @@ import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Button
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.automirrored.outlined.AltRoute
+import androidx.compose.material.icons.automirrored.outlined.ArrowBack
 import androidx.compose.material.icons.automirrored.outlined.KeyboardArrowRight
+import androidx.compose.material.icons.automirrored.outlined.ReceiptLong
+import androidx.compose.material.icons.outlined.AccountTree
+import androidx.compose.material.icons.outlined.AdminPanelSettings
+import androidx.compose.material.icons.outlined.Apps
+import androidx.compose.material.icons.outlined.Build
+import androidx.compose.material.icons.outlined.Code
+import androidx.compose.material.icons.outlined.ContentCopy
+import androidx.compose.material.icons.outlined.DataObject
+import androidx.compose.material.icons.outlined.Delete
+import androidx.compose.material.icons.outlined.Description
+import androidx.compose.material.icons.outlined.Domain
+import androidx.compose.material.icons.outlined.Edit
+import androidx.compose.material.icons.outlined.Groups
+import androidx.compose.material.icons.outlined.Https
+import androidx.compose.material.icons.outlined.Info
+import androidx.compose.material.icons.outlined.Insights
+import androidx.compose.material.icons.outlined.Language
+import androidx.compose.material.icons.outlined.Link
+import androidx.compose.material.icons.outlined.MonitorHeart
+import androidx.compose.material.icons.outlined.PauseCircle
+import androidx.compose.material.icons.outlined.PlayCircle
+import androidx.compose.material.icons.outlined.Public
+import androidx.compose.material.icons.outlined.Queue
+import androidx.compose.material.icons.outlined.Rocket
+import androidx.compose.material.icons.outlined.RocketLaunch
+import androidx.compose.material.icons.outlined.SettingsEthernet
+import androidx.compose.material.icons.outlined.Shield
+import androidx.compose.material.icons.outlined.Tune
+import androidx.compose.material.icons.outlined.Web
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
+import androidx.compose.material3.FilterChip
 import androidx.compose.material3.Icon
+import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.OutlinedTextField
+import androidx.compose.material3.Surface
 import androidx.compose.material3.Switch
 import androidx.compose.material3.Text
+import androidx.compose.material3.TextButton
+import androidx.compose.ui.graphics.vector.ImageVector
+import androidx.compose.ui.semantics.heading
+import androidx.compose.ui.semantics.semantics
+import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
@@ -62,11 +103,44 @@ internal fun siteSubsectionCategory(section: Int): SiteCategory = when (section)
     else -> throw IllegalArgumentException("Unknown site subsection: $section")
 }
 
+/** Leading icon of each site category row (decorative: the title says what the row is). */
+private fun siteCategoryIcon(category: SiteCategory): ImageVector = when (category) {
+    SiteCategory.OVERVIEW -> Icons.Outlined.Info
+    SiteCategory.DEPLOYMENT -> Icons.Outlined.RocketLaunch
+    SiteCategory.CONFIGURATION -> Icons.Outlined.Tune
+    SiteCategory.SECURITY -> Icons.Outlined.Shield
+    SiteCategory.OPERATIONS -> Icons.Outlined.Build
+}
+
+/** Title of a nested site screen, shown in its back row. */
+@StringRes
+private fun siteSectionTitle(section: Int): Int = when (section) {
+    1 -> R.string.queues_tab
+    2 -> R.string.redirects_tab
+    3 -> R.string.certificates_tab
+    4 -> R.string.auth_users_tab
+    5 -> R.string.aliases_tab
+    6 -> R.string.tenants_tab
+    7 -> R.string.site_monitors_tab
+    8 -> R.string.apps_tab
+    else -> R.string.wordpress_tab
+}
+
 @Composable
 private fun SiteNavigationCard(
     @StringRes title: Int, @StringRes description: Int? = null,
-    enabled: Boolean, destructive: Boolean = false, onClick: () -> Unit
+    enabled: Boolean, destructive: Boolean = false, icon: ImageVector? = null, onClick: () -> Unit
 ) {
+    // With an icon the row is the shared PanelListItem (icon badge, title, description, chevron),
+    // exactly like the server category hub.
+    if (icon != null) {
+        PanelListItem(
+            icon = icon, title = stringResource(title),
+            description = description?.let { stringResource(it) },
+            enabled = enabled, destructive = destructive, onClick = onClick
+        )
+        return
+    }
     // Same visual language as the server category hub: tinted row, title, description, chevron.
     Card(
         onClick = onClick, enabled = enabled, modifier = Modifier.fillMaxWidth(),
@@ -130,13 +204,13 @@ internal fun SitesScreen(token: String, serverId: Long, lock: AppLock, activity:
             }
         }
         Column(Modifier.fillMaxSize()) {
-        if (feedback.isNotEmpty()) Text(feedback, Modifier.padding(bottom = 8.dp))
+        if (feedback.isNotEmpty()) SuccessBanner(feedback, Modifier.padding(bottom = PanelSpacing.sm))
         if (creating) {
             CreateSiteForm(token, serverId,
                 onDone = { createdId -> creating = false; selectedId = createdId; feedback = createdMessage; refresh++ },
                 onCancel = { creating = false })
         } else if (expanded) {
-            Row(Modifier.weight(1f).fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(16.dp)) {
+            Row(Modifier.weight(1f).fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(PanelSpacing.lg)) {
                 Column(Modifier.weight(1f).fillMaxSize()) {
                     SiteList(result, loading, error, page,
                         onPage = { page = it; selectedId = null }, onRefresh = { refresh++ },
@@ -144,12 +218,15 @@ internal fun SitesScreen(token: String, serverId: Long, lock: AppLock, activity:
                 }
                 Column(Modifier.weight(1f).fillMaxSize()) {
                     val id = selectedId
-                    if (id == null) Text(stringResource(R.string.select_site)) else detail(id)
+                    if (id == null) EmptyState(Icons.Outlined.Language, stringResource(R.string.select_site)) else detail(id)
                 }
             }
         } else if (selectedId != null) {
             Column(Modifier.weight(1f).fillMaxWidth()) {
-                OutlinedButton(onClick = { selectedId = null }) { Text(stringResource(R.string.back_sites)) }
+                TextButton(onClick = { selectedId = null }) {
+                    Icon(Icons.AutoMirrored.Outlined.ArrowBack, contentDescription = null, modifier = Modifier.size(18.dp))
+                    Text(stringResource(R.string.back_sites), Modifier.padding(start = PanelSpacing.sm))
+                }
                 Box(Modifier.weight(1f).fillMaxWidth()) { detail(selectedId!!) }
             }
         } else {
@@ -168,28 +245,38 @@ private fun SiteList(
     data: SitePage?, loading: Boolean, error: Throwable?, page: Int,
     onPage: (Int) -> Unit, onRefresh: () -> Unit, onSelect: (Long) -> Unit, onCreate: () -> Unit
 ) {
-    Column(Modifier.fillMaxSize(), verticalArrangement = Arrangement.spacedBy(10.dp)) {
-        FlowRow(horizontalArrangement = Arrangement.spacedBy(8.dp), verticalArrangement = Arrangement.spacedBy(4.dp)) {
-            OutlinedButton(onClick = onRefresh, enabled = !loading) { Text(stringResource(R.string.reload)) }
-            OutlinedButton(onClick = onCreate) { Text(stringResource(R.string.new_site)) }
-        }
-        if (loading) BusyIndicator()
-        if (error != null) ApiErrorText(error)
-        if (data != null) {
-            if (data.sites.isEmpty()) Text(stringResource(R.string.empty_sites))
-            FlowRow(horizontalArrangement = Arrangement.spacedBy(8.dp), verticalArrangement = Arrangement.spacedBy(4.dp)) {
-                OutlinedButton(onClick = { onPage(page - 1) }, enabled = page > 1) { Text(stringResource(R.string.previous)) }
-                Text(stringResource(R.string.page, data.currentPage.toString(), data.lastPage.toString()), Modifier.padding(top = 12.dp))
-                OutlinedButton(onClick = { onPage(page + 1) }, enabled = data.hasNext) { Text(stringResource(R.string.next)) }
+    Column(Modifier.fillMaxSize()) {
+        LazyColumn(Modifier.weight(1f).fillMaxWidth(),
+            verticalArrangement = Arrangement.spacedBy(PanelSpacing.md),
+            contentPadding = PaddingValues(vertical = PanelSpacing.sm)
+        ) {
+            item {
+                ListToolbar(
+                    onRefresh = onRefresh, refreshEnabled = !loading,
+                    primaryLabel = stringResource(R.string.new_site), onPrimary = onCreate,
+                    summary = data?.let { stringResource(R.string.items_count, it.sites.size) }
+                )
             }
-            LazyColumn(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(8.dp)) {
+            if (loading) item { LoadingState(rows = 3) }
+            if (error != null) item { ErrorState(error, onRetry = onRefresh, retryEnabled = !loading) }
+            if (data != null) {
+                if (data.sites.isEmpty()) item {
+                    EmptyState(Icons.Outlined.Language, stringResource(R.string.empty_sites))
+                }
                 items(data.sites, key = { it.id }) { site ->
-                    Card(onClick = { onSelect(site.id) }, modifier = Modifier.fillMaxWidth()) {
-                        Column(Modifier.padding(16.dp)) {
-                            Text(site.domain, style = MaterialTheme.typography.titleMedium)
-                            Text(stringResource(R.string.server_status, site.status))
-                        }
-                    }
+                    ResourceCard(
+                        title = site.domain, icon = Icons.Outlined.Language, status = site.status,
+                        facts = listOfNotNull(
+                            site.phpVersion.takeIf { it.isNotBlank() }?.let { ResourceFact(stringResource(R.string.php_label), it, mono = true) },
+                            site.projectType.takeIf { it.isNotBlank() }?.let { ResourceFact(stringResource(R.string.g3_site_project_type), it) },
+                            site.lastDeployAt.takeIf { it.isNotBlank() }?.let { ResourceFact(stringResource(R.string.g3_site_last_deploy), it) }
+                        ),
+                        onClick = { onSelect(site.id) }
+                    )
+                }
+                item {
+                    PageBar(data.currentPage, data.lastPage, data.hasNext,
+                        onPrevious = { onPage(page - 1) }, onNext = { onPage(page + 1) }, enabled = !loading)
                 }
             }
         }
@@ -211,10 +298,11 @@ private fun CreateSiteForm(token: String, serverId: Long, onDone: (Long) -> Unit
     var error by remember { mutableStateOf<Throwable?>(null) }
 
     Column(
-        Modifier.padding(16.dp).verticalScroll(rememberScrollState()),
-        verticalArrangement = Arrangement.spacedBy(10.dp)
+        Modifier.padding(vertical = PanelSpacing.sm).verticalScroll(rememberScrollState()),
+        verticalArrangement = Arrangement.spacedBy(PanelSpacing.md)
     ) {
-        Text(stringResource(R.string.new_site), style = MaterialTheme.typography.titleLarge)
+        SiteBackRow(title = stringResource(R.string.new_site), subtitle = null,
+            backLabel = stringResource(R.string.cancel), enabled = !busy, onBack = onCancel)
         OutlinedTextField(value = domain, onValueChange = { domain = it },
             label = { Text(stringResource(R.string.root_domain_label)) }, singleLine = true,
             modifier = Modifier.fillMaxWidth())
@@ -236,8 +324,8 @@ private fun CreateSiteForm(token: String, serverId: Long, onDone: (Long) -> Unit
             keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Uri),
             modifier = Modifier.fillMaxWidth())
         if (invalid) Text(stringResource(R.string.invalid_form), color = MaterialTheme.colorScheme.error)
-        if (error != null) ApiErrorText(error!!)
-        FlowRow(horizontalArrangement = Arrangement.spacedBy(8.dp), verticalArrangement = Arrangement.spacedBy(4.dp)) {
+        if (error != null) ErrorState(error!!)
+        FlowRow(horizontalArrangement = Arrangement.spacedBy(PanelSpacing.sm), verticalArrangement = Arrangement.spacedBy(PanelSpacing.xs)) {
             OutlinedButton(onClick = onCancel, enabled = !busy) { Text(stringResource(R.string.cancel)) }
             Button(onClick = {
                 val request = try {
@@ -368,11 +456,15 @@ private fun SiteDetail(
     }
 
     if (siteSection != 0) {
-        Column(Modifier.fillMaxSize().padding(16.dp)) {
-            OutlinedButton(onClick = {
+        Column(Modifier.fillMaxSize()) {
+            SiteBackRow(
+                title = stringResource(siteSectionTitle(siteSection)),
+                subtitle = listOfNotNull(site?.domain, stringResource(siteSubsectionCategory(siteSection).title)).joinToString(" · "),
+                backLabel = stringResource(R.string.back)
+            ) {
                 siteCategory = siteSubsectionCategory(siteSection)
                 siteSection = 0
-            }) { Text(stringResource(R.string.back)) }
+            }
             Box(Modifier.weight(1f).fillMaxWidth()) { when (siteSection) {
                 1 -> QueueWorkersScreen(token, serverId, siteId, lock, activity)
                 2 -> RedirectsScreen(token, serverId, siteId, lock, activity)
@@ -390,95 +482,105 @@ private fun SiteDetail(
         return
     }
 
-    Column(Modifier.fillMaxSize().padding(16.dp), verticalArrangement = Arrangement.spacedBy(10.dp)) {
+    Column(Modifier.fillMaxSize().padding(vertical = PanelSpacing.sm), verticalArrangement = Arrangement.spacedBy(PanelSpacing.md)) {
         if (siteCategory == null) {
-            if (loading) BusyIndicator()
-            if (error != null) ApiErrorText(error!!)
+            if (loading) LoadingState(rows = 2)
+            if (error != null) ErrorState(error!!, onRetry = { refresh++ }, retryEnabled = !loading)
             site?.let { details ->
-                Text(details.domain, style = MaterialTheme.typography.headlineSmall)
                 Column(Modifier.weight(1f).fillMaxWidth().verticalScroll(rememberScrollState()),
-                    verticalArrangement = Arrangement.spacedBy(10.dp)) {
-                    SiteCategory.entries.forEach { category ->
-                        SiteNavigationCard(category.title, category.description, enabled = !busy) {
-                            siteCategory = category
+                    verticalArrangement = Arrangement.spacedBy(PanelSpacing.md)) {
+                    SiteHero(details)
+                    SectionCard(title = stringResource(R.string.g3_site_sections)) {
+                        SiteCategory.entries.forEach { category ->
+                            SiteNavigationCard(category.title, category.description, enabled = !busy,
+                                icon = siteCategoryIcon(category)) {
+                                siteCategory = category
+                            }
                         }
                     }
                 }
             }
         } else {
-            OutlinedButton(onClick = { siteCategory = null }, enabled = !busy) {
-                Text(stringResource(R.string.site_category_back))
-            }
-            Text(stringResource(siteCategory!!.title), style = MaterialTheme.typography.titleLarge)
+            SiteBackRow(
+                title = stringResource(siteCategory!!.title),
+                subtitle = site?.domain,
+                backLabel = stringResource(R.string.site_category_back),
+                enabled = !busy
+            ) { siteCategory = null }
             Column(Modifier.weight(1f).fillMaxWidth().verticalScroll(rememberScrollState()),
-                verticalArrangement = Arrangement.spacedBy(10.dp)) {
-                if (loading) BusyIndicator()
-                if (error != null) ApiErrorText(error!!)
+                verticalArrangement = Arrangement.spacedBy(PanelSpacing.sm)) {
+                if (loading) LoadingState(rows = 2)
+                if (error != null) ErrorState(error!!, onRetry = { refresh++ }, retryEnabled = !loading)
                 site?.let { details ->
                     when (siteCategory ?: return@let) {
                         SiteCategory.OVERVIEW -> {
                             val yes = stringResource(R.string.flag_yes)
                             val no = stringResource(R.string.flag_no)
-                            Text(details.domain, style = MaterialTheme.typography.headlineSmall)
-                            Text(stringResource(R.string.server_status, details.status))
-                            if (details.phpVersion.isNotBlank()) Text(stringResource(R.string.site_php, details.phpVersion))
-                            if (details.webDirectory.isNotBlank()) Text(stringResource(R.string.site_directory, details.webDirectory))
-                            if (details.projectType.isNotBlank()) Text(stringResource(R.string.site_project_type, details.projectType))
-                            if (details.systemUser.isNotBlank()) Text(stringResource(R.string.site_system_user, details.systemUser))
-                            if (details.diskUsage.isNotBlank()) Text(stringResource(R.string.site_disk, details.diskUsage))
-                            if (details.healthUrl.isNotBlank()) Text(stringResource(R.string.site_health, details.healthUrl))
-                            if (details.testDomain.isNotBlank()) Text(stringResource(R.string.test_domain, details.testDomain))
-                            if (details.lastDeployAt.isNotBlank()) Text(stringResource(R.string.site_last_deploy, details.lastDeployAt))
-                            if (details.createdAt.isNotBlank()) Text(stringResource(R.string.site_created_at, details.createdAt))
-                            Text(stringResource(R.string.site_repository, if (details.hasRepository) yes else no))
-                            Text(stringResource(R.string.site_zero_downtime, if (details.zeroDowntimeDeployment) yes else no))
-                            Text(stringResource(R.string.site_robots, if (details.disableRobots) yes else no))
-                            Text(stringResource(R.string.site_fastcgi, if (details.fastcgiCache) yes else no))
-                            SiteNavigationCard(R.string.clone_site, enabled = !busy) { cloneDialog = true }
-                            if (details.status.equals("suspended", ignoreCase = true)) {
-                                SiteNavigationCard(R.string.resume_site, enabled = !busy) { confirmResume = true }
-                            } else {
-                                SiteNavigationCard(R.string.suspend_site, enabled = !busy) { suspendDialog = true }
+                            SectionCard(title = details.domain, icon = Icons.Outlined.Language) {
+                                StatusPill(details.status)
+                                SiteFacts(listOfNotNull(
+                                    details.phpVersion.takeIf { it.isNotBlank() }?.let { ResourceFact(stringResource(R.string.php_label), it, mono = true) },
+                                    details.webDirectory.takeIf { it.isNotBlank() }?.let { ResourceFact(stringResource(R.string.g3_site_web_directory), it, mono = true) },
+                                    details.projectType.takeIf { it.isNotBlank() }?.let { ResourceFact(stringResource(R.string.g3_site_project_type), it) },
+                                    details.systemUser.takeIf { it.isNotBlank() }?.let { ResourceFact(stringResource(R.string.g3_site_system_user), it, mono = true) },
+                                    details.diskUsage.takeIf { it.isNotBlank() }?.let { ResourceFact(stringResource(R.string.g3_site_disk_usage), it, mono = true) },
+                                    details.healthUrl.takeIf { it.isNotBlank() }?.let { ResourceFact(stringResource(R.string.g3_site_health_url), it, mono = true) },
+                                    details.testDomain.takeIf { it.isNotBlank() }?.let { ResourceFact(stringResource(R.string.g3_site_test_domain), it, mono = true) },
+                                    details.lastDeployAt.takeIf { it.isNotBlank() }?.let { ResourceFact(stringResource(R.string.g3_site_last_deploy), it) },
+                                    details.createdAt.takeIf { it.isNotBlank() }?.let { ResourceFact(stringResource(R.string.g3_site_created_at), it) },
+                                    ResourceFact(stringResource(R.string.g3_site_repository), if (details.hasRepository) yes else no),
+                                    ResourceFact(stringResource(R.string.zero_downtime_label), if (details.zeroDowntimeDeployment) yes else no),
+                                    ResourceFact(stringResource(R.string.g3_site_robots_blocked), if (details.disableRobots) yes else no),
+                                    ResourceFact(stringResource(R.string.fastcgi_section), if (details.fastcgiCache) yes else no)
+                                ))
                             }
-                            SiteNavigationCard(R.string.delete_site, enabled = !busy, destructive = true) { confirmDelete = true }
+                            SiteNavigationCard(R.string.clone_site, enabled = !busy, icon = Icons.Outlined.ContentCopy) { cloneDialog = true }
+                            if (details.status.equals("suspended", ignoreCase = true)) {
+                                SiteNavigationCard(R.string.resume_site, enabled = !busy, icon = Icons.Outlined.PlayCircle) { confirmResume = true }
+                            } else {
+                                SiteNavigationCard(R.string.suspend_site, enabled = !busy, icon = Icons.Outlined.PauseCircle) { suspendDialog = true }
+                            }
+                            SiteNavigationCard(R.string.delete_site, enabled = !busy, destructive = true, icon = Icons.Outlined.Delete) { confirmDelete = true }
                         }
                         SiteCategory.DEPLOYMENT -> {
-                            SiteNavigationCard(R.string.repository_title, enabled = !busy) { repositoryDialog = true }
-                            SiteNavigationCard(R.string.deploy_site, enabled = !busy) { confirmDeploy = true }
-                            SiteNavigationCard(R.string.deploy_production, enabled = !busy) { confirmDeployProduction = true }
-                            SiteNavigationCard(R.string.deploy_script, enabled = !busy) { deployScriptDialog = true }
+                            SiteNavigationCard(R.string.repository_title, enabled = !busy, icon = Icons.Outlined.AccountTree) { repositoryDialog = true }
+                            SiteNavigationCard(R.string.deploy_site, enabled = !busy, icon = Icons.Outlined.RocketLaunch) { confirmDeploy = true }
+                            SiteNavigationCard(R.string.deploy_production, enabled = !busy, icon = Icons.Outlined.Rocket) { confirmDeployProduction = true }
+                            SiteNavigationCard(R.string.deploy_script, enabled = !busy, icon = Icons.Outlined.Code) { deployScriptDialog = true }
                         }
                         SiteCategory.CONFIGURATION -> {
-                            SiteNavigationCard(R.string.edit_site, enabled = !busy) { editing = true }
-                            SiteNavigationCard(R.string.php_version_change, enabled = !busy) { phpDialog = true }
-                            SiteNavigationCard(R.string.nginx_configuration, enabled = !busy) { nginxDialog = true }
-                            SiteNavigationCard(R.string.env_file, enabled = !busy) { envDialog = true }
-                            SiteNavigationCard(R.string.reset_permissions, enabled = !busy) { confirmResetPermissions = true }
-                            TestDomainSection(token, serverId, siteId, busy, lock, activity,
-                                onBusy = { busy = it }, onError = { actionError = it },
-                                onChanged = { refresh++; onChanged() })
+                            SiteNavigationCard(R.string.edit_site, enabled = !busy, icon = Icons.Outlined.Edit) { editing = true }
+                            SiteNavigationCard(R.string.php_version_change, enabled = !busy, icon = Icons.Outlined.DataObject) { phpDialog = true }
+                            SiteNavigationCard(R.string.nginx_configuration, enabled = !busy, icon = Icons.Outlined.SettingsEthernet) { nginxDialog = true }
+                            SiteNavigationCard(R.string.env_file, enabled = !busy, icon = Icons.Outlined.Description) { envDialog = true }
+                            SiteNavigationCard(R.string.reset_permissions, enabled = !busy, icon = Icons.Outlined.AdminPanelSettings) { confirmResetPermissions = true }
+                            SectionCard(title = stringResource(R.string.g3_site_test_domain), icon = Icons.Outlined.Public) {
+                                TestDomainSection(token, serverId, siteId, busy, lock, activity,
+                                    onBusy = { busy = it }, onError = { actionError = it },
+                                    onChanged = { refresh++; onChanged() })
+                            }
                         }
                         SiteCategory.SECURITY -> {
-                            SiteNavigationCard(R.string.certificates_tab, enabled = !busy) { siteSection = 3 }
-                            SiteNavigationCard(R.string.auth_users_tab, enabled = !busy) { siteSection = 4 }
+                            SiteNavigationCard(R.string.certificates_tab, enabled = !busy, icon = Icons.Outlined.Https) { siteSection = 3 }
+                            SiteNavigationCard(R.string.auth_users_tab, enabled = !busy, icon = Icons.Outlined.Groups) { siteSection = 4 }
                         }
                         SiteCategory.OPERATIONS -> {
-                            SiteNavigationCard(R.string.queues_tab, enabled = !busy) { siteSection = 1 }
-                            SiteNavigationCard(R.string.site_logs, enabled = !busy) { logsDialog = true }
-                            SiteNavigationCard(R.string.horizon_statistics, enabled = !busy) { horizonDialog = true }
-                            SiteNavigationCard(R.string.redirects_tab, enabled = !busy) { siteSection = 2 }
-                            SiteNavigationCard(R.string.aliases_tab, enabled = !busy) { siteSection = 5 }
-                            SiteNavigationCard(R.string.tenants_tab, enabled = !busy) { siteSection = 6 }
-                            SiteNavigationCard(R.string.site_monitors_tab, enabled = !busy) { siteSection = 7 }
-                            SiteNavigationCard(R.string.apps_tab, enabled = !busy) { siteSection = 8 }
-                            SiteNavigationCard(R.string.wordpress_tab, enabled = !busy) { siteSection = 9 }
+                            SiteNavigationCard(R.string.queues_tab, enabled = !busy, icon = Icons.Outlined.Queue) { siteSection = 1 }
+                            SiteNavigationCard(R.string.site_logs, enabled = !busy, icon = Icons.AutoMirrored.Outlined.ReceiptLong) { logsDialog = true }
+                            SiteNavigationCard(R.string.horizon_statistics, enabled = !busy, icon = Icons.Outlined.Insights) { horizonDialog = true }
+                            SiteNavigationCard(R.string.redirects_tab, enabled = !busy, icon = Icons.AutoMirrored.Outlined.AltRoute) { siteSection = 2 }
+                            SiteNavigationCard(R.string.aliases_tab, enabled = !busy, icon = Icons.Outlined.Link) { siteSection = 5 }
+                            SiteNavigationCard(R.string.tenants_tab, enabled = !busy, icon = Icons.Outlined.Domain) { siteSection = 6 }
+                            SiteNavigationCard(R.string.site_monitors_tab, enabled = !busy, icon = Icons.Outlined.MonitorHeart) { siteSection = 7 }
+                            SiteNavigationCard(R.string.apps_tab, enabled = !busy, icon = Icons.Outlined.Apps) { siteSection = 8 }
+                            SiteNavigationCard(R.string.wordpress_tab, enabled = !busy, icon = Icons.Outlined.Web) { siteSection = 9 }
                         }
                     }
                 }
             }
         }
-        if (actionError != null) ApiErrorText(actionError!!)
-        if (actionFeedback.isNotEmpty()) Text(actionFeedback)
+        if (actionError != null) ErrorState(actionError!!)
+        if (actionFeedback.isNotEmpty()) SuccessBanner(actionFeedback)
     }
 
     if (editing && site != null) {
@@ -655,6 +757,75 @@ private fun SiteDetail(
     }
 }
 
+/** Back row of a nested site view: icon-only back button (described), title and context line. */
+@Composable
+private fun SiteBackRow(
+    title: String, subtitle: String?, backLabel: String, enabled: Boolean = true, onBack: () -> Unit
+) {
+    Row(
+        Modifier.fillMaxWidth().padding(bottom = PanelSpacing.xs),
+        verticalAlignment = Alignment.CenterVertically,
+        horizontalArrangement = Arrangement.spacedBy(PanelSpacing.xs)
+    ) {
+        IconButton(onClick = onBack, enabled = enabled) {
+            Icon(Icons.AutoMirrored.Outlined.ArrowBack, contentDescription = backLabel)
+        }
+        Column(Modifier.weight(1f)) {
+            Text(title, style = MaterialTheme.typography.titleMedium, maxLines = 1, overflow = TextOverflow.Ellipsis,
+                modifier = Modifier.semantics { heading() })
+            if (!subtitle.isNullOrBlank()) Text(
+                subtitle, style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant,
+                maxLines = 1, overflow = TextOverflow.Ellipsis
+            )
+        }
+    }
+}
+
+/** Identity of the site above its category rows: domain, worded status, test domain and web root. */
+@Composable
+private fun SiteHero(site: Site) {
+    val colors = MaterialTheme.colorScheme
+    Surface(
+        shape = MaterialTheme.shapes.large, color = colors.primaryContainer, contentColor = colors.onPrimaryContainer,
+        modifier = Modifier.fillMaxWidth()
+    ) {
+        Column(Modifier.padding(PanelSpacing.lg), verticalArrangement = Arrangement.spacedBy(PanelSpacing.md)) {
+            Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(PanelSpacing.md)) {
+                IconBadge(Icons.Outlined.Language, container = colors.surfaceContainerLowest, content = colors.primary, size = 48)
+                Text(site.domain, style = MaterialTheme.typography.headlineSmall,
+                    maxLines = 2, overflow = TextOverflow.Ellipsis,
+                    modifier = Modifier.weight(1f).semantics { heading() })
+            }
+            StatusPill(site.status)
+            SiteFacts(listOfNotNull(
+                site.testDomain.takeIf { it.isNotBlank() }?.let { ResourceFact(stringResource(R.string.g3_site_test_domain), it, mono = true) },
+                site.webDirectory.takeIf { it.isNotBlank() }?.let { ResourceFact(stringResource(R.string.g3_site_web_directory), it, mono = true) }
+            ))
+        }
+    }
+}
+
+/**
+ * Label/value pairs laid out like the facts of a [ResourceCard], wrapping on narrow screens.
+ * Shared by the site area screens (site overview, repository, aliases, apps).
+ */
+@Composable
+internal fun SiteFacts(facts: List<ResourceFact>) {
+    if (facts.isEmpty()) return
+    FlowRow(
+        horizontalArrangement = Arrangement.spacedBy(PanelSpacing.lg),
+        verticalArrangement = Arrangement.spacedBy(PanelSpacing.sm)
+    ) {
+        facts.forEach { fact ->
+            Column {
+                Text(fact.label, style = MaterialTheme.typography.labelSmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant)
+                Text(fact.value, style = if (fact.mono) panelMonoStyle else MaterialTheme.typography.bodyMedium)
+            }
+        }
+    }
+}
+
 /** Test domain status + enable/disable (GET 404 means none is active). */
 @Composable
 private fun TestDomainSection(
@@ -682,20 +853,18 @@ private fun TestDomainSection(
         }
     }
 
-    Column(verticalArrangement = Arrangement.spacedBy(6.dp)) {
+    Column(verticalArrangement = Arrangement.spacedBy(PanelSpacing.sm)) {
         if (!loaded) {
             BusyIndicator()
         } else if (info == null || info!!.testDomain.isBlank()) {
-            Text(stringResource(R.string.test_domain_none))
-            OutlinedButton(onClick = { pendingEnable = true }, enabled = !busy) {
-                Text(stringResource(R.string.enable_test_domain))
-            }
+            Text(stringResource(R.string.test_domain_none), style = MaterialTheme.typography.bodyMedium,
+                color = MaterialTheme.colorScheme.onSurfaceVariant)
+            CardAction(stringResource(R.string.enable_test_domain), onClick = { pendingEnable = true }, enabled = !busy,
+                icon = Icons.Outlined.Public)
         } else {
-            Text(stringResource(R.string.test_domain, info!!.fullTestDomain.ifBlank { info!!.testDomain }))
-            Text(dnsHint, style = MaterialTheme.typography.bodySmall)
-            OutlinedButton(onClick = { pendingEnable = false }, enabled = !busy) {
-                Text(stringResource(R.string.disable_test_domain))
-            }
+            Text(info!!.fullTestDomain.ifBlank { info!!.testDomain }, style = panelMonoStyle)
+            Text(dnsHint, style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+            CardAction(stringResource(R.string.disable_test_domain), onClick = { pendingEnable = false }, enabled = !busy)
         }
     }
     pendingEnable?.let { enable ->
@@ -911,53 +1080,43 @@ private fun SiteLogsDialog(token: String, serverId: Long, siteId: Long, onDismis
         onDismissRequest = onDismiss,
         title = { Text(stringResource(R.string.site_logs)) },
         text = {
-            Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+            Column(verticalArrangement = Arrangement.spacedBy(PanelSpacing.sm)) {
                 if (loading) BusyIndicator()
-                if (error != null) ApiErrorText(error!!)
+                if (error != null) ErrorState(error!!)
                 result?.let { data ->
-                    if (data.logs.isEmpty()) Text(stringResource(R.string.empty_site_logs))
-                    FlowRow(horizontalArrangement = Arrangement.spacedBy(8.dp), verticalArrangement = Arrangement.spacedBy(4.dp)) {
-                        OutlinedButton(onClick = { page-- }, enabled = page > 1) {
-                            Text(stringResource(R.string.previous))
-                        }
-                        Text(
-                            stringResource(R.string.page, data.currentPage.toString(), data.lastPage.toString()),
-                            Modifier.padding(top = 12.dp)
-                        )
-                        OutlinedButton(onClick = { page++ }, enabled = data.hasNext) {
-                            Text(stringResource(R.string.next))
-                        }
-                    }
-                    LazyColumn(verticalArrangement = Arrangement.spacedBy(6.dp)) {
+                    if (data.logs.isEmpty()) Text(stringResource(R.string.empty_site_logs),
+                        color = MaterialTheme.colorScheme.onSurfaceVariant)
+                    PageBar(data.currentPage, data.lastPage, data.hasNext,
+                        onPrevious = { page-- }, onNext = { page++ }, enabled = !loading)
+                    LazyColumn(verticalArrangement = Arrangement.spacedBy(PanelSpacing.sm)) {
                         items(data.logs, key = { it.id }) { entry ->
-                            Card(onClick = {
-                                detailLoading = true
-                                scope.launch {
-                                    try {
-                                        selected = withContext(Dispatchers.IO) {
-                                            PloiApi.siteLog(token, serverId, siteId, entry.id)
+                            ResourceCard(
+                                title = plainFromMarkdown(entry.description),
+                                icon = Icons.AutoMirrored.Outlined.ReceiptLong,
+                                subtitle = entry.createdAtHuman.ifBlank { entry.createdAt },
+                                onClick = {
+                                    detailLoading = true
+                                    scope.launch {
+                                        try {
+                                            selected = withContext(Dispatchers.IO) {
+                                                PloiApi.siteLog(token, serverId, siteId, entry.id)
+                                            }
+                                        } catch (cancelled: CancellationException) {
+                                            throw cancelled
+                                        } catch (failure: Exception) {
+                                            error = failure
+                                        } finally {
+                                            detailLoading = false
                                         }
-                                    } catch (cancelled: CancellationException) {
-                                        throw cancelled
-                                    } catch (failure: Exception) {
-                                        error = failure
-                                    } finally {
-                                        detailLoading = false
                                     }
                                 }
-                            }, modifier = Modifier.fillMaxWidth()) {
-                                Column(Modifier.padding(10.dp)) {
-                                    Text(entry.description, style = MaterialTheme.typography.bodyLarge)
-                                    val whenText = entry.createdAtHuman.ifBlank { entry.createdAt }
-                                    if (whenText.isNotBlank()) Text(whenText, style = MaterialTheme.typography.bodySmall)
-                                }
-                            }
+                            )
                         }
                     }
                     if (detailLoading) BusyIndicator()
                     selected?.let { entry ->
                         if (entry.content.isNotBlank()) {
-                            Text(entry.content, style = MaterialTheme.typography.bodySmall)
+                            ExpandableMono(entry.content, collapsedLines = 8)
                         }
                     }
                 }
@@ -994,40 +1153,62 @@ private fun HorizonDialog(token: String, serverId: Long, onDismiss: () -> Unit) 
         onDismissRequest = onDismiss,
         title = { Text(stringResource(R.string.horizon_statistics)) },
         text = {
-            Column(Modifier.verticalScroll(rememberScrollState()), verticalArrangement = Arrangement.spacedBy(8.dp)) {
-                FlowRow(horizontalArrangement = Arrangement.spacedBy(8.dp), verticalArrangement = Arrangement.spacedBy(4.dp)) {
+            Column(Modifier.verticalScroll(rememberScrollState()), verticalArrangement = Arrangement.spacedBy(PanelSpacing.sm)) {
+                FlowRow(horizontalArrangement = Arrangement.spacedBy(PanelSpacing.sm), verticalArrangement = Arrangement.spacedBy(PanelSpacing.xs)) {
                     val labels = listOf(
                         "stats" to R.string.horizon_type_stats, "workload" to R.string.horizon_type_workload,
                         "masters" to R.string.horizon_type_masters, "failed" to R.string.horizon_type_failed
                     )
                     labels.forEach { (value, label) ->
-                        OutlinedButton(onClick = { type = value }, enabled = type != value) {
-                            Text(stringResource(label))
-                        }
+                        FilterChip(
+                            selected = type == value,
+                            onClick = { if (type != value) type = value },
+                            label = { Text(stringResource(label)) }
+                        )
                     }
                 }
                 if (loading) BusyIndicator()
-                if (error != null) ApiErrorText(error!!)
+                if (error != null) ErrorState(error!!)
                 when (val stats = result) {
                     is HorizonStatistics.Stats -> {
-                        Text(stringResource(R.string.server_status, stats.status))
-                        Text(stringResource(R.string.horizon_failed_jobs) + ": ${stats.failedJobs}")
-                        Text(stringResource(R.string.horizon_jobs_per_minute) + ": ${stats.jobsPerMinute}")
-                        Text(stringResource(R.string.horizon_recent_jobs) + ": ${stats.recentJobs}")
-                        Text(stringResource(R.string.horizon_processes) + ": ${stats.processes}")
-                        Text(stringResource(R.string.horizon_paused) + ": ${stats.pausedMasters}")
-                        stats.wait.forEach { (queue, wait) -> Text("$queue: ${wait}s") }
+                        StatusPill(stats.status)
+                        SiteFacts(listOf(
+                            ResourceFact(stringResource(R.string.horizon_failed_jobs), stats.failedJobs.toString()),
+                            ResourceFact(stringResource(R.string.horizon_jobs_per_minute), stats.jobsPerMinute.toString()),
+                            ResourceFact(stringResource(R.string.horizon_recent_jobs), stats.recentJobs.toString()),
+                            ResourceFact(stringResource(R.string.horizon_processes), stats.processes.toString()),
+                            ResourceFact(stringResource(R.string.horizon_paused), stats.pausedMasters.toString())
+                        ))
+                        if (stats.wait.isNotEmpty()) {
+                            SectionHeader(stringResource(R.string.g3_site_wait))
+                            SiteFacts(stats.wait.map { (queue, wait) -> ResourceFact(queue, "$wait s", mono = true) })
+                        }
                     }
                     is HorizonStatistics.Workload -> stats.queues.forEach { queue ->
-                        Text("${queue.name} — ${queue.length} jobs, ${queue.wait}s, ${queue.processes} proc.")
+                        ResourceCard(
+                            title = queue.name, monoTitle = true, icon = Icons.Outlined.Queue,
+                            facts = listOf(
+                                ResourceFact(stringResource(R.string.g3_site_jobs), queue.length.toString()),
+                                ResourceFact(stringResource(R.string.g3_site_wait), "${queue.wait} s", mono = true),
+                                ResourceFact(stringResource(R.string.horizon_processes), queue.processes.toString())
+                            )
+                        )
                     }
                     is HorizonStatistics.Masters -> stats.masters.forEach { master ->
-                        Text("${master.name} (${master.status}) — ${master.supervisors} " +
-                            stringResource(R.string.horizon_supervisors))
+                        ResourceCard(
+                            title = master.name, monoTitle = true, status = master.status,
+                            facts = listOf(ResourceFact(stringResource(R.string.g3_site_supervisors), master.supervisors.toString()))
+                        )
                     }
                     is HorizonStatistics.Failed -> {
-                        Text(stringResource(R.string.horizon_total) + ": ${stats.total}")
-                        stats.jobs.forEach { job -> Text("${job.name} [${job.queue}] — ${job.exception}") }
+                        SiteFacts(listOf(ResourceFact(stringResource(R.string.horizon_total), stats.total.toString())))
+                        stats.jobs.forEach { job ->
+                            ResourceCard(
+                                title = job.name, monoTitle = true,
+                                facts = listOf(ResourceFact(stringResource(R.string.g3_site_queue), job.queue, mono = true))
+                            )
+                            if (job.exception.isNotBlank()) ExpandableMono(job.exception, collapsedLines = 3)
+                        }
                     }
                     null -> Unit
                 }
@@ -1067,18 +1248,19 @@ private fun NginxDialog(token: String, serverId: Long, siteId: Long, onSave: (St
         onDismissRequest = onDismiss,
         title = { Text(stringResource(R.string.nginx_configuration)) },
         text = {
-            Column(Modifier.verticalScroll(rememberScrollState()), verticalArrangement = Arrangement.spacedBy(8.dp)) {
+            Column(Modifier.verticalScroll(rememberScrollState()), verticalArrangement = Arrangement.spacedBy(PanelSpacing.sm)) {
                 if (loading) BusyIndicator()
-                if (error != null) ApiErrorText(error!!)
+                if (error != null) ErrorState(error!!)
                 content?.let { current ->
                     if (editing) {
                         OutlinedTextField(
                             value = draft, onValueChange = { draft = it },
                             label = { Text(stringResource(R.string.nginx_edit)) },
+                            textStyle = panelMonoStyle,
                             modifier = Modifier.fillMaxWidth()
                         )
                     } else {
-                        Text(current, style = MaterialTheme.typography.bodySmall)
+                        ExpandableMono(current, collapsedLines = 24)
                     }
                 }
             }

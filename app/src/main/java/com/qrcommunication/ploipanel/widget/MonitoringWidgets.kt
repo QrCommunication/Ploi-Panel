@@ -137,7 +137,8 @@ internal object WidgetRefresh {
                 val shown = bindGauges(displayContext, view, singleGaugeSlots, reading.sample, config.metrics)
                 val stale = isStale(reading.sample, System.currentTimeMillis()) || error
                 // Load is not a percentage: plain text only, never a gauge.
-                val load = if ("load" in config.metrics) widgetMetrics(displayContext, reading, setOf("load")) else null
+                val load = if ("load" in config.metrics) displayContext.getString(
+                    R.string.widget_load_short, metricValue(reading.sample, "load")) else null
                 view.setViewVisibility(R.id.widget_load, if (load != null) View.VISIBLE else View.GONE)
                 if (load != null) view.setTextViewText(R.id.widget_load, load)
                 val note = listOfNotNull(
@@ -180,6 +181,12 @@ internal object WidgetRefresh {
         view.setTextViewText(R.id.widget_time, when {
             locked -> displayContext.getString(R.string.widget_unlock)
             error -> displayContext.getString(R.string.widget_fetch_error)
+            // Single widget: time only (today) to leave room for the load; multi: full date.
+            newest != null && single -> displayContext.getString(
+                R.string.widget_updated_short,
+                DateFormat.getTimeInstance(DateFormat.SHORT,
+                    displayContext.resources.configuration.locales[0]).format(Date(newest))
+            )
             newest != null -> displayContext.getString(
                 R.string.widget_updated,
                 DateFormat.getDateTimeInstance(DateFormat.SHORT, DateFormat.SHORT,

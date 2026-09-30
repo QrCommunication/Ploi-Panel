@@ -2,15 +2,21 @@ package com.qrcommunication.ploipanel
 
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
-import androidx.compose.foundation.layout.FlowRow
-import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
-import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.lazy.LazyColumn
-import androidx.compose.material3.Card
+import androidx.compose.foundation.lazy.items
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.outlined.AccountCircle
+import androidx.compose.material.icons.outlined.Backup
+import androidx.compose.material.icons.outlined.ExpandLess
+import androidx.compose.material.icons.outlined.ExpandMore
+import androidx.compose.material.icons.outlined.FolderOpen
+import androidx.compose.material.icons.outlined.NotificationsNone
+import androidx.compose.material.icons.outlined.Source
+import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
@@ -21,8 +27,6 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.res.stringResource
-import androidx.compose.ui.text.font.FontWeight
-import androidx.compose.ui.unit.dp
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
@@ -97,43 +101,43 @@ internal fun AccountScreen(token: String) {
 
     var expandedProvider by remember(token) { mutableStateOf<Long?>(null) }
 
-    LazyColumn(Modifier.fillMaxSize(), verticalArrangement = Arrangement.spacedBy(10.dp)) {
-        item {
-            Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
-                Text(stringResource(R.string.account), style = MaterialTheme.typography.titleLarge, fontWeight = FontWeight.Bold)
-                OutlinedButton(onClick = { refresh++ }) { Text(stringResource(R.string.reload)) }
-            }
-        }
+    LazyColumn(
+        Modifier.fillMaxSize(),
+        verticalArrangement = Arrangement.spacedBy(PanelSpacing.md),
+        contentPadding = PaddingValues(vertical = PanelSpacing.sm)
+    ) {
+        item { ListToolbar(onRefresh = { refresh++ }) }
         item {
             when {
-                infoError != null -> ApiErrorText(infoError!!)
-                info == null -> BusyIndicator()
-                else -> Card(Modifier.fillMaxWidth()) {
-                    Column(Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(4.dp)) {
-                        Text(info!!.name, style = MaterialTheme.typography.titleMedium)
-                        Text(info!!.email)
-                        Text(stringResource(R.string.account_plan, info!!.plan))
-                        if (info!!.planExpiresAt.isNotBlank()) {
-                            Text(stringResource(R.string.account_plan_expiry, info!!.planExpiresAt))
-                        }
-                    }
+                infoError != null -> ErrorState(infoError!!, onRetry = { refresh++ })
+                info == null -> LoadingState(rows = 1)
+                else -> {
+                    val user = info!!
+                    ResourceCard(
+                        title = user.name, subtitle = user.email, icon = Icons.Outlined.AccountCircle,
+                        facts = listOfNotNull(
+                            ResourceFact(stringResource(R.string.g4_account_plan_label), user.plan),
+                            user.planExpiresAt.takeIf { it.isNotBlank() }?.let {
+                                ResourceFact(stringResource(R.string.g4_account_expiry_label), it)
+                            }
+                        )
+                    )
                 }
             }
         }
-        item { Text(stringResource(R.string.backup_configurations), style = MaterialTheme.typography.titleMedium) }
+        item { SectionHeader(stringResource(R.string.backup_configurations)) }
         when {
-            backupsError != null -> item { ApiErrorText(backupsError!!) }
-            backups == null -> item { BusyIndicator() }
-            backups!!.configurations.isEmpty() -> item { Text(stringResource(R.string.empty_backup_configurations)) }
-            else -> items(backups!!.configurations.size) { index ->
-                val configuration = backups!!.configurations[index]
-                Card(Modifier.fillMaxWidth()) {
-                    Column(Modifier.padding(16.dp)) {
-                        val label = configuration.label.ifBlank { configuration.humanType.ifBlank { configuration.type } }
-                        Text(label, style = MaterialTheme.typography.titleSmall)
-                        Text(configuration.type, style = MaterialTheme.typography.bodySmall)
-                    }
-                }
+            backupsError != null -> item { ErrorState(backupsError!!, onRetry = { refresh++ }) }
+            backups == null -> item { LoadingState(rows = 1) }
+            backups!!.configurations.isEmpty() -> item {
+                EmptyState(Icons.Outlined.Backup, stringResource(R.string.empty_backup_configurations))
+            }
+            else -> items(backups!!.configurations) { configuration ->
+                val label = configuration.label.ifBlank { configuration.humanType.ifBlank { configuration.type } }
+                ResourceCard(
+                    title = label, icon = Icons.Outlined.Backup,
+                    facts = listOf(ResourceFact(stringResource(R.string.g4_type_label), configuration.type, mono = true))
+                )
             }
         }
         backups?.let { data ->
@@ -141,19 +145,18 @@ internal fun AccountScreen(token: String) {
                 AccountPager(data.currentPage, data.lastPage, data.hasNext) { backupPage = it }
             }
         }
-        item { Text(stringResource(R.string.notification_channels), style = MaterialTheme.typography.titleMedium) }
+        item { SectionHeader(stringResource(R.string.notification_channels)) }
         when {
-            channelsError != null -> item { ApiErrorText(channelsError!!) }
-            channels == null -> item { BusyIndicator() }
-            channels!!.channels.isEmpty() -> item { Text(stringResource(R.string.empty_notification_channels)) }
-            else -> items(channels!!.channels.size) { index ->
-                val channel = channels!!.channels[index]
-                Card(Modifier.fillMaxWidth()) {
-                    Column(Modifier.padding(16.dp)) {
-                        Text(channel.label.ifBlank { channel.type }, style = MaterialTheme.typography.titleSmall)
-                        Text(channel.type, style = MaterialTheme.typography.bodySmall)
-                    }
-                }
+            channelsError != null -> item { ErrorState(channelsError!!, onRetry = { refresh++ }) }
+            channels == null -> item { LoadingState(rows = 1) }
+            channels!!.channels.isEmpty() -> item {
+                EmptyState(Icons.Outlined.NotificationsNone, stringResource(R.string.empty_notification_channels))
+            }
+            else -> items(channels!!.channels) { channel ->
+                ResourceCard(
+                    title = channel.label.ifBlank { channel.type }, icon = Icons.Outlined.NotificationsNone,
+                    facts = listOf(ResourceFact(stringResource(R.string.g4_type_label), channel.type, mono = true))
+                )
             }
         }
         channels?.let { data ->
@@ -161,13 +164,14 @@ internal fun AccountScreen(token: String) {
                 AccountPager(data.currentPage, data.lastPage, data.hasNext) { channelsPage = it }
             }
         }
-        item { Text(stringResource(R.string.source_control), style = MaterialTheme.typography.titleMedium) }
+        item { SectionHeader(stringResource(R.string.source_control)) }
         when {
-            sourceControlError != null -> item { ApiErrorText(sourceControlError!!) }
-            sourceControl == null -> item { BusyIndicator() }
-            sourceControl!!.providers.isEmpty() -> item { Text(stringResource(R.string.empty_source_control)) }
-            else -> items(sourceControl!!.providers.size) { index ->
-                val provider = sourceControl!!.providers[index]
+            sourceControlError != null -> item { ErrorState(sourceControlError!!, onRetry = { refresh++ }) }
+            sourceControl == null -> item { LoadingState(rows = 1) }
+            sourceControl!!.providers.isEmpty() -> item {
+                EmptyState(Icons.Outlined.Source, stringResource(R.string.empty_source_control))
+            }
+            else -> items(sourceControl!!.providers) { provider ->
                 SourceControlCard(
                     token = token,
                     provider = provider,
@@ -187,18 +191,10 @@ internal fun AccountScreen(token: String) {
     }
 }
 
+/** Per-section pager: each account section pages independently through the shared [PageBar]. */
 @Composable
 private fun AccountPager(current: Int, last: Int, hasNext: Boolean, onPage: (Int) -> Unit) {
-    FlowRow(horizontalArrangement = Arrangement.spacedBy(8.dp), verticalArrangement = Arrangement.spacedBy(4.dp)) {
-        OutlinedButton(onClick = { onPage(current - 1) }, enabled = current > 1) {
-            Text(stringResource(R.string.previous))
-        }
-        Text(stringResource(R.string.page, current.toString(), last.toString()),
-            Modifier.padding(top = 12.dp), style = MaterialTheme.typography.bodySmall)
-        OutlinedButton(onClick = { onPage(current + 1) }, enabled = hasNext) {
-            Text(stringResource(R.string.next))
-        }
-    }
+    PageBar(current, last, hasNext, onPrevious = { onPage(current - 1) }, onNext = { onPage(current + 1) })
 }
 
 @Composable
@@ -217,17 +213,28 @@ private fun SourceControlCard(token: String, provider: SourceControlProvider, ex
             error = failure
         }
     }
-    Card(onClick = onToggle, modifier = Modifier.fillMaxWidth()) {
-        Column(Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(4.dp)) {
-            Text(provider.displayName, style = MaterialTheme.typography.titleSmall)
-            Text(provider.provider, style = MaterialTheme.typography.bodySmall)
-            if (expanded) {
-                Text(stringResource(R.string.repositories), style = MaterialTheme.typography.titleSmall)
-                when {
-                    error != null -> ApiErrorText(error!!)
-                    repositories == null -> BusyIndicator()
-                    repositories!!.isEmpty() -> Text(stringResource(R.string.empty_repositories))
-                    else -> repositories!!.forEach { repository -> Text(repository.name) }
+    Column(Modifier.fillMaxWidth(), verticalArrangement = Arrangement.spacedBy(PanelSpacing.sm)) {
+        ResourceCard(
+            title = provider.displayName, icon = Icons.Outlined.Source,
+            facts = listOf(ResourceFact(stringResource(R.string.g4_type_label), provider.provider, mono = true))
+        ) {
+            CardAction(
+                stringResource(if (expanded) R.string.g4_repositories_hide else R.string.g4_repositories_show),
+                onClick = onToggle,
+                icon = if (expanded) Icons.Outlined.ExpandLess else Icons.Outlined.ExpandMore
+            )
+        }
+        if (expanded) SectionCard(title = stringResource(R.string.repositories), icon = Icons.Outlined.FolderOpen) {
+            when {
+                error != null -> ErrorState(error!!)
+                repositories == null -> BusyIndicator()
+                repositories!!.isEmpty() -> Text(
+                    stringResource(R.string.empty_repositories), style = MaterialTheme.typography.bodyMedium,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                )
+                else -> repositories!!.forEachIndexed { index, repository ->
+                    if (index > 0) HorizontalDivider(color = MaterialTheme.colorScheme.outlineVariant)
+                    Text(repository.name, style = panelMonoStyle)
                 }
             }
         }

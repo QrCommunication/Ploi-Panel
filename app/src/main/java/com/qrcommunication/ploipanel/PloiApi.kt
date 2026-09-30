@@ -1208,7 +1208,9 @@ internal data class ProjectSite(val id: Long, val rootDomain: String)
 /** Project entry of GET/POST/PATCH /api/projects responses. */
 internal data class PloiProject(
     val id: Long, val title: String, val serverIds: List<Long>,
-    val sites: List<ProjectSite>, val createdAt: String
+    val sites: List<ProjectSite>, val createdAt: String,
+    /** Server names when the API embeds server objects (live shape); empty for the ID-only shape. */
+    val serverNames: Map<Long, String> = emptyMap()
 )
 internal data class ProjectPage(val projects: List<PloiProject>, val currentPage: Int, val lastPage: Int) {
     val hasNext: Boolean get() = currentPage < lastPage
@@ -3269,11 +3271,22 @@ internal object PloiApi {
         return PloiProject(
             id = item.getLong("id"),
             title = item.getString("title"),
-            serverIds = servers?.let { array -> (0 until array.length()).map { array.getLong(it) } }.orEmpty(),
+            // Docs show plain IDs; the live API returns {id, name, status, ip}. Accept both.
+            serverIds = servers?.let { array ->
+                (0 until array.length()).mapNotNull { i ->
+                    array.optJSONObject(i)?.optLong("id")?.takeIf { it > 0 } ?: array.optLong(i).takeIf { it > 0 }
+                }
+            }.orEmpty(),
+            serverNames = servers?.let { array ->
+                (0 until array.length()).mapNotNull { i ->
+                    array.optJSONObject(i)?.let { o -> o.optLong("id").takeIf { it > 0 }?.let { it to o.optString("name") } }
+                }.toMap()
+            }.orEmpty(),
             sites = sites?.let { array ->
                 (0 until array.length()).map { index ->
-                    val site = array.getJSONObject(index)
-                    ProjectSite(site.getLong("id"), site.optString("root_domain"))
+                    val site = array.optJSONObject(index)
+                    if (site == null) ProjectSite(array.optLong(index), "")
+                    else ProjectSite(site.getLong("id"), site.optString("root_domain").ifBlank { site.optString("domain") })
                 }
             }.orEmpty(),
             createdAt = item.optString("created_at")

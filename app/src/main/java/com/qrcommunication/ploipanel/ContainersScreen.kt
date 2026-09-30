@@ -1,19 +1,31 @@
 package com.qrcommunication.ploipanel
 
+import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
-import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.FlowRow
+import androidx.compose.foundation.layout.PaddingValues
+import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.foundation.verticalScroll
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.outlined.Description
+import androidx.compose.material.icons.outlined.Edit
+import androidx.compose.material.icons.outlined.Link
+import androidx.compose.material.icons.outlined.LinkOff
+import androidx.compose.material.icons.outlined.PlayArrow
+import androidx.compose.material.icons.outlined.Stop
+import androidx.compose.material.icons.outlined.ViewInAr
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Button
-import androidx.compose.material3.Card
+import androidx.compose.material3.ButtonDefaults
+import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.OutlinedTextField
@@ -90,90 +102,80 @@ internal fun ContainersScreen(token: String, serverId: Long, lock: AppLock, acti
         }
     }
 
-    Column(Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(10.dp)) {
-        FlowRow(horizontalArrangement = Arrangement.spacedBy(8.dp), verticalArrangement = Arrangement.spacedBy(4.dp)) {
-            OutlinedButton(onClick = { refresh++ }, enabled = !loading && !busy) {
-                Text(stringResource(R.string.reload))
-            }
-            OutlinedButton(onClick = { editingId = null; editing = ContainerRequest("", "version: '3'\nservices:\n") }, enabled = !busy) {
-                Text(stringResource(R.string.new_container))
-            }
+    LazyColumn(
+        Modifier.fillMaxSize(),
+        verticalArrangement = Arrangement.spacedBy(PanelSpacing.md),
+        contentPadding = PaddingValues(vertical = PanelSpacing.sm)
+    ) {
+        item {
+            ListToolbar(
+                onRefresh = { refresh++ }, refreshEnabled = !loading && !busy,
+                primaryLabel = stringResource(R.string.new_container),
+                onPrimary = { editingId = null; editing = ContainerRequest("", "version: '3'\nservices:\n") },
+                primaryEnabled = !busy,
+                summary = result?.let { stringResource(R.string.items_count, it.containers.size) }
+            )
         }
-        if (loading) BusyIndicator()
-        if (error != null) ApiErrorText(error!!)
-        if (feedback.isNotEmpty()) Text(feedback)
+        if (loading) item { LoadingState(rows = 2) }
+        error?.let { failure -> item { ErrorState(failure, onRetry = { refresh++ }, retryEnabled = !loading) } }
+        if (feedback.isNotEmpty()) item { SuccessBanner(feedback) }
         result?.let { data ->
-            if (data.containers.isEmpty()) Text(stringResource(R.string.empty_containers))
-            FlowRow(horizontalArrangement = Arrangement.spacedBy(8.dp), verticalArrangement = Arrangement.spacedBy(4.dp)) {
-                OutlinedButton(onClick = { page-- }, enabled = page > 1) {
-                    Text(stringResource(R.string.previous))
-                }
-                Text(
-                    stringResource(R.string.page, data.currentPage.toString(), data.lastPage.toString()),
-                    Modifier.padding(top = 12.dp)
-                )
-                OutlinedButton(onClick = { page++ }, enabled = data.hasNext) {
-                    Text(stringResource(R.string.next))
-                }
-            }
-            LazyColumn(verticalArrangement = Arrangement.spacedBy(8.dp)) {
-                items(data.containers, key = { it.id }) { container ->
-                    Card(modifier = Modifier.fillMaxWidth()) {
-                        Column(Modifier.padding(12.dp), verticalArrangement = Arrangement.spacedBy(6.dp)) {
-                            Text(container.name, style = MaterialTheme.typography.titleMedium)
-                            Text(stringResource(R.string.container_state, container.status, container.state))
-                            FlowRow(horizontalArrangement = Arrangement.spacedBy(8.dp), verticalArrangement = Arrangement.spacedBy(4.dp)) {
-                                OutlinedButton(
-                                    onClick = { runAction(doneMessage) { PloiApi.startContainer(token, serverId, container.id) } },
-                                    enabled = !busy && container.state != "running"
-                                ) { Text(stringResource(R.string.container_start)) }
-                                OutlinedButton(
-                                    onClick = { runAction(doneMessage) { PloiApi.stopContainer(token, serverId, container.id) } },
-                                    enabled = !busy && container.state == "running"
-                                ) { Text(stringResource(R.string.container_stop)) }
-                                OutlinedButton(
-                                    onClick = {
-                                        busy = true
-                                        error = null
-                                        scope.launch {
-                                            try {
-                                                val content = withContext(Dispatchers.IO) {
-                                                    PloiApi.containerLogs(token, serverId, container.id)
-                                                }
-                                                logs = container.name to content
-                                            } catch (cancelled: CancellationException) {
-                                                throw cancelled
-                                            } catch (failure: Exception) {
-                                                error = failure
-                                            } finally {
-                                                busy = false
-                                            }
-                                        }
-                                    },
-                                    enabled = !busy
-                                ) { Text(stringResource(R.string.container_logs)) }
-                            }
-                            FlowRow(horizontalArrangement = Arrangement.spacedBy(8.dp), verticalArrangement = Arrangement.spacedBy(4.dp)) {
-                                OutlinedButton(
-                                    onClick = {
-                                        editingId = container.id
-                                        editing = ContainerRequest(container.name, container.deployScript)
-                                    },
-                                    enabled = !busy
-                                ) { Text(stringResource(R.string.container_edit)) }
-                                OutlinedButton(onClick = { linkDialog = container }, enabled = !busy) {
-                                    Text(stringResource(R.string.container_link))
-                                }
-                                OutlinedButton(onClick = { confirmDelete = container }, enabled = !busy) {
-                                    Text(
-                                        stringResource(R.string.container_delete),
-                                        color = MaterialTheme.colorScheme.error
-                                    )
+            if (data.containers.isEmpty()) item { EmptyState(Icons.Outlined.ViewInAr, stringResource(R.string.empty_containers)) }
+            items(data.containers, key = { it.id }) { container ->
+                ResourceCard(
+                    title = container.name, monoTitle = true, icon = Icons.Outlined.ViewInAr,
+                    // Docker's runtime state ("running", "exited"…) drives the pill; Ploi's own status stays a fact.
+                    status = container.state.ifBlank { container.status },
+                    facts = listOfNotNull(
+                        container.status.takeIf { it.isNotBlank() && container.state.isNotBlank() }
+                            ?.let { ResourceFact(stringResource(R.string.g2_ploi_status_label), it) }
+                    )
+                ) {
+                    CardAction(
+                        stringResource(R.string.container_start), icon = Icons.Outlined.PlayArrow,
+                        enabled = !busy && container.state != "running",
+                        onClick = { runAction(doneMessage) { PloiApi.startContainer(token, serverId, container.id) } }
+                    )
+                    CardAction(
+                        stringResource(R.string.container_stop), icon = Icons.Outlined.Stop,
+                        enabled = !busy && container.state == "running",
+                        onClick = { runAction(doneMessage) { PloiApi.stopContainer(token, serverId, container.id) } }
+                    )
+                    CardAction(
+                        stringResource(R.string.container_logs), icon = Icons.Outlined.Description, enabled = !busy,
+                        onClick = {
+                            busy = true
+                            error = null
+                            scope.launch {
+                                try {
+                                    val content = withContext(Dispatchers.IO) {
+                                        PloiApi.containerLogs(token, serverId, container.id)
+                                    }
+                                    logs = container.name to content
+                                } catch (cancelled: CancellationException) {
+                                    throw cancelled
+                                } catch (failure: Exception) {
+                                    error = failure
+                                } finally {
+                                    busy = false
                                 }
                             }
                         }
-                    }
+                    )
+                    CardAction(
+                        stringResource(R.string.container_edit), icon = Icons.Outlined.Edit, enabled = !busy,
+                        onClick = {
+                            editingId = container.id
+                            editing = ContainerRequest(container.name, container.deployScript)
+                        }
+                    )
+                    CardAction(stringResource(R.string.container_link), icon = Icons.Outlined.Link, enabled = !busy,
+                        onClick = { linkDialog = container })
+                    DangerAction(stringResource(R.string.container_delete), onClick = { confirmDelete = container }, enabled = !busy)
                 }
+            }
+            item {
+                PageBar(data.currentPage, data.lastPage, data.hasNext, onPrevious = { page-- }, onNext = { page++ })
             }
         }
     }
@@ -201,7 +203,11 @@ internal fun ContainersScreen(token: String, serverId: Long, lock: AppLock, acti
             title = { Text(stringResource(R.string.container_logs_title, name)) },
             text = {
                 Column(Modifier.verticalScroll(rememberScrollState())) {
-                    Text(content, style = MaterialTheme.typography.bodySmall)
+                    if (content.isBlank()) {
+                        Text(stringResource(R.string.g2_logs_empty), style = MaterialTheme.typography.bodyMedium)
+                    } else {
+                        ExpandableMono(content, collapsedLines = 20)
+                    }
                 }
             },
             confirmButton = {
@@ -253,7 +259,7 @@ private fun ContainerDialog(
         onDismissRequest = onDismiss,
         title = { Text(stringResource(if (isCreate) R.string.new_container else R.string.container_edit)) },
         text = {
-            Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
+            Column(Modifier.verticalScroll(rememberScrollState()), verticalArrangement = Arrangement.spacedBy(PanelSpacing.md)) {
                 OutlinedTextField(
                     value = name, onValueChange = { name = it },
                     label = { Text(stringResource(R.string.container_name_label)) },
@@ -262,6 +268,7 @@ private fun ContainerDialog(
                 OutlinedTextField(
                     value = deployScript, onValueChange = { deployScript = it },
                     label = { Text(stringResource(R.string.container_script_label)) },
+                    textStyle = panelMonoStyle, minLines = 4,
                     modifier = Modifier.fillMaxWidth()
                 )
                 if (invalid) Text(stringResource(R.string.invalid_form), color = MaterialTheme.colorScheme.error)
@@ -299,7 +306,7 @@ private fun LinkContainerDialog(
         onDismissRequest = onDismiss,
         title = { Text(stringResource(R.string.container_link_title, container.name)) },
         text = {
-            Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
+            Column(Modifier.verticalScroll(rememberScrollState()), verticalArrangement = Arrangement.spacedBy(PanelSpacing.md)) {
                 OutlinedTextField(
                     value = siteId, onValueChange = { siteId = it.filter(Char::isDigit) },
                     label = { Text(stringResource(R.string.container_link_site)) },
@@ -335,9 +342,14 @@ private fun LinkContainerDialog(
             ) { Text(stringResource(R.string.container_link)) }
         },
         dismissButton = {
-            FlowRow(horizontalArrangement = Arrangement.spacedBy(8.dp), verticalArrangement = Arrangement.spacedBy(4.dp)) {
-                OutlinedButton(onClick = onUnlink, enabled = !busy) {
-                    Text(stringResource(R.string.container_unlink), color = MaterialTheme.colorScheme.error)
+            FlowRow(horizontalArrangement = Arrangement.spacedBy(PanelSpacing.sm), verticalArrangement = Arrangement.spacedBy(PanelSpacing.xs)) {
+                OutlinedButton(
+                    onClick = onUnlink, enabled = !busy,
+                    colors = ButtonDefaults.outlinedButtonColors(contentColor = MaterialTheme.colorScheme.error),
+                    border = BorderStroke(1.dp, MaterialTheme.colorScheme.error.copy(alpha = if (!busy) 0.6f else 0.2f))
+                ) {
+                    Icon(Icons.Outlined.LinkOff, contentDescription = null, modifier = Modifier.size(16.dp))
+                    Text(stringResource(R.string.container_unlink), Modifier.padding(start = PanelSpacing.xs))
                 }
                 OutlinedButton(onClick = onDismiss) { Text(stringResource(R.string.cancel)) }
             }

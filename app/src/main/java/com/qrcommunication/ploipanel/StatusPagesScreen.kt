@@ -2,18 +2,20 @@ package com.qrcommunication.ploipanel
 
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
-import androidx.compose.foundation.layout.FlowRow
+import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.heightIn
-import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.outlined.MonitorHeart
+import androidx.compose.material.icons.outlined.ReportProblem
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Button
-import androidx.compose.material3.Card
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.OutlinedTextField
@@ -68,45 +70,37 @@ internal fun StatusPagesScreen(token: String, lock: AppLock, activity: FragmentA
         }
     }
 
-    Column(Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(10.dp)) {
-        FlowRow(horizontalArrangement = Arrangement.spacedBy(8.dp), verticalArrangement = Arrangement.spacedBy(4.dp)) {
-            OutlinedButton(onClick = { refresh++ }, enabled = !loading) {
-                Text(stringResource(R.string.reload))
-            }
+    LazyColumn(
+        Modifier.fillMaxSize(),
+        verticalArrangement = Arrangement.spacedBy(PanelSpacing.md),
+        contentPadding = PaddingValues(vertical = PanelSpacing.sm)
+    ) {
+        item {
+            ListToolbar(
+                onRefresh = { refresh++ }, refreshEnabled = !loading,
+                summary = result?.let { stringResource(R.string.items_count, it.statusPages.size) }
+            )
         }
-        if (loading) BusyIndicator()
-        if (error != null) ApiErrorText(error!!)
+        if (loading) item { LoadingState(rows = 2) }
+        error?.let { failure -> item { ErrorState(failure, onRetry = { refresh++ }, retryEnabled = !loading) } }
         result?.let { data ->
-            if (data.statusPages.isEmpty()) Text(stringResource(R.string.empty_status_pages))
-            FlowRow(horizontalArrangement = Arrangement.spacedBy(8.dp), verticalArrangement = Arrangement.spacedBy(4.dp)) {
-                OutlinedButton(onClick = { page-- }, enabled = page > 1) {
-                    Text(stringResource(R.string.previous))
-                }
-                Text(
-                    stringResource(R.string.page, data.currentPage.toString(), data.lastPage.toString()),
-                    Modifier.padding(top = 12.dp)
-                )
-                OutlinedButton(onClick = { page++ }, enabled = data.hasNext) {
-                    Text(stringResource(R.string.next))
+            if (data.statusPages.isEmpty()) item { EmptyState(Icons.Outlined.MonitorHeart, stringResource(R.string.empty_status_pages)) }
+            items(data.statusPages, key = { it.id }) { statusPage ->
+                ResourceCard(
+                    title = statusPage.name, icon = Icons.Outlined.MonitorHeart,
+                    subtitle = statusPage.description.takeIf { it.isNotBlank() }?.let { plainFromMarkdown(it) },
+                    facts = listOfNotNull(
+                        statusPage.slug.takeIf { it.isNotBlank() }?.let {
+                            ResourceFact(stringResource(R.string.g4_slug_label), it, mono = true)
+                        }
+                    )
+                ) {
+                    CardAction(stringResource(R.string.status_page_incidents), icon = Icons.Outlined.ReportProblem,
+                        onClick = { viewing = statusPage })
                 }
             }
-            LazyColumn(verticalArrangement = Arrangement.spacedBy(8.dp)) {
-                items(data.statusPages, key = { it.id }) { statusPage ->
-                    Card(modifier = Modifier.fillMaxWidth()) {
-                        Column(Modifier.padding(12.dp), verticalArrangement = Arrangement.spacedBy(6.dp)) {
-                            Text(statusPage.name, style = MaterialTheme.typography.titleMedium)
-                            if (statusPage.slug.isNotBlank()) {
-                                Text(stringResource(R.string.status_page_slug, statusPage.slug))
-                            }
-                            if (statusPage.description.isNotBlank()) Text(statusPage.description)
-                            FlowRow(horizontalArrangement = Arrangement.spacedBy(8.dp), verticalArrangement = Arrangement.spacedBy(4.dp)) {
-                                OutlinedButton(onClick = { viewing = statusPage }) {
-                                    Text(stringResource(R.string.status_page_incidents))
-                                }
-                            }
-                        }
-                    }
-                }
+            item {
+                PageBar(data.currentPage, data.lastPage, data.hasNext, onPrevious = { page-- }, onNext = { page++ })
             }
         }
     }
@@ -198,54 +192,36 @@ private fun StatusPageIncidentsDialog(
         text = {
             Column(
                 Modifier.heightIn(max = 480.dp),
-                verticalArrangement = Arrangement.spacedBy(8.dp)
+                verticalArrangement = Arrangement.spacedBy(PanelSpacing.sm)
             ) {
-                FlowRow(horizontalArrangement = Arrangement.spacedBy(8.dp), verticalArrangement = Arrangement.spacedBy(4.dp)) {
-                    OutlinedButton(onClick = { refresh++ }, enabled = !loading && !busy) {
-                        Text(stringResource(R.string.reload))
-                    }
-                    OutlinedButton(onClick = { creating = true }, enabled = !busy) {
-                        Text(stringResource(R.string.new_incident))
-                    }
-                }
+                ListToolbar(
+                    onRefresh = { refresh++ }, refreshEnabled = !loading && !busy,
+                    primaryLabel = stringResource(R.string.new_incident), onPrimary = { creating = true }, primaryEnabled = !busy
+                )
                 if (loading) BusyIndicator()
                 if (error != null) ApiErrorText(error!!)
-                if (feedback.isNotEmpty()) Text(feedback)
+                if (feedback.isNotEmpty()) SuccessBanner(feedback)
                 result?.let { data ->
-                    if (data.incidents.isEmpty()) Text(stringResource(R.string.empty_incidents))
-                    FlowRow(horizontalArrangement = Arrangement.spacedBy(8.dp), verticalArrangement = Arrangement.spacedBy(4.dp)) {
-                        OutlinedButton(onClick = { page-- }, enabled = page > 1 && !busy) {
-                            Text(stringResource(R.string.previous))
-                        }
-                        Text(
-                            stringResource(R.string.page, data.currentPage.toString(), data.lastPage.toString()),
-                            Modifier.padding(top = 12.dp)
-                        )
-                        OutlinedButton(onClick = { page++ }, enabled = data.hasNext && !busy) {
-                            Text(stringResource(R.string.next))
-                        }
-                    }
-                    LazyColumn(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                    if (data.incidents.isEmpty()) Text(
+                        stringResource(R.string.empty_incidents), style = MaterialTheme.typography.bodyMedium,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                    )
+                    PageBar(data.currentPage, data.lastPage, data.hasNext,
+                        onPrevious = { page-- }, onNext = { page++ }, enabled = !busy)
+                    LazyColumn(verticalArrangement = Arrangement.spacedBy(PanelSpacing.sm)) {
                         items(data.incidents, key = { it.id }) { incident ->
-                            Card(modifier = Modifier.fillMaxWidth()) {
-                                Column(Modifier.padding(12.dp), verticalArrangement = Arrangement.spacedBy(6.dp)) {
-                                    Text(incident.title, style = MaterialTheme.typography.titleMedium)
-                                    Text(
-                                        stringResource(
-                                            R.string.incident_severity_value,
-                                            stringResource(incidentSeverityLabel(incident.severity))
-                                        )
+                            ResourceCard(
+                                title = incident.title, icon = Icons.Outlined.ReportProblem,
+                                subtitle = incident.description.takeIf { it.isNotBlank() }?.let { plainFromMarkdown(it) },
+                                facts = listOf(
+                                    ResourceFact(
+                                        stringResource(R.string.incident_severity_label),
+                                        stringResource(incidentSeverityLabel(incident.severity))
                                     )
-                                    if (incident.description.isNotBlank()) Text(incident.description)
-                                    FlowRow(horizontalArrangement = Arrangement.spacedBy(8.dp), verticalArrangement = Arrangement.spacedBy(4.dp)) {
-                                        OutlinedButton(onClick = { confirmDelete = incident }, enabled = !busy) {
-                                            Text(
-                                                stringResource(R.string.delete_incident),
-                                                color = MaterialTheme.colorScheme.error
-                                            )
-                                        }
-                                    }
-                                }
+                                )
+                            ) {
+                                DangerAction(stringResource(R.string.delete_incident), onClick = { confirmDelete = incident },
+                                    enabled = !busy)
                             }
                         }
                     }

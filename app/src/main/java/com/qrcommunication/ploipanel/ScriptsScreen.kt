@@ -1,21 +1,34 @@
 package com.qrcommunication.ploipanel
 
 import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
-import androidx.compose.foundation.layout.FlowRow
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.widthIn
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.automirrored.outlined.ReceiptLong
+import androidx.compose.material.icons.outlined.Bolt
+import androidx.compose.material.icons.outlined.Edit
+import androidx.compose.material.icons.outlined.Key
+import androidx.compose.material.icons.outlined.Pause
+import androidx.compose.material.icons.outlined.PlayArrow
+import androidx.compose.material.icons.outlined.Refresh
+import androidx.compose.material.icons.outlined.Schedule
+import androidx.compose.material.icons.outlined.Terminal
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Button
-import androidx.compose.material3.Card
 import androidx.compose.material3.Checkbox
+import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.OutlinedTextField
@@ -106,67 +119,49 @@ internal fun ScriptsScreen(token: String, lock: AppLock, activity: FragmentActiv
         }
     }
 
-    Column(Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(10.dp)) {
-        FlowRow(horizontalArrangement = Arrangement.spacedBy(8.dp), verticalArrangement = Arrangement.spacedBy(4.dp)) {
-            OutlinedButton(onClick = { refresh++ }, enabled = !loading && !busy) {
-                Text(stringResource(R.string.reload))
-            }
-            OutlinedButton(onClick = { creating = true }, enabled = !busy) {
-                Text(stringResource(R.string.new_script))
-            }
+    LazyColumn(
+        Modifier.fillMaxSize(),
+        verticalArrangement = Arrangement.spacedBy(PanelSpacing.md),
+        contentPadding = PaddingValues(vertical = PanelSpacing.sm)
+    ) {
+        item {
+            ListToolbar(
+                onRefresh = { refresh++ }, refreshEnabled = !loading && !busy,
+                primaryLabel = stringResource(R.string.new_script), onPrimary = { creating = true }, primaryEnabled = !busy,
+                summary = result?.let { stringResource(R.string.items_count, it.scripts.size) }
+            )
         }
-        if (loading) BusyIndicator()
-        if (error != null) ApiErrorText(error!!)
-        if (feedback.isNotEmpty()) Text(feedback)
+        if (loading) item { LoadingState(rows = 2) }
+        error?.let { failure -> item { ErrorState(failure, onRetry = { refresh++ }, retryEnabled = !loading && !busy) } }
+        if (feedback.isNotEmpty()) item { SuccessBanner(feedback) }
         startedOn?.let { names ->
-            if (names.isNotEmpty()) Text(stringResource(R.string.script_started_on, names.joinToString(", ")))
+            if (names.isNotEmpty()) item { SuccessBanner(stringResource(R.string.script_started_on, names.joinToString(", "))) }
         }
         result?.let { data ->
-            if (data.scripts.isEmpty()) Text(stringResource(R.string.empty_scripts))
-            FlowRow(horizontalArrangement = Arrangement.spacedBy(8.dp), verticalArrangement = Arrangement.spacedBy(4.dp)) {
-                OutlinedButton(onClick = { page-- }, enabled = page > 1) {
-                    Text(stringResource(R.string.previous))
-                }
-                Text(
-                    stringResource(R.string.page, data.currentPage.toString(), data.lastPage.toString()),
-                    Modifier.padding(top = 12.dp)
-                )
-                OutlinedButton(onClick = { page++ }, enabled = data.hasNext) {
-                    Text(stringResource(R.string.next))
+            if (data.scripts.isEmpty()) item { EmptyState(Icons.Outlined.Terminal, stringResource(R.string.empty_scripts)) }
+            items(data.scripts, key = { it.id }) { script ->
+                ResourceCard(
+                    title = script.label, icon = Icons.Outlined.Terminal,
+                    facts = listOfNotNull(
+                        ResourceFact(stringResource(R.string.g4_run_as_label), script.user, mono = true),
+                        script.createdAt.takeIf { it.isNotBlank() }?.let {
+                            ResourceFact(stringResource(R.string.g4_created_label), it)
+                        }
+                    )
+                ) {
+                    CardAction(stringResource(R.string.run_script), icon = Icons.Outlined.PlayArrow, enabled = !busy,
+                        onClick = { running = script })
+                    CardAction(stringResource(R.string.script_schedules), icon = Icons.Outlined.Schedule, enabled = !busy,
+                        onClick = { scheduling = script })
+                    CardAction(stringResource(R.string.script_actions), icon = Icons.Outlined.Bolt, enabled = !busy,
+                        onClick = { actioning = script })
+                    CardAction(stringResource(R.string.edit_site), icon = Icons.Outlined.Edit, enabled = !busy,
+                        onClick = { editing = script })
+                    DangerAction(stringResource(R.string.delete_script), onClick = { confirmDelete = script }, enabled = !busy)
                 }
             }
-            LazyColumn(verticalArrangement = Arrangement.spacedBy(8.dp)) {
-                items(data.scripts, key = { it.id }) { script ->
-                    Card(modifier = Modifier.fillMaxWidth()) {
-                        Column(Modifier.padding(12.dp), verticalArrangement = Arrangement.spacedBy(6.dp)) {
-                            Text(script.label, style = MaterialTheme.typography.titleMedium)
-                            Text(stringResource(R.string.script_run_as, script.user))
-                            if (script.createdAt.isNotBlank()) {
-                                Text(stringResource(R.string.system_user_created_at, script.createdAt))
-                            }
-                            FlowRow(horizontalArrangement = Arrangement.spacedBy(8.dp), verticalArrangement = Arrangement.spacedBy(4.dp)) {
-                                OutlinedButton(onClick = { running = script }, enabled = !busy) {
-                                    Text(stringResource(R.string.run_script))
-                                }
-                                OutlinedButton(onClick = { scheduling = script }, enabled = !busy) {
-                                    Text(stringResource(R.string.script_schedules))
-                                }
-                                OutlinedButton(onClick = { actioning = script }, enabled = !busy) {
-                                    Text(stringResource(R.string.script_actions))
-                                }
-                                OutlinedButton(onClick = { editing = script }, enabled = !busy) {
-                                    Text(stringResource(R.string.edit_site))
-                                }
-                                OutlinedButton(onClick = { confirmDelete = script }, enabled = !busy) {
-                                    Text(
-                                        stringResource(R.string.delete_script),
-                                        color = MaterialTheme.colorScheme.error
-                                    )
-                                }
-                            }
-                        }
-                    }
-                }
+            item {
+                PageBar(data.currentPage, data.lastPage, data.hasNext, onPrevious = { page-- }, onNext = { page++ })
             }
         }
     }
@@ -311,6 +306,7 @@ private fun <T> ScriptFormDialog(
                 OutlinedTextField(
                     value = content, onValueChange = { content = it },
                     label = { Text(stringResource(R.string.script_content_label)) },
+                    textStyle = panelMonoStyle,
                     minLines = 6, maxLines = 12, modifier = Modifier.fillMaxWidth()
                 )
                 if (invalid) {
@@ -490,100 +486,77 @@ private fun ScriptSchedulesDialog(
         onDismissRequest = onDismiss,
         title = { Text(stringResource(R.string.schedules_title, script.label)) },
         text = {
-            Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+            Column(verticalArrangement = Arrangement.spacedBy(PanelSpacing.sm)) {
                 Text(
                     stringResource(R.string.schedule_pro_note),
-                    style = MaterialTheme.typography.bodySmall
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant
                 )
-                FlowRow(horizontalArrangement = Arrangement.spacedBy(8.dp), verticalArrangement = Arrangement.spacedBy(4.dp)) {
-                    OutlinedButton(onClick = { refresh++ }, enabled = !loading && !busy) {
-                        Text(stringResource(R.string.reload))
-                    }
-                    OutlinedButton(onClick = { creating = true }, enabled = !busy) {
-                        Text(stringResource(R.string.new_schedule))
-                    }
-                }
+                ListToolbar(
+                    onRefresh = { refresh++ }, refreshEnabled = !loading && !busy,
+                    primaryLabel = stringResource(R.string.new_schedule), onPrimary = { creating = true }, primaryEnabled = !busy
+                )
                 if (loading) BusyIndicator()
                 if (error != null) ApiErrorText(error!!)
-                if (feedback.isNotEmpty()) Text(feedback)
+                if (feedback.isNotEmpty()) SuccessBanner(feedback)
                 result?.let { data ->
-                    if (data.schedules.isEmpty()) Text(stringResource(R.string.empty_schedules))
+                    if (data.schedules.isEmpty()) Text(
+                        stringResource(R.string.empty_schedules), style = MaterialTheme.typography.bodyMedium,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                    )
                     if (data.lastPage > 1) {
-                        FlowRow(horizontalArrangement = Arrangement.spacedBy(8.dp), verticalArrangement = Arrangement.spacedBy(4.dp)) {
-                            OutlinedButton(onClick = { page-- }, enabled = page > 1) {
-                                Text(stringResource(R.string.previous))
-                            }
-                            Text(
-                                stringResource(R.string.page, data.currentPage.toString(), data.lastPage.toString()),
-                                Modifier.padding(top = 12.dp)
-                            )
-                            OutlinedButton(onClick = { page++ }, enabled = data.hasNext) {
-                                Text(stringResource(R.string.next))
-                            }
-                        }
+                        PageBar(data.currentPage, data.lastPage, data.hasNext, onPrevious = { page-- }, onNext = { page++ })
                     }
                     LazyColumn(
                         Modifier.heightIn(max = 320.dp),
-                        verticalArrangement = Arrangement.spacedBy(8.dp)
+                        verticalArrangement = Arrangement.spacedBy(PanelSpacing.sm)
                     ) {
                         items(data.schedules, key = { it.id }) { schedule ->
-                            Card(modifier = Modifier.fillMaxWidth()) {
-                                Column(Modifier.padding(12.dp), verticalArrangement = Arrangement.spacedBy(6.dp)) {
-                                    Text(schedule.cronExpression, style = MaterialTheme.typography.titleSmall)
-                                    Text(stringResource(R.string.schedule_servers_count, schedule.servers.size))
-                                    Text(
-                                        stringResource(
-                                            if (schedule.isPaused) R.string.schedule_paused else R.string.schedule_active
-                                        )
-                                    )
-                                    if (schedule.nextRunAt.isNotBlank()) {
-                                        Text(stringResource(R.string.schedule_next_run, schedule.nextRunAt))
+                            ResourceCard(
+                                title = schedule.cronExpression, monoTitle = true, icon = Icons.Outlined.Schedule,
+                                facts = listOfNotNull(
+                                    ResourceFact(
+                                        stringResource(R.string.g4_state_label),
+                                        stringResource(if (schedule.isPaused) R.string.schedule_paused else R.string.schedule_active)
+                                    ),
+                                    ResourceFact(stringResource(R.string.g4_servers_label), schedule.servers.size.toString()),
+                                    schedule.nextRunAt.takeIf { it.isNotBlank() }?.let {
+                                        ResourceFact(stringResource(R.string.g4_next_run_label), it)
+                                    },
+                                    schedule.lastRunAt.takeIf { it.isNotBlank() }?.let {
+                                        ResourceFact(stringResource(R.string.g4_last_run_label), it)
                                     }
-                                    if (schedule.lastRunAt.isNotBlank()) {
-                                        Text(stringResource(R.string.schedule_last_run, schedule.lastRunAt))
-                                    }
-                                    FlowRow(horizontalArrangement = Arrangement.spacedBy(8.dp), verticalArrangement = Arrangement.spacedBy(4.dp)) {
-                                        OutlinedButton(
-                                            onClick = {
-                                                busy = true
-                                                error = null
-                                                feedback = ""
-                                                scope.launch {
-                                                    try {
-                                                        val toggled = withContext(Dispatchers.IO) {
-                                                            PloiApi.toggleScriptSchedule(token, script.id, schedule.id)
-                                                        }
-                                                        feedback = if (toggled.isPaused) pausedMessage else resumedMessage
-                                                        refresh++
-                                                    } catch (cancelled: CancellationException) {
-                                                        throw cancelled
-                                                    } catch (failure: Exception) {
-                                                        error = failure
-                                                    } finally {
-                                                        busy = false
-                                                    }
+                                )
+                            ) {
+                                CardAction(
+                                    stringResource(if (schedule.isPaused) R.string.resume_schedule else R.string.pause_schedule),
+                                    icon = if (schedule.isPaused) Icons.Outlined.PlayArrow else Icons.Outlined.Pause,
+                                    enabled = !busy,
+                                    onClick = {
+                                        busy = true
+                                        error = null
+                                        feedback = ""
+                                        scope.launch {
+                                            try {
+                                                val toggled = withContext(Dispatchers.IO) {
+                                                    PloiApi.toggleScriptSchedule(token, script.id, schedule.id)
                                                 }
-                                            },
-                                            enabled = !busy
-                                        ) {
-                                            Text(
-                                                stringResource(
-                                                    if (schedule.isPaused) R.string.resume_schedule
-                                                    else R.string.pause_schedule
-                                                )
-                                            )
-                                        }
-                                        OutlinedButton(onClick = { editing = schedule }, enabled = !busy) {
-                                            Text(stringResource(R.string.edit_site))
-                                        }
-                                        OutlinedButton(onClick = { confirmDelete = schedule }, enabled = !busy) {
-                                            Text(
-                                                stringResource(R.string.delete_schedule),
-                                                color = MaterialTheme.colorScheme.error
-                                            )
+                                                feedback = if (toggled.isPaused) pausedMessage else resumedMessage
+                                                refresh++
+                                            } catch (cancelled: CancellationException) {
+                                                throw cancelled
+                                            } catch (failure: Exception) {
+                                                error = failure
+                                            } finally {
+                                                busy = false
+                                            }
                                         }
                                     }
-                                }
+                                )
+                                CardAction(stringResource(R.string.edit_site), icon = Icons.Outlined.Edit, enabled = !busy,
+                                    onClick = { editing = schedule })
+                                DangerAction(stringResource(R.string.delete_schedule), onClick = { confirmDelete = schedule },
+                                    enabled = !busy)
                             }
                         }
                     }
@@ -777,106 +750,88 @@ private fun ScriptActionsDialog(
         onDismissRequest = onDismiss,
         title = { Text(stringResource(R.string.actions_title, script.label)) },
         text = {
-            Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+            Column(verticalArrangement = Arrangement.spacedBy(PanelSpacing.sm)) {
                 Text(
                     stringResource(R.string.action_unlimited_note),
-                    style = MaterialTheme.typography.bodySmall
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant
                 )
-                FlowRow(horizontalArrangement = Arrangement.spacedBy(8.dp), verticalArrangement = Arrangement.spacedBy(4.dp)) {
-                    OutlinedButton(onClick = { refresh++ }, enabled = !loading && !busy) {
-                        Text(stringResource(R.string.reload))
-                    }
-                    OutlinedButton(onClick = { creating = true }, enabled = !busy) {
-                        Text(stringResource(R.string.new_action))
-                    }
-                }
+                ListToolbar(
+                    onRefresh = { refresh++ }, refreshEnabled = !loading && !busy,
+                    primaryLabel = stringResource(R.string.new_action), onPrimary = { creating = true }, primaryEnabled = !busy
+                )
                 if (loading) BusyIndicator()
                 if (error != null) ApiErrorText(error!!)
-                if (feedback.isNotEmpty()) Text(feedback)
+                if (feedback.isNotEmpty()) SuccessBanner(feedback)
                 result?.let { actions ->
-                    if (actions.isEmpty()) Text(stringResource(R.string.empty_actions))
+                    if (actions.isEmpty()) Text(
+                        stringResource(R.string.empty_actions), style = MaterialTheme.typography.bodyMedium,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                    )
                     LazyColumn(
                         Modifier.heightIn(max = 320.dp),
-                        verticalArrangement = Arrangement.spacedBy(8.dp)
+                        verticalArrangement = Arrangement.spacedBy(PanelSpacing.sm)
                     ) {
                         items(actions, key = { it.id }) { action ->
-                            Card(modifier = Modifier.fillMaxWidth()) {
-                                Column(Modifier.padding(12.dp), verticalArrangement = Arrangement.spacedBy(6.dp)) {
+                            val serverFacts = action.servers.map { server ->
+                                ResourceFact(
+                                    stringResource(R.string.g4_server_number, server.serverId),
+                                    stringResource(actionServerStatusLabel(server.status))
+                                )
+                            }
+                            ResourceCard(
+                                title = action.triggerLabel.ifBlank { action.trigger }, icon = Icons.Outlined.Bolt,
+                                facts = listOfNotNull(
+                                    ResourceFact(
+                                        stringResource(R.string.g4_state_label),
+                                        stringResource(if (action.isPaused) R.string.schedule_paused else R.string.schedule_active)
+                                    ),
+                                    ResourceFact(stringResource(R.string.g4_delay_label), stringResource(R.string.g4_seconds_value, action.delaySeconds)),
+                                    action.lastTriggeredAt.takeIf { it.isNotBlank() }?.let {
+                                        ResourceFact(stringResource(R.string.g4_last_triggered_label), it)
+                                    }
+                                ) + serverFacts
+                            ) {
+                                // Per-server install errors: worded and error-coloured, each on its own line.
+                                action.servers.filter { it.lastError.isNotBlank() }.forEach { server ->
                                     Text(
-                                        action.triggerLabel.ifBlank { action.trigger },
-                                        style = MaterialTheme.typography.titleSmall
+                                        stringResource(R.string.g4_server_error, server.serverId, server.lastError),
+                                        style = MaterialTheme.typography.bodySmall,
+                                        color = MaterialTheme.colorScheme.error,
+                                        modifier = Modifier.fillMaxWidth()
                                     )
-                                    Text(stringResource(R.string.action_delay_value, action.delaySeconds))
-                                    Text(
-                                        stringResource(
-                                            if (action.isPaused) R.string.schedule_paused else R.string.schedule_active
-                                        )
-                                    )
-                                    if (action.lastTriggeredAt.isNotBlank()) {
-                                        Text(stringResource(R.string.action_last_triggered, action.lastTriggeredAt))
-                                    }
-                                    action.servers.forEach { server ->
-                                        Text(
-                                            stringResource(
-                                                R.string.action_server_status,
-                                                server.serverId,
-                                                stringResource(actionServerStatusLabel(server.status))
-                                            )
-                                        )
-                                        if (server.lastError.isNotBlank()) {
-                                            Text(
-                                                stringResource(R.string.action_last_error, server.lastError),
-                                                color = MaterialTheme.colorScheme.error
-                                            )
-                                        }
-                                    }
-                                    FlowRow(horizontalArrangement = Arrangement.spacedBy(8.dp), verticalArrangement = Arrangement.spacedBy(4.dp)) {
-                                        OutlinedButton(
-                                            onClick = {
-                                                busy = true
-                                                error = null
-                                                feedback = ""
-                                                scope.launch {
-                                                    try {
-                                                        val toggled = withContext(Dispatchers.IO) {
-                                                            PloiApi.toggleScriptAction(token, script.id, action.id)
-                                                        }
-                                                        feedback = if (toggled.isPaused) pausedMessage else resumedMessage
-                                                        refresh++
-                                                    } catch (cancelled: CancellationException) {
-                                                        throw cancelled
-                                                    } catch (failure: Exception) {
-                                                        error = failure
-                                                    } finally {
-                                                        busy = false
-                                                    }
-                                                }
-                                            },
-                                            enabled = !busy
-                                        ) {
-                                            Text(
-                                                stringResource(
-                                                    if (action.isPaused) R.string.resume_schedule
-                                                    else R.string.pause_schedule
-                                                )
-                                            )
-                                        }
-                                        OutlinedButton(onClick = { editing = action }, enabled = !busy) {
-                                            Text(stringResource(R.string.edit_site))
-                                        }
-                                    }
-                                    FlowRow(horizontalArrangement = Arrangement.spacedBy(8.dp), verticalArrangement = Arrangement.spacedBy(4.dp)) {
-                                        OutlinedButton(onClick = { confirmRotate = action }, enabled = !busy) {
-                                            Text(stringResource(R.string.rotate_action_secret))
-                                        }
-                                        OutlinedButton(onClick = { confirmDelete = action }, enabled = !busy) {
-                                            Text(
-                                                stringResource(R.string.delete_action),
-                                                color = MaterialTheme.colorScheme.error
-                                            )
-                                        }
-                                    }
                                 }
+                                CardAction(
+                                    stringResource(if (action.isPaused) R.string.resume_schedule else R.string.pause_schedule),
+                                    icon = if (action.isPaused) Icons.Outlined.PlayArrow else Icons.Outlined.Pause,
+                                    enabled = !busy,
+                                    onClick = {
+                                        busy = true
+                                        error = null
+                                        feedback = ""
+                                        scope.launch {
+                                            try {
+                                                val toggled = withContext(Dispatchers.IO) {
+                                                    PloiApi.toggleScriptAction(token, script.id, action.id)
+                                                }
+                                                feedback = if (toggled.isPaused) pausedMessage else resumedMessage
+                                                refresh++
+                                            } catch (cancelled: CancellationException) {
+                                                throw cancelled
+                                            } catch (failure: Exception) {
+                                                error = failure
+                                            } finally {
+                                                busy = false
+                                            }
+                                        }
+                                    }
+                                )
+                                CardAction(stringResource(R.string.edit_site), icon = Icons.Outlined.Edit, enabled = !busy,
+                                    onClick = { editing = action })
+                                CardAction(stringResource(R.string.rotate_action_secret), icon = Icons.Outlined.Key, enabled = !busy,
+                                    onClick = { confirmRotate = action })
+                                DangerAction(stringResource(R.string.delete_action), onClick = { confirmDelete = action },
+                                    enabled = !busy)
                             }
                         }
                     }
@@ -1077,56 +1032,68 @@ internal fun OneOffScriptScreen(token: String, serverId: Long, lock: AppLock, ac
         }
     }
 
-    Column(Modifier.fillMaxSize().verticalScroll(rememberScrollState()).padding(16.dp),
-        verticalArrangement = Arrangement.spacedBy(10.dp)) {
-        Text(stringResource(R.string.one_off_script_title), style = MaterialTheme.typography.titleMedium)
-        OutlinedTextField(
-            value = user, onValueChange = { user = it },
-            label = { Text(stringResource(R.string.script_user_label)) },
-            singleLine = true, modifier = Modifier.fillMaxWidth()
-        )
-        OutlinedTextField(
-            value = content, onValueChange = { content = it },
-            label = { Text(stringResource(R.string.one_off_script_content_label)) },
-            minLines = 6, maxLines = 12, modifier = Modifier.fillMaxWidth()
-        )
-        if (invalid) {
-            Text(stringResource(R.string.invalid_form), color = MaterialTheme.colorScheme.error)
-        }
-        Button(
-            onClick = {
-                if (content.isBlank() || content.length > ONE_OFF_SCRIPT_MAX_LENGTH || user.isBlank()) {
-                    invalid = true
-                } else {
-                    invalid = false
-                    pendingRun = content to user.trim()
+    Box(Modifier.fillMaxSize(), contentAlignment = Alignment.TopCenter) {
+        Column(
+            Modifier.widthIn(max = PanelSpacing.maxContentWidth).fillMaxWidth()
+                .verticalScroll(rememberScrollState()).padding(vertical = PanelSpacing.sm),
+            verticalArrangement = Arrangement.spacedBy(PanelSpacing.md)
+        ) {
+            SectionCard(title = stringResource(R.string.one_off_script_title), icon = Icons.Outlined.Terminal) {
+                OutlinedTextField(
+                    value = user, onValueChange = { user = it },
+                    label = { Text(stringResource(R.string.script_user_label)) },
+                    singleLine = true, modifier = Modifier.fillMaxWidth()
+                )
+                OutlinedTextField(
+                    value = content, onValueChange = { content = it },
+                    label = { Text(stringResource(R.string.one_off_script_content_label)) },
+                    textStyle = panelMonoStyle,
+                    minLines = 6, maxLines = 12, modifier = Modifier.fillMaxWidth()
+                )
+                if (invalid) {
+                    Text(stringResource(R.string.invalid_form), color = MaterialTheme.colorScheme.error)
                 }
-            },
-            enabled = !busy && !polling && content.isNotBlank()
-        ) { Text(stringResource(R.string.run_script_submit)) }
-        if (error != null) ApiErrorText(error!!)
-        if (busy) BusyIndicator()
-        if (polling) Text(stringResource(R.string.execution_following))
-        if (!polling && shouldPollExecution(execution)) Text(stringResource(R.string.execution_manual_refresh))
-        execution?.let { exec ->
-            Card(Modifier.fillMaxWidth()) {
-                Column(Modifier.padding(12.dp), verticalArrangement = Arrangement.spacedBy(6.dp)) {
-                    Text(stringResource(R.string.execution_status, exec.status))
-                    exec.exitCode?.let { code -> Text(stringResource(R.string.execution_exit_code, code)) }
-                    if (exec.startedAt.isNotBlank()) {
-                        Text(stringResource(R.string.execution_started_at, exec.startedAt))
-                    }
-                    if (exec.finishedAt.isNotBlank()) {
-                        Text(stringResource(R.string.execution_finished_at, exec.finishedAt))
-                    }
-                    if (exec.output.isNotBlank()) {
-                        Text(stringResource(R.string.execution_output), style = MaterialTheme.typography.titleSmall)
-                        Text(exec.output)
-                    }
-                    OutlinedButton(
+                Button(
+                    onClick = {
+                        if (content.isBlank() || content.length > ONE_OFF_SCRIPT_MAX_LENGTH || user.isBlank()) {
+                            invalid = true
+                        } else {
+                            invalid = false
+                            pendingRun = content to user.trim()
+                        }
+                    },
+                    enabled = !busy && !polling && content.isNotBlank()
+                ) {
+                    Icon(Icons.Outlined.PlayArrow, contentDescription = null, modifier = Modifier.size(18.dp))
+                    Text(stringResource(R.string.run_script_submit), Modifier.padding(start = PanelSpacing.sm))
+                }
+            }
+            if (error != null) ErrorState(error!!)
+            if (busy) LoadingState(rows = 1)
+            if (polling) Text(
+                stringResource(R.string.execution_following), style = MaterialTheme.typography.bodyMedium,
+                color = MaterialTheme.colorScheme.onSurfaceVariant
+            )
+            if (!polling && shouldPollExecution(execution)) Text(
+                stringResource(R.string.execution_manual_refresh), style = MaterialTheme.typography.bodyMedium,
+                color = MaterialTheme.colorScheme.onSurfaceVariant
+            )
+            execution?.let { exec ->
+                ResourceCard(
+                    title = stringResource(R.string.g4_execution_title), icon = Icons.AutoMirrored.Outlined.ReceiptLong,
+                    status = exec.status,
+                    facts = listOfNotNull(
+                        exec.exitCode?.let { code -> ResourceFact(stringResource(R.string.g4_exit_code_label), code.toString(), mono = true) },
+                        exec.startedAt.takeIf { it.isNotBlank() }?.let { ResourceFact(stringResource(R.string.g4_started_label), it) },
+                        exec.finishedAt.takeIf { it.isNotBlank() }?.let { ResourceFact(stringResource(R.string.g4_finished_label), it) }
+                    )
+                ) {
+                    if (exec.output.isNotBlank()) ExpandableMono(exec.output, collapsedLines = 8)
+                    CardAction(
+                        stringResource(R.string.refresh_execution), icon = Icons.Outlined.Refresh,
                         onClick = { launchAction { PloiApi.scriptExecution(token, serverId, exec.id) } },
                         enabled = !busy && !polling
-                    ) { Text(stringResource(R.string.refresh_execution)) }
+                    )
                 }
             }
         }
