@@ -10,6 +10,29 @@ internal data class ServerPage(val servers: List<Server>, val currentPage: Int, 
 }
 internal data class MonitorSample(val cpu: String, val ram: String, val disk: String, val load: String, val date: String)
 
+/**
+ * Orders "HH:mm" labels of a window shorter than a day. The series is circular: the largest gap
+ * between consecutive times marks where the window starts, so 23:50, 23:55, 00:00 stay in that
+ * order. Labels that are not HH:mm keep their relative order at the end.
+ */
+internal fun orderClockLabels(labels: List<String>): List<String> {
+    fun minutes(label: String): Int? = Regex("(\\d{1,2}):(\\d{2})").matchEntire(label.trim())?.let {
+        val (h, m) = it.destructured
+        (h.toInt() * 60 + m.toInt()).takeIf { value -> h.toInt() < 24 && m.toInt() < 60 && value >= 0 }
+    }
+    val timed = labels.mapNotNull { label -> minutes(label)?.let { label to it } }.sortedBy { it.second }
+    val others = labels.filter { minutes(it) == null }
+    if (timed.size < 2) return timed.map { it.first } + others
+    var start = 0
+    var widest = -1
+    timed.indices.forEach { i ->
+        val next = timed[(i + 1) % timed.size].second
+        val gap = (next - timed[i].second + 24 * 60) % (24 * 60)
+        if (gap > widest) { widest = gap; start = (i + 1) % timed.size }
+    }
+    return (timed.drop(start) + timed.take(start)).map { it.first } + others
+}
+
 /** Invalid percentages are unknown, not zero; out-of-range numeric readings are bounded for display. */
 internal fun monitoringPercent(raw: String): Float? {
     val number = raw.trim().removeSuffix("%").trim()
@@ -3077,11 +3100,37 @@ internal object PloiApi {
                 name = item.getString("name"),
                 ip = item.optString("ip"),
                 url = item.optString("url"),
-                statistics = statistics?.let { array ->
-                    (0 until array.length()).map { parseMonitorSample(array.getJSONObject(it)) }.sortedBy { it.date }
-                }.orEmpty()
+                statistics = statistics?.let(::parseMonitoredStatistics).orEmpty()
             )
         }
+    }
+
+    /**
+     * `/servers/monitored` answers with named series, one per metric:
+     * `[{"name":"CPU","data":{"00:47":0.7,...}},{"name":"RAM",...},{"name":"Disk",...}]`
+     * (observed on the live API; keys are account-local HH:mm labels without a date). They are
+     * zipped into samples by label and ordered by [orderClockLabels] (JSON object key order is not
+     * guaranteed, and a plain sort would put "00:00" before "23:55" across midnight). The older
+     * per-sample shape is still accepted.
+     */
+    internal fun parseMonitoredStatistics(array: JSONArray): List<MonitorSample> {
+        if (array.length() == 0) return emptyList()
+        val first = array.optJSONObject(0) ?: return emptyList()
+        if (!first.has("name") || first.opt("data") !is JSONObject) {
+            return (0 until array.length()).map { parseMonitorSample(array.getJSONObject(it)) }.sortedBy { it.date }
+        }
+        val series = mutableMapOf<String, JSONObject>()
+        (0 until array.length()).forEach { i ->
+            val entry = array.optJSONObject(i) ?: return@forEach
+            val values = entry.optJSONObject("data") ?: return@forEach
+            series[entry.optString("name").trim().lowercase()] = values
+        }
+        val labels = LinkedHashSet<String>()
+        listOf("cpu", "ram", "disk").forEach { metric -> series[metric]?.keys()?.forEach { labels += it } }
+        orderClockLabels(labels.toList()).let { labels.clear(); labels.addAll(it) }
+        fun value(metric: String, label: String): String =
+            series[metric]?.takeIf { it.has(label) && !it.isNull(label) }?.optString(label).orEmpty()
+        return labels.map { label -> MonitorSample(value("cpu", label), value("ram", label), value("disk", label), "", label) }
     }
 
     fun monitoredServers(token: String): List<MonitoredServer> = parseOrThrow {

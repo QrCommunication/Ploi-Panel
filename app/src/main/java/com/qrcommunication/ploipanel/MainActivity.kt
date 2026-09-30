@@ -53,6 +53,13 @@ import androidx.compose.material.icons.outlined.Refresh
 import androidx.compose.material.icons.outlined.Search
 import androidx.compose.material.icons.outlined.SearchOff
 import androidx.compose.material3.Button
+import androidx.compose.foundation.shape.CircleShape
+import androidx.compose.runtime.saveable.rememberSaveable
+import androidx.compose.runtime.derivedStateOf
+import androidx.compose.foundation.lazy.rememberLazyListState
+import androidx.compose.material3.pulltorefresh.PullToRefreshBox
+import androidx.compose.material3.ExtendedFloatingActionButton
+import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
@@ -402,7 +409,8 @@ private fun PanelHome(
         serversCachedAt = null
         error = null
         try {
-            val fresh = withContext(Dispatchers.IO) { PloiApi.servers(active, page) }
+            // 50 = documented maximum: most accounts fit on one page, fewer requests, fewer pages.
+            val fresh = withContext(Dispatchers.IO) { PloiApi.servers(active, page, SERVER_PAGE_SIZE) }
             servers = fresh
             rechecks = emptyMap()
             if (profileId != null) {
@@ -719,6 +727,9 @@ internal fun InlineNotice(message: String) {
     }
 }
 
+/** Servers requested per page: the documented Ploi maximum. */
+internal const val SERVER_PAGE_SIZE = 50
+
 /** Local, case-insensitive filter over the rows of the page already loaded (name, IP or status). */
 internal fun filterLoadedServers(servers: List<Server>, query: String): List<Server> {
     val needle = query.trim()
@@ -729,6 +740,19 @@ internal fun filterLoadedServers(servers: List<Server>, query: String): List<Ser
     }
 }
 
+/** Status filter of the server list; counts always describe the loaded page only. */
+internal enum class ServerFilter { ALL, HEALTHY, ATTENTION }
+
+internal fun filterByStatus(servers: List<Server>, filter: ServerFilter, rechecks: Map<Long, Recheck> = emptyMap()): List<Server> {
+    fun healthy(server: Server) = serverStatusKind(rechecks[server.id]?.ploiStatus ?: server.status) == ServerStatusKind.HEALTHY
+    return when (filter) {
+        ServerFilter.ALL -> servers
+        ServerFilter.HEALTHY -> servers.filter(::healthy)
+        ServerFilter.ATTENTION -> servers.filterNot(::healthy)
+    }
+}
+
+@OptIn(ExperimentalMaterial3Api::class)
 @Composable
 private fun ServerList(
     pageData: ServerPage?, loading: Boolean, error: Throwable?, page: Int, cachedAt: Long?,
@@ -740,94 +764,102 @@ private fun ServerList(
     // Cached rows are a past observation: opening a server would need live calls we cannot make,
     // and creating one would act on an account state we have not read. Reload stays available.
     val offline = cachedAt != null
-    val visible = pageData?.let { filterLoadedServers(it.servers, query) }.orEmpty()
-    LazyColumn(
-        modifier = Modifier.fillMaxSize(),
-        verticalArrangement = Arrangement.spacedBy(PanelSpacing.md),
-        contentPadding = PaddingValues(bottom = PanelSpacing.xl)
-    ) {
-        item {
-            FlowRow(
-                horizontalArrangement = Arrangement.spacedBy(PanelSpacing.sm),
-                verticalArrangement = Arrangement.spacedBy(PanelSpacing.xs)
+    var filter by rememberSaveable { mutableStateOf(ServerFilter.ALL) }
+    val loaded = pageData?.servers.orEmpty()
+    val visible = filterByStatus(filterLoadedServers(loaded, query), filter, rechecks)
+    val listState = rememberLazyListState()
+    val fabExpanded by remember { derivedStateOf { listState.firstVisibleItemIndex == 0 } }
+    Box(Modifier.fillMaxSize()) {
+        PullToRefreshBox(isRefreshing = loading && pageData != null, onRefresh = onRefresh, modifier = Modifier.fillMaxSize()) {
+            LazyColumn(
+                modifier = Modifier.fillMaxSize(),
+                state = listState,
+                verticalArrangement = Arrangement.spacedBy(PanelSpacing.md),
+                // Bottom padding keeps the last card clear of the floating "New server" button.
+                contentPadding = PaddingValues(top = PanelSpacing.xs, bottom = 96.dp)
             ) {
-                Button(onClick = onCreate, enabled = !offline) {
-                    Icon(Icons.Outlined.Add, contentDescription = null, modifier = Modifier.size(18.dp))
-                    Text(stringResource(R.string.new_server), Modifier.padding(start = PanelSpacing.sm))
-                }
-                OutlinedButton(onClick = onMonitored, enabled = !offline) {
-                    Icon(Icons.Outlined.MonitorHeart, contentDescription = null, modifier = Modifier.size(18.dp))
-                    Text(stringResource(R.string.monitored_overview), Modifier.padding(start = PanelSpacing.sm))
-                }
-                OutlinedButton(onClick = onRefresh, enabled = !loading) {
-                    Icon(Icons.Outlined.Refresh, contentDescription = null, modifier = Modifier.size(18.dp))
-                    Text(stringResource(R.string.reload), Modifier.padding(start = PanelSpacing.sm))
-                }
-            }
-        }
-        if (loading) item { LoadingState() }
-        if (error != null) item { ErrorState(error, onRetry = onRefresh, retryEnabled = !loading) }
-        if (cachedAt != null) item { OfflineCacheBanner(cachedAt) }
-        if (pageData != null) {
-            item { ServerPageHero(pageData) }
-            if (pageData.servers.isEmpty()) item {
-                EmptyState(
-                    Icons.Outlined.Dns, stringResource(R.string.servers_empty_title),
-                    body = stringResource(R.string.dashboard_empty),
-                    actionLabel = stringResource(R.string.new_server), actionEnabled = !offline, onAction = onCreate
-                )
-            } else item {
-                OutlinedTextField(
-                    value = query, onValueChange = onQuery,
-                    label = { Text(stringResource(R.string.servers_search_label)) },
-                    supportingText = { Text(stringResource(R.string.servers_search_scope, pageData.servers.size)) },
-                    leadingIcon = { Icon(Icons.Outlined.Search, contentDescription = null) },
-                    trailingIcon = if (query.isNotEmpty()) {
-                        {
-                            IconButton(onClick = { onQuery("") }) {
-                                Icon(Icons.Outlined.Close, contentDescription = stringResource(R.string.servers_search_clear))
+                if (loading && pageData == null) item { LoadingState() }
+                if (error != null) item { ErrorState(error, onRetry = onRefresh, retryEnabled = !loading) }
+                if (cachedAt != null) item { OfflineCacheBanner(cachedAt) }
+                if (pageData != null) {
+                    item {
+                        ServerPageHero(
+                            pageData, rechecks, filter, onFilter = { filter = it },
+                            refreshing = loading, offline = offline,
+                            onRefresh = onRefresh, onMonitored = onMonitored
+                        )
+                    }
+                    if (loaded.isEmpty()) item {
+                        EmptyState(
+                            Icons.Outlined.Dns, stringResource(R.string.servers_empty_title),
+                            body = stringResource(R.string.dashboard_empty),
+                            actionLabel = stringResource(R.string.new_server), actionEnabled = !offline, onAction = onCreate
+                        )
+                    } else item {
+                        OutlinedTextField(
+                            value = query, onValueChange = onQuery,
+                            placeholder = { Text(stringResource(R.string.servers_search_label)) },
+                            leadingIcon = { Icon(Icons.Outlined.Search, contentDescription = null) },
+                            trailingIcon = if (query.isNotEmpty()) {
+                                {
+                                    IconButton(onClick = { onQuery("") }) {
+                                        Icon(Icons.Outlined.Close, contentDescription = stringResource(R.string.servers_search_clear))
+                                    }
+                                }
+                            } else null,
+                            singleLine = true, shape = CircleShape,
+                            modifier = Modifier.fillMaxWidth()
+                        )
+                    }
+                    if (loaded.isNotEmpty() && visible.isEmpty()) item {
+                        EmptyState(
+                            Icons.Outlined.SearchOff, stringResource(R.string.servers_search_empty_title),
+                            body = stringResource(R.string.servers_search_empty_body),
+                            actionLabel = stringResource(R.string.servers_search_clear),
+                            onAction = { onQuery(""); filter = ServerFilter.ALL }
+                        )
+                    }
+                    items(visible, key = { it.id }) { server ->
+                        ServerItemCard(server, enabled = !offline,
+                            recheck = rechecks[server.id], rechecking = server.id in rechecking,
+                            onRecheck = { onRecheck(server) }) { onSelect(server) }
+                    }
+                    if (pageData.lastPage > 1) item {
+                        Row(
+                            Modifier.fillMaxWidth(),
+                            horizontalArrangement = Arrangement.SpaceBetween,
+                            verticalAlignment = Alignment.CenterVertically
+                        ) {
+                            OutlinedButton(onClick = { onPage(page - 1) }, enabled = page > 1) {
+                                Icon(Icons.AutoMirrored.Outlined.KeyboardArrowLeft, contentDescription = null, modifier = Modifier.size(18.dp))
+                                Text(stringResource(R.string.previous))
+                            }
+                            Text(
+                                stringResource(R.string.servers_page_label, pageData.currentPage.toString(), pageData.lastPage.toString()),
+                                style = MaterialTheme.typography.labelLarge,
+                                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                                modifier = Modifier.weight(1f).padding(horizontal = PanelSpacing.sm),
+                                textAlign = TextAlign.Center
+                            )
+                            OutlinedButton(onClick = { onPage(page + 1) }, enabled = pageData.hasNext) {
+                                Text(stringResource(R.string.next))
+                                Icon(Icons.AutoMirrored.Outlined.KeyboardArrowRight, contentDescription = null, modifier = Modifier.size(18.dp))
                             }
                         }
-                    } else null,
-                    singleLine = true, modifier = Modifier.fillMaxWidth()
-                )
-            }
-            if (pageData.servers.isNotEmpty() && visible.isEmpty()) item {
-                EmptyState(
-                    Icons.Outlined.SearchOff, stringResource(R.string.servers_search_empty_title),
-                    body = stringResource(R.string.servers_search_empty_body),
-                    actionLabel = stringResource(R.string.servers_search_clear), onAction = { onQuery("") }
-                )
-            }
-            items(visible, key = { it.id }) { server ->
-                ServerItemCard(server, enabled = !offline,
-                    recheck = rechecks[server.id], rechecking = server.id in rechecking,
-                    onRecheck = { onRecheck(server) }) { onSelect(server) }
-            }
-            item {
-                Row(
-                    Modifier.fillMaxWidth(),
-                    horizontalArrangement = Arrangement.SpaceBetween,
-                    verticalAlignment = Alignment.CenterVertically
-                ) {
-                    OutlinedButton(onClick = { onPage(page - 1) }, enabled = page > 1) {
-                        Icon(Icons.AutoMirrored.Outlined.KeyboardArrowLeft, contentDescription = null, modifier = Modifier.size(18.dp))
-                        Text(stringResource(R.string.previous))
-                    }
-                    Text(
-                        stringResource(R.string.servers_page_label, pageData.currentPage.toString(), pageData.lastPage.toString()),
-                        style = MaterialTheme.typography.labelLarge,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant,
-                        modifier = Modifier.weight(1f).padding(horizontal = PanelSpacing.sm),
-                        textAlign = TextAlign.Center
-                    )
-                    OutlinedButton(onClick = { onPage(page + 1) }, enabled = pageData.hasNext) {
-                        Text(stringResource(R.string.next))
-                        Icon(Icons.AutoMirrored.Outlined.KeyboardArrowRight, contentDescription = null, modifier = Modifier.size(18.dp))
                     }
                 }
             }
         }
+        // Primary action of the screen, always reachable; collapses to an icon while scrolling.
+        // Hidden on cached rows: creating a server needs a live read of the account.
+        if (!offline) ExtendedFloatingActionButton(
+            onClick = onCreate, expanded = fabExpanded,
+            icon = { Icon(Icons.Outlined.Add, contentDescription = null) },
+            text = { Text(stringResource(R.string.new_server)) },
+            modifier = Modifier.align(Alignment.BottomEnd).padding(bottom = PanelSpacing.lg),
+            containerColor = MaterialTheme.colorScheme.primary,
+            contentColor = MaterialTheme.colorScheme.onPrimary
+        )
     }
 }
 

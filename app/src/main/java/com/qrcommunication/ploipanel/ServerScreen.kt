@@ -320,7 +320,7 @@ internal fun MonitoringView(token: String, server: Server, refresh: Int, profile
             val latest = samples.last()
             Text(stringResource(R.string.stale_warning), style = MaterialTheme.typography.bodySmall,
                 color = MaterialTheme.colorScheme.onSurfaceVariant)
-            Text(stringResource(R.string.updated, latest.date), style = MaterialTheme.typography.labelLarge)
+            Text(stringResource(R.string.updated, formatSampleTime(latest.date)), style = MaterialTheme.typography.labelLarge)
             MonitoringCharts(samples)
             Metric(stringResource(R.string.metric_load), latest.load.ifBlank { "—" })
         }
@@ -685,7 +685,7 @@ internal fun MonitoredServersScreen(token: String) {
                         if (latest == null) {
                             Text(stringResource(R.string.monitoring_unavailable))
                         } else {
-                            Text(stringResource(R.string.updated, latest.date), style = MaterialTheme.typography.labelLarge)
+                            Text(stringResource(R.string.updated, formatSampleTime(latest.date)), style = MaterialTheme.typography.labelLarge)
                             MonitoringCharts(server.statistics)
                             Metric(stringResource(R.string.metric_load), latest.load.ifBlank { "—" })
                         }

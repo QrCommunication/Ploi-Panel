@@ -52,11 +52,26 @@ internal fun canPickWidgetServer(selected: Set<Long>, serverId: Long, single: Bo
 
 internal data class WidgetReading(val name: String, val sample: MonitorSample, val fetchedAt: Long, val status: String = "")
 
-internal fun sampleTime(date: String): Long? = try {
-    Instant.parse(date).toEpochMilli()
-} catch (_: DateTimeParseException) {
-    try { OffsetDateTime.parse(date).toInstant().toEpochMilli() } catch (_: DateTimeParseException) { null }
+/**
+ * Monitoring timestamps. ISO-8601 with an offset is honoured; Ploi's `/monitor` endpoint actually
+ * sends `yyyy-MM-dd HH:mm:ss[.SSS]` without a zone, which is UTC (cross-checked against the
+ * account-local labels of `/servers/monitored`). Anything else is unknown (null), never "now".
+ */
+internal fun sampleTime(date: String): Long? {
+    val text = date.trim()
+    if (text.isEmpty()) return null
+    try { return Instant.parse(text).toEpochMilli() } catch (_: DateTimeParseException) { }
+    try { return OffsetDateTime.parse(text).toInstant().toEpochMilli() } catch (_: DateTimeParseException) { }
+    return try {
+        java.time.LocalDateTime.parse(text, PLOI_SAMPLE_FORMAT).toInstant(java.time.ZoneOffset.UTC).toEpochMilli()
+    } catch (_: DateTimeParseException) { null }
 }
+
+private val PLOI_SAMPLE_FORMAT: java.time.format.DateTimeFormatter =
+    java.time.format.DateTimeFormatterBuilder()
+        .appendPattern("yyyy-MM-dd HH:mm:ss")
+        .optionalStart().appendFraction(java.time.temporal.ChronoField.NANO_OF_SECOND, 0, 9, true).optionalEnd()
+        .toFormatter(java.util.Locale.ROOT)
 
 internal fun isStale(sample: MonitorSample, now: Long): Boolean {
     val time = sampleTime(sample.date) ?: return true

@@ -112,4 +112,15 @@
     <string name="recheck_device_no_ip">Test depuis le téléphone impossible : aucune adresse IP</string>
     <string name="recheck_checked_at">Testé à %1$s</string>
     <string name="recheck_retest">Retester</string>
+    <string name="servers_filter_all">Tous · %1$d</string>
+    <string name="servers_filter_healthy">Actifs · %1$d</string>
+    <string name="servers_filter_attention">À vérifier · %1$d</string>
+    <string name="status_unreachable">Injoignable</string>
+    <string name="status_installing">Installation</string>
+    <string name="recheck_compact_ok">Retesté %1$s · port joignable depuis ce téléphone</string>
+    <string name="recheck_compact_ko">Retesté %1$s · Ploi : %2$s · port injoignable depuis ce téléphone</string>
+    <string name="recheck_compact_running">Nouveau test en cours…</string>
+    <string name="show_more">Afficher tout</string>
+    <string name="show_less">Réduire</string>
+    <string name="items_count">Éléments : %1$d</string>
 </resources>

@@ -64,6 +64,13 @@ android {
     testOptions {
         // Robolectric Compose tests render real screens on the JVM (resources, locales, dialogs).
         unitTests.isIncludeAndroidResources = true
+        unitTests.all { test ->
+            test.maxHeapSize = "3g"
+            // Live screenshot tour: opt-in only (-Pscreenshots), needs network and a read-only token
+            // file named by PLOI_SCREENSHOT_TOKEN_FILE. Never part of the default test/CI run.
+            if (!project.hasProperty("screenshots")) test.exclude("**/screenshots/**")
+            else test.systemProperty("ploi.screenshots.out", layout.buildDirectory.dir("screenshots").get().asFile.path)
+        }
     }
     packaging {
         jniLibs {

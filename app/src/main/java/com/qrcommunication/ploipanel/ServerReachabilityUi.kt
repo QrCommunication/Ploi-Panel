@@ -12,6 +12,7 @@ import androidx.compose.material.icons.outlined.CloudOff
 import androidx.compose.material.icons.outlined.Refresh
 import androidx.compose.material.icons.outlined.WifiTethering
 import androidx.compose.material3.Icon
+import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.Surface
@@ -105,6 +106,45 @@ internal fun RecheckPanel(recheck: Recheck?, running: Boolean, onRetest: () -> U
                 Icon(Icons.Outlined.Refresh, contentDescription = null, modifier = Modifier.size(18.dp))
                 Text(stringResource(R.string.recheck_retest), Modifier.padding(start = PanelSpacing.sm))
             }
+        }
+    }
+}
+
+/**
+ * One-line recheck summary for list rows: when it was retested, Ploi's fresh status and whether
+ * this phone reached the port, plus an icon button to retest. The full breakdown lives in the
+ * server detail ([RecheckPanel]).
+ */
+@Composable
+internal fun RecheckLine(recheck: Recheck?, running: Boolean, onRetest: () -> Unit, modifier: Modifier = Modifier) {
+    val colors = MaterialTheme.colorScheme
+    val reachable = recheck?.probe is DeviceProbe.Reachable
+    val tint = when {
+        running || recheck == null -> colors.onSurfaceVariant
+        reachable -> PanelTheme.status.success
+        else -> colors.error
+    }
+    Row(
+        modifier.fillMaxWidth().semantics { liveRegion = LiveRegionMode.Polite },
+        verticalAlignment = Alignment.CenterVertically,
+        horizontalArrangement = Arrangement.spacedBy(PanelSpacing.sm)
+    ) {
+        if (running) BusyIndicator(Modifier.size(16.dp))
+        else Icon(if (reachable) Icons.Outlined.CloudDone else Icons.Outlined.CloudOff, contentDescription = null,
+            tint = tint, modifier = Modifier.size(16.dp))
+        val time = recheck?.let { DateFormat.getTimeInstance(DateFormat.SHORT).format(Date(it.checkedAt)) }
+        Text(
+            when {
+                running || recheck == null -> stringResource(R.string.recheck_compact_running)
+                reachable -> stringResource(R.string.recheck_compact_ok, time.orEmpty())
+                else -> stringResource(R.string.recheck_compact_ko, time.orEmpty(),
+                    recheck.ploiStatus?.ifBlank { "—" } ?: "—")
+            },
+            style = MaterialTheme.typography.bodySmall, color = colors.onSurfaceVariant,
+            modifier = Modifier.weight(1f)
+        )
+        IconButton(onClick = onRetest, enabled = !running) {
+            Icon(Icons.Outlined.Refresh, contentDescription = stringResource(R.string.recheck_retest))
         }
     }
 }

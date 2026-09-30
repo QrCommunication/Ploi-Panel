@@ -3,6 +3,7 @@ package com.qrcommunication.ploipanel
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.FlowRow
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
@@ -11,11 +12,16 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.outlined.KeyboardArrowRight
 import androidx.compose.material.icons.outlined.CheckCircle
 import androidx.compose.material.icons.outlined.CloudOff
+import androidx.compose.material.icons.outlined.ErrorOutline
+import androidx.compose.material.icons.outlined.MonitorHeart
+import androidx.compose.material.icons.outlined.Refresh
 import androidx.compose.material.icons.outlined.Dns
-import androidx.compose.material.icons.outlined.Info
 import androidx.compose.material.icons.outlined.Terminal
 import androidx.compose.material3.Card
+import androidx.compose.material3.FilterChip
+import androidx.compose.material3.FilterChipDefaults
 import androidx.compose.material3.CardDefaults
+import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
@@ -33,41 +39,81 @@ import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 
 /**
- * Dashboard numbers describe only the loaded page; never imply a fleet-wide total. Every tile is a
- * count of rows actually returned by Ploi for this page.
+ * Dashboard numbers describe only the loaded page; never imply a fleet-wide total. Each count is
+ * a filter chip (all / healthy / needs attention) so the numbers are also the way to act on them.
+ * Healthy uses the freshest known status (a recheck result replaces Ploi's listed status).
  */
 @Composable
-internal fun ServerPageHero(page: ServerPage) {
+internal fun ServerPageHero(
+    page: ServerPage, rechecks: Map<Long, Recheck> = emptyMap(),
+    filter: ServerFilter = ServerFilter.ALL, onFilter: (ServerFilter) -> Unit = {},
+    refreshing: Boolean = false, offline: Boolean = false,
+    onRefresh: () -> Unit = {}, onMonitored: () -> Unit = {}
+) {
     val colors = MaterialTheme.colorScheme
-    val active = page.servers.count { serverStatusKind(it.status) == ServerStatusKind.HEALTHY }
+    val healthy = filterByStatus(page.servers, ServerFilter.HEALTHY, rechecks).size
+    val attention = page.servers.size - healthy
     Surface(
         shape = MaterialTheme.shapes.large,
-        color = colors.primaryContainer,
-        contentColor = colors.onPrimaryContainer,
+        color = colors.surfaceContainerLow,
+        border = BorderStroke(1.dp, colors.outlineVariant),
         modifier = Modifier.fillMaxWidth()
     ) {
         Column(Modifier.padding(PanelSpacing.lg), verticalArrangement = Arrangement.spacedBy(PanelSpacing.md)) {
-            Column(verticalArrangement = Arrangement.spacedBy(PanelSpacing.xxs)) {
-                Text(stringResource(R.string.servers_hero_title), style = MaterialTheme.typography.titleLarge)
-                Text(
-                    pluralStringResource(R.plurals.dashboard_page_count, page.servers.size, page.servers.size),
-                    style = MaterialTheme.typography.bodyMedium
-                )
-                Text(
-                    stringResource(R.string.dashboard_page_scope, page.currentPage.toString(), page.lastPage.toString()),
-                    style = MaterialTheme.typography.bodySmall
-                )
+            Row(verticalAlignment = Alignment.CenterVertically) {
+                Column(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(PanelSpacing.xxs)) {
+                    Text(
+                        pluralStringResource(R.plurals.dashboard_page_count, page.servers.size, page.servers.size),
+                        style = MaterialTheme.typography.titleMedium
+                    )
+                    Text(
+                        stringResource(R.string.dashboard_page_scope, page.currentPage.toString(), page.lastPage.toString()),
+                        style = MaterialTheme.typography.bodySmall, color = colors.onSurfaceVariant
+                    )
+                }
+                IconButton(onClick = onMonitored, enabled = !offline) {
+                    Icon(Icons.Outlined.MonitorHeart, contentDescription = stringResource(R.string.monitored_overview))
+                }
+                IconButton(onClick = onRefresh, enabled = !refreshing) {
+                    Icon(Icons.Outlined.Refresh, contentDescription = stringResource(R.string.reload))
+                }
             }
-            Row(horizontalArrangement = Arrangement.spacedBy(PanelSpacing.sm), modifier = Modifier.fillMaxWidth()) {
-                MetricTile(stringResource(R.string.servers_metric_loaded), page.servers.size.toString(),
-                    Modifier.weight(1f), icon = Icons.Outlined.Dns)
-                MetricTile(stringResource(R.string.servers_metric_active), active.toString(),
-                    Modifier.weight(1f), icon = Icons.Outlined.CheckCircle)
-                MetricTile(stringResource(R.string.servers_metric_attention), (page.servers.size - active).toString(),
-                    Modifier.weight(1f), icon = Icons.Outlined.Info)
+            FlowRow(horizontalArrangement = Arrangement.spacedBy(PanelSpacing.sm), verticalArrangement = Arrangement.spacedBy(PanelSpacing.xs)) {
+                StatusFilterChip(ServerFilter.ALL, filter, R.string.servers_filter_all, page.servers.size, onFilter)
+                StatusFilterChip(ServerFilter.HEALTHY, filter, R.string.servers_filter_healthy, healthy, onFilter)
+                StatusFilterChip(ServerFilter.ATTENTION, filter, R.string.servers_filter_attention, attention, onFilter)
             }
         }
     }
+}
+
+@Composable
+private fun StatusFilterChip(
+    value: ServerFilter, current: ServerFilter, label: Int, count: Int, onFilter: (ServerFilter) -> Unit
+) {
+    val status = PanelTheme.status
+    val colors = MaterialTheme.colorScheme
+    val (dot, container) = when (value) {
+        ServerFilter.ALL -> colors.primary to colors.primaryContainer
+        ServerFilter.HEALTHY -> status.success to status.successContainer
+        ServerFilter.ATTENTION -> colors.error to colors.errorContainer
+    }
+    FilterChip(
+        selected = current == value,
+        onClick = { onFilter(value) },
+        label = { Text(stringResource(label, count)) },
+        leadingIcon = {
+            Icon(
+                when (value) {
+                    ServerFilter.ALL -> Icons.Outlined.Dns
+                    ServerFilter.HEALTHY -> Icons.Outlined.CheckCircle
+                    ServerFilter.ATTENTION -> Icons.Outlined.ErrorOutline
+                },
+                contentDescription = null, tint = dot, modifier = Modifier.size(18.dp)
+            )
+        },
+        colors = FilterChipDefaults.filterChipColors(selectedContainerColor = container)
+    )
 }
 
 /**
@@ -154,9 +200,10 @@ internal fun ServerItemCard(
                 Icon(Icons.AutoMirrored.Outlined.KeyboardArrowRight, contentDescription = null, tint = colors.onSurfaceVariant)
             }
             if (onRecheck != null && enabled && (needsRecheck(server.status) || recheck != null || rechecking)) {
-                RecheckPanel(
+                HorizontalDivider(color = colors.outlineVariant, modifier = Modifier.padding(horizontal = PanelSpacing.lg))
+                RecheckLine(
                     recheck, rechecking, onRetest = onRecheck,
-                    modifier = Modifier.padding(start = PanelSpacing.md, end = PanelSpacing.md, bottom = PanelSpacing.md)
+                    modifier = Modifier.padding(start = PanelSpacing.lg, end = PanelSpacing.xs)
                 )
             }
         }

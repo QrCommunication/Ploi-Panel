@@ -22,6 +22,16 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import java.util.Locale
 
+/**
+ * A monitoring timestamp in the device's zone and locale ("30/09/2026 01:42"); the raw API text
+ * is shown unchanged when it cannot be parsed, so an odd value is visible rather than hidden.
+ */
+internal fun formatSampleTime(raw: String, locale: Locale = Locale.getDefault(), zone: java.util.TimeZone = java.util.TimeZone.getDefault()): String {
+    val millis = com.qrcommunication.ploipanel.widget.sampleTime(raw) ?: return raw
+    return java.text.DateFormat.getDateTimeInstance(java.text.DateFormat.SHORT, java.text.DateFormat.SHORT, locale)
+        .apply { timeZone = zone }.format(java.util.Date(millis))
+}
+
 /** Only the readings supplied by the API are drawn. A single reading has a gauge, never a trend. */
 @Composable
 internal fun MonitoringCharts(samples: List<MonitorSample>, modifier: Modifier = Modifier) {

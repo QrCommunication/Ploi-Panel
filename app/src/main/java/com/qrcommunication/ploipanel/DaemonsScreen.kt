@@ -1,6 +1,12 @@
 package com.qrcommunication.ploipanel
 
 import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.PaddingValues
+import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.outlined.Autorenew
+import androidx.compose.material.icons.outlined.PauseCircle
+import androidx.compose.material.icons.outlined.RestartAlt
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.FlowRow
@@ -90,88 +96,62 @@ internal fun DaemonsScreen(token: String, serverId: Long, lock: AppLock, activit
         }
     }
 
-    Column(Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(10.dp)) {
-        FlowRow(horizontalArrangement = Arrangement.spacedBy(8.dp), verticalArrangement = Arrangement.spacedBy(4.dp)) {
-            OutlinedButton(onClick = { refresh++ }, enabled = !loading && !busy) {
-                Text(stringResource(R.string.reload))
-            }
-            OutlinedButton(onClick = { creating = true }, enabled = !busy) {
-                Text(stringResource(R.string.new_daemon))
-            }
+    LazyColumn(
+        Modifier.fillMaxSize(),
+        verticalArrangement = Arrangement.spacedBy(PanelSpacing.md),
+        contentPadding = PaddingValues(vertical = PanelSpacing.sm)
+    ) {
+        item {
+            ListToolbar(
+                onRefresh = { refresh++ }, refreshEnabled = !loading && !busy,
+                primaryLabel = stringResource(R.string.new_daemon), onPrimary = { creating = true }, primaryEnabled = !busy,
+                summary = result?.let { stringResource(R.string.items_count, it.daemons.size) }
+            )
         }
-        if (loading) BusyIndicator()
-        if (error != null) ApiErrorText(error!!)
-        if (feedback.isNotEmpty()) Text(feedback)
+        if (loading) item { LoadingState(rows = 2) }
+        error?.let { failure -> item { ErrorState(failure, onRetry = { refresh++ }, retryEnabled = !loading) } }
+        if (feedback.isNotEmpty()) item { SuccessBanner(feedback) }
         result?.let { data ->
-            if (data.daemons.isEmpty()) Text(stringResource(R.string.empty_daemons))
-            FlowRow(horizontalArrangement = Arrangement.spacedBy(8.dp), verticalArrangement = Arrangement.spacedBy(4.dp)) {
-                OutlinedButton(onClick = { page-- }, enabled = page > 1) {
-                    Text(stringResource(R.string.previous))
-                }
-                Text(
-                    stringResource(R.string.page, data.currentPage.toString(), data.lastPage.toString()),
-                    Modifier.padding(top = 12.dp)
-                )
-                OutlinedButton(onClick = { page++ }, enabled = data.hasNext) {
-                    Text(stringResource(R.string.next))
-                }
-            }
-            LazyColumn(verticalArrangement = Arrangement.spacedBy(8.dp)) {
-                items(data.daemons, key = { it.id }) { daemon ->
-                    Card(modifier = Modifier.fillMaxWidth()) {
-                        Column(Modifier.padding(12.dp), verticalArrangement = Arrangement.spacedBy(6.dp)) {
-                            Text(daemon.command, style = MaterialTheme.typography.titleMedium)
-                            if (daemon.status.isNotBlank()) {
-                                Text(stringResource(R.string.daemon_status, daemon.status))
-                            }
-                            Text(stringResource(R.string.daemon_processes, daemon.processes))
-                            if (daemon.systemUser.isNotBlank()) {
-                                Text(stringResource(R.string.daemon_user, daemon.systemUser))
-                            }
-                            if (daemon.directory.isNotBlank()) {
-                                Text(stringResource(R.string.daemon_directory, daemon.directory))
-                            }
-                            FlowRow(horizontalArrangement = Arrangement.spacedBy(8.dp), verticalArrangement = Arrangement.spacedBy(4.dp)) {
-                                OutlinedButton(
-                                    onClick = {
-                                        busy = true
-                                        error = null
-                                        scope.launch {
-                                            try {
-                                                val message = withContext(Dispatchers.IO) {
-                                                    PloiApi.restartDaemon(token, serverId, daemon.id)
-                                                }
-                                                feedback = message.ifBlank { restartedFallback }
-                                                refresh++
-                                            } catch (cancelled: CancellationException) {
-                                                throw cancelled
-                                            } catch (failure: Exception) {
-                                                error = failure
-                                            } finally {
-                                                busy = false
-                                            }
-                                        }
-                                    },
-                                    enabled = !busy
-                                ) { Text(stringResource(R.string.restart_daemon)) }
-                                OutlinedButton(
-                                    onClick = {
-                                        runAction(pauseToggledMessage) {
-                                            PloiApi.togglePauseDaemon(token, serverId, daemon.id)
-                                        }
-                                    },
-                                    enabled = !busy
-                                ) { Text(stringResource(R.string.toggle_pause_daemon)) }
-                                OutlinedButton(onClick = { confirmDelete = daemon }, enabled = !busy) {
-                                    Text(
-                                        stringResource(R.string.delete_daemon),
-                                        color = MaterialTheme.colorScheme.error
-                                    )
+            if (data.daemons.isEmpty()) item { EmptyState(Icons.Outlined.Autorenew, stringResource(R.string.empty_daemons)) }
+            items(data.daemons, key = { it.id }) { daemon ->
+                ResourceCard(
+                    title = daemon.command, monoTitle = true, icon = Icons.Outlined.Autorenew,
+                    status = daemon.status,
+                    facts = listOfNotNull(
+                        ResourceFact(stringResource(R.string.daemon_processes_label), daemon.processes.toString()),
+                        daemon.systemUser.takeIf { it.isNotBlank() }?.let { ResourceFact(stringResource(R.string.daemon_user_label), it, mono = true) },
+                        daemon.directory.takeIf { it.isNotBlank() }?.let { ResourceFact(stringResource(R.string.daemon_directory_label), it, mono = true) }
+                    )
+                ) {
+                    CardAction(stringResource(R.string.restart_daemon), icon = Icons.Outlined.RestartAlt, enabled = !busy, onClick = {
+                        busy = true
+                        error = null
+                        scope.launch {
+                            try {
+                                val message = withContext(Dispatchers.IO) {
+                                    PloiApi.restartDaemon(token, serverId, daemon.id)
                                 }
+                                feedback = message.ifBlank { restartedFallback }
+                                refresh++
+                            } catch (cancelled: CancellationException) {
+                                throw cancelled
+                            } catch (failure: Exception) {
+                                error = failure
+                            } finally {
+                                busy = false
                             }
                         }
-                    }
+                    })
+                    CardAction(stringResource(R.string.toggle_pause_daemon), icon = Icons.Outlined.PauseCircle, enabled = !busy, onClick = {
+                        runAction(pauseToggledMessage) {
+                            PloiApi.togglePauseDaemon(token, serverId, daemon.id)
+                        }
+                    })
+                    DangerAction(stringResource(R.string.delete_daemon), onClick = { confirmDelete = daemon }, enabled = !busy)
                 }
+            }
+            item {
+                PageBar(data.currentPage, data.lastPage, data.hasNext, onPrevious = { page-- }, onNext = { page++ })
             }
         }
     }

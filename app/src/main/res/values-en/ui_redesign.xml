@@ -112,4 +112,15 @@
     <string name="recheck_device_no_ip">Can’t test from the phone: no IP address</string>
     <string name="recheck_checked_at">Tested at %1$s</string>
     <string name="recheck_retest">Retest</string>
+    <string name="servers_filter_all">All · %1$d</string>
+    <string name="servers_filter_healthy">Active · %1$d</string>
+    <string name="servers_filter_attention">Needs attention · %1$d</string>
+    <string name="status_unreachable">Unreachable</string>
+    <string name="status_installing">Installing</string>
+    <string name="recheck_compact_ok">Retested %1$s · port reachable from this phone</string>
+    <string name="recheck_compact_ko">Retested %1$s · Ploi: %2$s · port unreachable from this phone</string>
+    <string name="recheck_compact_running">Retesting…</string>
+    <string name="show_more">Show all</string>
+    <string name="show_less">Show less</string>
+    <string name="items_count">Items: %1$d</string>
 </resources>
