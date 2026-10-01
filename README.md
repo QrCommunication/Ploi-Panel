@@ -1,15 +1,17 @@
 # Ploi Panel — administration Ploi sur Android
 
-**Ploi Panel 0.2.0** est un client Android open source, local-first, pour gérer plusieurs profils Ploi, leurs serveurs et leurs sites depuis un téléphone ou un écran pliable. Il communique directement avec l'[API officielle Ploi](https://developers.ploi.io/) ; aucun compte intermédiaire ni serveur Ploi Panel n'est requis. L'application n'est pas affiliée à Ploi.
+**Ploi Panel 0.3.0** est un client Android open source, local-first, pour gérer plusieurs profils Ploi, leurs serveurs et leurs sites depuis un téléphone ou un écran pliable. Il communique directement avec l'[API officielle Ploi](https://developers.ploi.io/) ; aucun compte intermédiaire ni serveur Ploi Panel n'est requis. L'application n'est pas affiliée à Ploi.
 
-> **État de la version :** le code et les tests locaux ne prouvent pas une intégration validée sur un compte Ploi réel, ni une publication sur Google Play. Vérifiez les droits du jeton, l'abonnement et les effets des actions avant toute utilisation sur des ressources importantes. Ne publiez jamais de jeton, archive ou clé SSH dans une issue.
+> **État de la version :** les écrans de lecture ont été parcourus sur un compte Ploi réel (lectures seules) via un rendu JVM, sur quatre formats d'écran — voir [vérification](#construire-et-vérifier). Cela ne remplace pas un essai sur appareil : gestes, clavier, lecteur d'écran, biométrie, widgets posés sur un écran d'accueil et actions qui modifient des ressources restent à valider par vous. Aucune publication Google Play. Vérifiez les droits du jeton, l'abonnement et les effets des actions avant toute utilisation sur des ressources importantes. Ne publiez jamais de jeton, archive ou clé SSH dans une issue.
 
-## Fonctions présentes en 0.2.0
+## Fonctions présentes en 0.3.0
 
 - Profils Ploi multiples avec jetons Bearer locaux ; navigation serveurs, sites et domaines de l'API, dont déploiements, bases, certificats, sauvegardes et opérations d'administration. Certaines actions modifient ou suppriment des ressources distantes : elles nécessitent une attention particulière. L'[inventaire des routes et de leur statut](docs/api-coverage.md) recense **231 opérations implémentées/testées localement, non vérifiées en conditions réelles** ; il ne garantit ni disponibilité pour chaque compte ni compatibilité permanente avec l'API.
-- Interface français/anglais, thème clair/sombre, navigation adaptative ; PIN de l'application, biométrie forte optionnelle et confirmation des opérations sensibles.
+- Interface français/anglais, thème clair/sombre ; PIN de l'application (4 à 12 chiffres), biométrie forte optionnelle et confirmation des opérations sensibles.
+- Interface unifiée sur un [design system](docs/design-system.md) : barre de navigation sous 600 dp, rail latéral au-delà, liste et détail côte à côte à partir de 720 dp (pliant ouvert, tablette). Chaque écran de ressources partage la même présentation — barre d'outils, cartes avec statut en mots, détails en paires libellé/valeur, suppressions distinguées en rouge derrière confirmation, états vide/erreur/chargement explicites. Les valeurs machine (IP, ports, chemins, commandes) sont en police à largeur fixe.
+- Liste des serveurs : filtres par état avec compteurs de la page chargée, recherche locale, tirer pour actualiser. Les serveurs signalés injoignables par Ploi sont automatiquement retestés à l'ouverture de la liste et de la fiche (relecture du statut Ploi + test TCP vers le port SSH depuis le téléphone, résultats affichés séparément et horodatés). Ploi ne documente aucun moyen de relancer sa propre vérification : l'application ne le prétend pas.
 - Mesures de monitoring serveur issues de Ploi lorsqu'elles sont disponibles (selon installation et abonnement), avec horodatage ; pas de mesure inventée en l'absence de données.
-- Trois types de [widgets d'écran d'accueil](docs/widget-multiserver.md) : **un serveur** (jauges), **jusqu'à quatre serveurs** (liste), et [contrôles HTTP(S) de sites](docs/local-checks.md) (jusqu'à dix cibles). Après création du PIN et d'un profil, maintenir un espace vide sur l'écran d'accueil → **Widgets → Ploi Panel**, puis configurer le widget. Les données peuvent être périmées ; le contenu sensible est masqué lorsque l'appareil est verrouillé.
+- Trois types de [widgets d'écran d'accueil](docs/widget-multiserver.md) : **un serveur** (jauges), **jusqu'à trois serveurs** (liste), et [contrôles HTTP(S) de sites](docs/local-checks.md) (jusqu'à dix cibles). Thème clair/sombre suivi, jauges colorées par palier (sous 75 %, 75–89 %, 90 % et plus) avec la valeur écrite à côté, statut Ploi en toutes lettres ; une mesure absente n'est jamais affichée comme zéro. Après création du PIN et d'un profil, maintenir un espace vide sur l'écran d'accueil → **Widgets → Ploi Panel**, puis configurer le widget. Les données peuvent être périmées ; le contenu sensible est masqué lorsque l'appareil est verrouillé.
 - [Vérifications locales de sites](docs/local-checks.md) par HTTP(S), indépendantes des moniteurs de l'API Ploi : cibles, codes acceptés, état/latence et alertes panne/rétablissement facultatives. WorkManager a un plancher de **15 minutes**, pas une fréquence garantie ; hors ligne, appareil éteint ou restrictions Android empêchent les alertes.
 - [Export/import chiffré de configuration](docs/portable-configuration.md) avec phrase de passe distincte du PIN via sélecteur de fichiers Android. L'archive contient profils, jetons, modèles locaux de scripts et préférences langue/thème ; elle **n'inclut pas** PIN, widgets, historiques, contrôles HTTP locaux, clés privées SSH ni hôtes épinglés. La restauration sur un second appareil reste à vérifier physiquement.
 - [Terminal SSH intégré](docs/ssh.md) : sessions interactives multiples (onglets) directement du téléphone vers vos serveurs, émulation xterm-256color (couleurs, vim/nano/htop/less, écran alternatif), clavier logiciel + barre de touches (Ctrl, Alt, Échap, Tab, flèches, F1–F12), clavier physique, copier/coller, taille de police réglable. Authentification par **mot de passe** (jamais enregistré) ou **clé** : import OpenSSH/PEM, y compris protégées par phrase de passe, ou **génération Ed25519 sur le téléphone** puis autorisation sur le serveur via l'API Ploi. La clé d'hôte est vérifiée contre les empreintes épinglées (TOFU) **avant** tout envoi d'identifiant ; hôte inconnu ou modifié = connexion bloquée. Ouverture en un geste depuis la fiche d'un serveur (IP et port SSH Ploi préremplis), destinations enregistrées par profil.
@@ -39,7 +41,18 @@ Prérequis : **JDK 17**, SDK Android API 36 installé et licences SDK acceptées
 ./gradlew :app:testDebugUnitTest :app:lintDebug :app:assembleDebug
 ```
 
-APK de développement : `app/build/outputs/apk/debug/app-debug.apk`. Tests unitaires/API avec réponses simulées, sans compte Ploi réel. Une distribution de release exige signature privée hors dépôt, tests sur appareil et revue des politiques Play ; voir [PLAY_RELEASE.md](docs/PLAY_RELEASE.md). Contributions : [CONTRIBUTING.md](CONTRIBUTING.md) ; changements : [CHANGELOG.md](CHANGELOG.md).
+APK de développement : `app/build/outputs/apk/debug/app-debug.apk`. Les tests unitaires et d'API utilisent des réponses simulées ; le rapport lint doit afficher `No issues found.`
+
+Un parcours de captures d'écran facultatif rend les écrans réels sur la JVM (Robolectric, graphismes natifs) en lisant un vrai compte Ploi — **lectures seules**, aucune création, modification ni suppression :
+
+```sh
+PLOI_SCREENSHOT_TOKEN_FILE=/chemin/vers/jeton \
+  ./gradlew :app:testDebugUnitTest -Pscreenshots --tests '*LiveScreenshotTour*'
+```
+
+Sans l'option `-Pscreenshots`, ces tests sont exclus : ils ne s'exécutent ni en local par défaut ni en CI. Le jeton est lu dans un fichier (jamais un argument ni une variable commitée) et les images sortent dans `app/build/screenshots/` (téléphone, pliant fermé, pliant ouvert, tablette). `WidgetScreenshots` rend de la même manière les widgets réels en thèmes clair et sombre. Un audit équivalent (`LiveParserAudit`, `PLOI_LIVE_SAMPLES_DIR`) rejoue chaque lecture de l'API sur des réponses réelles enregistrées localement.
+
+Une distribution de release exige signature privée hors dépôt, tests sur appareil et revue des politiques Play ; voir [PLAY_RELEASE.md](docs/PLAY_RELEASE.md). Contributions : [CONTRIBUTING.md](CONTRIBUTING.md) ; changements : [CHANGELOG.md](CHANGELOG.md).
 
 ## FAQ
 

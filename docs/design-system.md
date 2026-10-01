@@ -1,4 +1,4 @@
-# Design system et navigation (refonte UI 0.3)
+# Design system et navigation (refonte UI 0.3.0)
 
 Référence courte pour garder l'interface cohérente. Code : `PanelTheme.kt`, `DesignComponents.kt`,
 `AppNavigation.kt`.
@@ -51,7 +51,7 @@ null` ; boutons icône seuls : libellé traduit.
   couvrant les 16 sous-écrans (`ServerSection`) ; chaque sous-écran s'ouvre dans un viewport pondéré
   avec retour borné à la liste des catégories.
 
-## Correctifs 0.3
+## Correctifs 0.3.0
 
 - **Fermeture sur Monitoring** : la langue intégrée remplace `LocalContext` par un contexte de configuration qui n'est pas l'Activity ; `rememberLauncherForActivityResult` (permission de notification des alertes et de la Surveillance) levait « No ActivityResultRegistryOwner ». `LocalizedActivityScope` fournit explicitement l'Activity comme propriétaire. Test Robolectric `LocalizedActivityScopeTest`, vérifié en échec sans le correctif.
 - **PIN 4 à 12 chiffres** : politique unique `pinProblem()` ; la saisie accepte jusqu'à 12 chiffres, affiche un compteur et la règle exacte non respectée (suite, chiffre répété) pendant la frappe. Changement de PIN : même pavé et mêmes étapes que la création. Test Robolectric `PinEntryLengthTest` (8 et 12 chiffres, 13e ignoré).

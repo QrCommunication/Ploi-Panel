@@ -7,7 +7,7 @@
 
 **Vérification à effectuer sur appareil :** installation et redimensionnement des deux widgets sur le lanceur visé, défilement tactile de trois lignes, écran verrouillé/déverrouillé, activation biométrique/PIN et comportement de l'adaptateur de liste sur les versions Android prises en charge. Les tests JVM, lint et l'assemblage ne constituent pas une validation visuelle du lanceur.
 
-## Présentation (refonte 0.3)
+## Présentation (refonte 0.3.0)
 
 - Mises en page natives clair/sombre (`values/` et `values-night/widget_colors.xml`), contrastes AA vérifiés.
 - Une barre de progression native par mesure en pourcentage (CPU, RAM, disque), avec la valeur écrite à côté ; couleur par palier (< 75 %, 75–89 %, ≥ 90 %) jamais utilisée seule. Une mesure absente ou illisible masque sa barre (jamais affichée à 0). La charge reste du texte.
