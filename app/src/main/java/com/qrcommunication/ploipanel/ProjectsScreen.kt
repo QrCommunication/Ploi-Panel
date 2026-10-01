@@ -1,0 +1,270 @@
+package com.qrcommunication.ploipanel
+
+import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.PaddingValues
+import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.heightIn
+import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.verticalScroll
+import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.foundation.lazy.items
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.outlined.Edit
+import androidx.compose.material.icons.outlined.Workspaces
+import androidx.compose.material3.AlertDialog
+import androidx.compose.material3.Button
+import androidx.compose.material3.Checkbox
+import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.OutlinedButton
+import androidx.compose.material3.OutlinedTextField
+import androidx.compose.material3.Text
+import androidx.compose.material3.TextButton
+import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableIntStateOf
+import androidx.compose.runtime.mutableLongStateOf
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberCoroutineScope
+import androidx.compose.runtime.setValue
+import androidx.compose.ui.Alignment
+import androidx.compose.ui.Modifier
+import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.unit.dp
+import androidx.fragment.app.FragmentActivity
+import kotlinx.coroutines.CancellationException
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.launch
+import kotlinx.coroutines.withContext
+
+/** Projects domain: account-level projects grouping servers and sites. */
+@Composable
+internal fun ProjectsScreen(token: String, lock: AppLock, activity: FragmentActivity) {
+    val scope = rememberCoroutineScope()
+    var page by remember(token) { mutableIntStateOf(1) }
+    var refresh by remember(token) { mutableIntStateOf(0) }
+    var result by remember(token) { mutableStateOf<ProjectPage?>(null) }
+    var loading by remember(token) { mutableStateOf(true) }
+    var error by remember(token) { mutableStateOf<Throwable?>(null) }
+    var feedback by remember(token) { mutableStateOf("") }
+    var busy by remember(token) { mutableStateOf(false) }
+    var editing by remember { mutableStateOf<PloiProject?>(null) }
+    var creating by remember { mutableStateOf(false) }
+    var confirmDelete by remember { mutableStateOf<PloiProject?>(null) }
+
+    val doneMessage = stringResource(R.string.action_done)
+
+    LaunchedEffect(token, page, refresh) {
+        loading = true
+        result = null
+        error = null
+        try {
+            result = withContext(Dispatchers.IO) { PloiApi.projects(token, page) }
+        } catch (cancelled: CancellationException) {
+            throw cancelled
+        } catch (failure: Exception) {
+            result = null
+            error = failure
+        } finally {
+            loading = false
+        }
+    }
+
+    fun runAction(message: String, onSuccess: () -> Unit = {}, block: suspend () -> Unit) {
+        busy = true
+        error = null
+        feedback = ""
+        scope.launch {
+            try {
+                withContext(Dispatchers.IO) { block() }
+                feedback = message
+                refresh++
+                onSuccess()
+            } catch (cancelled: CancellationException) {
+                throw cancelled
+            } catch (failure: Exception) {
+                error = failure
+            } finally {
+                busy = false
+            }
+        }
+    }
+
+    LazyColumn(
+        Modifier.fillMaxSize(),
+        verticalArrangement = Arrangement.spacedBy(PanelSpacing.md),
+        contentPadding = PaddingValues(vertical = PanelSpacing.sm)
+    ) {
+        item {
+            ListToolbar(
+                onRefresh = { refresh++ }, refreshEnabled = !loading && !busy,
+                primaryLabel = stringResource(R.string.new_project), onPrimary = { creating = true }, primaryEnabled = !busy,
+                summary = result?.let { stringResource(R.string.items_count, it.projects.size) }
+            )
+        }
+        if (loading) item { LoadingState(rows = 2) }
+        error?.let { failure -> item { ErrorState(failure, onRetry = { refresh++ }, retryEnabled = !loading && !busy) } }
+        if (feedback.isNotEmpty()) item { SuccessBanner(feedback) }
+        result?.let { data ->
+            if (data.projects.isEmpty()) item { EmptyState(Icons.Outlined.Workspaces, stringResource(R.string.empty_projects)) }
+            items(data.projects, key = { it.id }) { project ->
+                // Live API embeds server objects: show their names, fall back to the bare ID otherwise.
+                val serverLabels = project.serverIds.map { id -> project.serverNames[id] ?: "#$id" }
+                val siteLabels = project.sites.map { site -> site.rootDomain.ifBlank { "#${site.id}" } }
+                ResourceCard(
+                    title = project.title, icon = Icons.Outlined.Workspaces,
+                    facts = listOfNotNull(
+                        ResourceFact(
+                            stringResource(R.string.g4_servers_label),
+                            serverLabels.joinToString(", ").ifEmpty { "0" }
+                        ),
+                        ResourceFact(
+                            stringResource(R.string.g4_sites_label),
+                            siteLabels.joinToString(", ").ifEmpty { "0" }
+                        ),
+                        project.createdAt.takeIf { it.isNotBlank() }?.let {
+                            ResourceFact(stringResource(R.string.g4_created_label), it)
+                        }
+                    )
+                ) {
+                    CardAction(stringResource(R.string.project_edit), icon = Icons.Outlined.Edit, enabled = !busy,
+                        onClick = { editing = project })
+                    DangerAction(stringResource(R.string.project_delete), onClick = { confirmDelete = project }, enabled = !busy)
+                }
+            }
+            item {
+                PageBar(data.currentPage, data.lastPage, data.hasNext, onPrevious = { page-- }, onNext = { page++ })
+            }
+        }
+    }
+
+    if (creating || editing != null) {
+        ProjectDialog(
+            initial = editing,
+            token = token,
+            busy = busy,
+            submitError = error,
+            onSubmit = { request ->
+                val target = editing
+                runAction(doneMessage, onSuccess = { creating = false; editing = null }) {
+                    if (target == null) PloiApi.createProject(token, request)
+                    else PloiApi.updateProject(token, target.id, request)
+                }
+            },
+            onDismiss = { creating = false; editing = null }
+        )
+    }
+    confirmDelete?.let { project ->
+        SensitiveConfirmDialog(
+            lock = lock,
+            activity = activity,
+            message = stringResource(R.string.confirm_project_delete, project.title),
+            confirmLabel = R.string.project_delete,
+            onConfirmed = {
+                confirmDelete = null
+                runAction(doneMessage) { PloiApi.deleteProject(token, project.id) }
+            },
+            onDismiss = { confirmDelete = null }
+        )
+    }
+}
+
+/** Create/edit dialog: paged server/site pickers plus manual IDs for existing associations. */
+@Composable
+private fun ProjectDialog(
+    initial: PloiProject?, token: String, busy: Boolean, submitError: Throwable?,
+    onSubmit: (ProjectRequest) -> Unit, onDismiss: () -> Unit
+) {
+    var title by remember(initial?.id) { mutableStateOf(initial?.title.orEmpty()) }
+    var servers by remember(initial?.id) {
+        mutableStateOf(initial?.serverIds?.joinToString(",").orEmpty())
+    }
+    var sites by remember(initial?.id) {
+        mutableStateOf(initial?.sites?.joinToString(",") { it.id.toString() }.orEmpty())
+    }
+    var browsingServer by remember(initial?.id) { mutableLongStateOf(initial?.serverIds?.firstOrNull() ?: 0L) }
+    var invalid by remember { mutableStateOf(false) }
+    AlertDialog(
+        onDismissRequest = { if (!busy) onDismiss() },
+        title = { Text(stringResource(if (initial == null) R.string.new_project else R.string.project_edit)) },
+        text = {
+            Column(Modifier.heightIn(max = 360.dp).verticalScroll(rememberScrollState()),
+                verticalArrangement = Arrangement.spacedBy(PanelSpacing.md)) {
+                OutlinedTextField(
+                    value = title, onValueChange = { title = it },
+                    label = { Text(stringResource(R.string.project_title_label)) },
+                    singleLine = true, modifier = Modifier.fillMaxWidth()
+                )
+                OutlinedTextField(
+                    value = servers, onValueChange = { servers = it.filter { c -> c.isDigit() || c == ',' || c == ' ' } },
+                    label = { Text(stringResource(R.string.project_servers_label)) },
+                    singleLine = true, modifier = Modifier.fillMaxWidth()
+                )
+                OutlinedTextField(
+                    value = sites, onValueChange = { sites = it.filter { c -> c.isDigit() || c == ',' || c == ' ' } },
+                    label = { Text(stringResource(R.string.project_sites_label)) },
+                    singleLine = true, modifier = Modifier.fillMaxWidth()
+                )
+                PagedOptionPicker(
+                    key = token, label = stringResource(R.string.project_pick_servers),
+                    emptyLabel = stringResource(R.string.project_no_servers),
+                    load = { page -> PloiApi.servers(token, page = page, perPage = 50).let {
+                        PickerOptions(it.servers, it.currentPage, it.lastPage)
+                    } }
+                ) { server ->
+                    Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
+                        Checkbox(
+                            checked = server.id in parseProjectIds(servers).orEmpty(),
+                            onCheckedChange = { checked -> servers = toggleProjectId(servers, server.id, checked) },
+                            enabled = parseProjectIds(servers) != null
+                        )
+                        TextButton(onClick = { browsingServer = server.id }) {
+                            Text(stringResource(R.string.project_browse_server_sites, server.name))
+                        }
+                    }
+                }
+                if (browsingServer > 0) {
+                    PagedOptionPicker(
+                        key = token to browsingServer, label = stringResource(R.string.project_pick_sites),
+                        emptyLabel = stringResource(R.string.project_no_sites),
+                        load = { page -> PloiApi.sites(token, browsingServer, page = page, perPage = 50).let {
+                            PickerOptions(it.sites, it.currentPage, it.lastPage)
+                        } }
+                    ) { site ->
+                        Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
+                            Checkbox(
+                                checked = site.id in parseProjectIds(sites).orEmpty(),
+                                onCheckedChange = { checked -> sites = toggleProjectId(sites, site.id, checked) },
+                                enabled = parseProjectIds(sites) != null
+                            )
+                            Text(site.domain, style = MaterialTheme.typography.bodyMedium)
+                        }
+                    }
+                }
+                if (invalid) Text(stringResource(R.string.invalid_form), color = MaterialTheme.colorScheme.error)
+                if (submitError != null) ApiErrorText(submitError)
+            }
+        },
+        confirmButton = {
+            Button(
+                onClick = {
+                    val serverIds = parseProjectIds(servers)
+                    val siteIds = parseProjectIds(sites)
+                    val request = if (serverIds != null && siteIds != null) {
+                        try { ProjectRequest(title.trim(), serverIds, siteIds) }
+                        catch (_: IllegalArgumentException) { null }
+                    } else null
+                    if (request == null) invalid = true else onSubmit(request)
+                },
+                enabled = !busy && title.isNotBlank()
+            ) { Text(stringResource(R.string.submit_action)) }
+        },
+        dismissButton = {
+            OutlinedButton(onClick = onDismiss, enabled = !busy) { Text(stringResource(R.string.cancel)) }
+        }
+    )
+}

@@ -1,0 +1,23 @@
+<resources>
+    <string name="widget_config_no_profiles">No profiles available. Add a profile in Ploi Panel.</string>
+    <string name="widget_config_count">Selected: %1$d/%2$d</string>
+    <string name="widget_config_limit">Limit reached (%1$d). Deselect a server to continue.</string>
+    <string name="widget_config_page_error">Could not load this page of servers.</string>
+    <string name="widget_config_retry">Retry</string>
+    <string name="widget_config_empty_page">No servers on this page.</string>
+    <string name="widget_config_previous">Previous</string>
+    <string name="widget_config_next">Next</string>
+    <string name="widget_config_page">Page %1$d</string>
+    <string name="widget_config_cpu">CPU usage</string>
+    <string name="widget_config_ram">Memory usage (RAM)</string>
+    <string name="widget_config_disk">Disk usage</string>
+    <string name="widget_config_load">System load</string>
+    <string name="widget_config_single_rule">One server, shown with its gauges.</string>
+    <string name="widget_config_multi_rule">Servers shown: up to %1$d</string>
+    <string name="widget_config_checks_rule">Monitoring targets: up to %1$d</string>
+    <string name="widget_config_step_profile">1. Ploi profile</string>
+    <string name="widget_config_step_server">2. Server (one only)</string>
+    <string name="widget_config_step_servers">2. Servers</string>
+    <string name="widget_config_step_metrics">3. Metrics shown</string>
+    <string name="widget_config_remove_named">Remove %1$s</string>
+</resources>

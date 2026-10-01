@@ -1,0 +1,44 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="deploy_global_tab">Deployments</string>
+    <string name="deploy_global_templates">Deployment templates</string>
+    <string name="deploy_global_local_hint">Templates are stored locally, encrypted and scoped to the profile. This text replaces the Ploi script on selected sites; it does not trigger a deployment.</string>
+    <string name="deploy_global_new">New template</string>
+    <string name="deploy_global_name">Template name</string>
+    <string name="deploy_global_text">Script contents</string>
+    <string name="deploy_global_length">%1$d / %2$d</string>
+    <string name="deploy_global_save_local">Save local template</string>
+    <string name="deploy_global_delete">Delete template</string>
+    <string name="deploy_global_delete_confirm">Delete this local template? Scripts already saved on Ploi will not be changed.</string>
+    <string name="deploy_global_invalid">Invalid name, content, domain or placeholders. Check script length and duplicate names.</string>
+    <string name="deploy_global_placeholders">Optional placeholders: {{domain}} (shell-quoted site domain), {{server_id}}, {{site_id}}. Do not place {{domain}} inside existing quotes. Inspect the script before applying it.</string>
+    <string name="deploy_global_select_sites">Target sites</string>
+    <string name="deploy_global_replace_warning">Explicitly select sites. Their current deploy scripts will be replaced; check site-specific paths and commands. No deployment will run.</string>
+    <string name="deploy_global_servers">Account servers</string>
+    <string name="deploy_global_empty_servers">No servers available</string>
+    <string name="deploy_global_sites_on">Sites on %1$s</string>
+    <plurals name="deploy_global_count">
+        <item quantity="one">%d site selected</item>
+        <item quantity="other">%d sites selected</item>
+    </plurals>
+    <string name="deploy_global_remove_site">Remove %1$s (%2$s)</string>
+    <string name="deploy_global_preview">Excerpt for %1$s:</string>
+    <string name="deploy_global_apply">Apply text to selected sites</string>
+    <plurals name="deploy_global_confirm">
+        <item quantity="one">Replace the selected site’s deployment script? PIN or biometric verification is required. This will not deploy the site.</item>
+        <item quantity="other">Replace deployment scripts on %d selected sites? PIN or biometric verification is required. This will not deploy them.</item>
+    </plurals>
+    <string name="deploy_global_progress">Sites processed: %1$d / %2$d</string>
+    <string name="deploy_global_preflight_abort">No scripts changed: a preflight read failed for at least one site.</string>
+    <string name="deploy_global_report">Per-site result (script update, not deployment)</string>
+    <string name="deploy_global_verified">Saved and read back</string>
+    <string name="deploy_global_unverified">Change sent; readback unconfirmed</string>
+    <string name="deploy_global_failed">Request failed</string>
+    <string name="deploy_global_preflight_failed">Preflight read failed</string>
+    <string name="deploy_global_skipped">Not changed</string>
+    <string name="deploy_global_result">%1$s: %2$s</string>
+    <string name="deploy_site_editor_hint">Deployment script for this site. Saving replaces the Ploi script after PIN/biometric verification; it does not start a deployment.</string>
+    <string name="deploy_discard_title">Leave without saving?</string>
+    <string name="deploy_discard_message">Changes to this script will be lost.</string>
+    <string name="deploy_discard_action">Discard changes</string>
+</resources>

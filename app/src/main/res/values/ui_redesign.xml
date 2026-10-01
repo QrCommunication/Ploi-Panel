@@ -1,0 +1,236 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <!-- Navigation principale -->
+    <string name="nav_servers">Serveurs</string>
+    <string name="nav_terminal">Terminal</string>
+    <string name="nav_monitoring">Veille</string>
+    <string name="nav_deploy">Déployer</string>
+    <string name="nav_more">Plus</string>
+    <string name="nav_locked_during_batch">Navigation bloquée pendant l’application du script de déploiement.</string>
+
+    <!-- Hub « Plus » -->
+    <string name="more_title">Plus d’outils</string>
+    <string name="more_providers_description">Comptes cloud reliés à Ploi, plans et régions pour créer des serveurs</string>
+    <string name="more_account_description">Informations du compte Ploi, canaux de notification et sauvegardes</string>
+    <string name="more_scripts_description">Bibliothèque de scripts et exécution sur plusieurs serveurs</string>
+    <string name="more_status_pages_description">Pages de statut publiques et leurs incidents</string>
+    <string name="more_templates_description">Modèles de configuration du serveur web</string>
+    <string name="more_projects_description">Regroupez sites et serveurs par projet</string>
+    <string name="more_settings_description">Profils, apparence, sécurité, SSH, sauvegarde de la configuration</string>
+
+    <!-- Barre supérieure et sélecteur de profil -->
+    <string name="profile_menu_open">Profil actif : %1$s. Changer de profil</string>
+    <string name="profile_menu_manage">Gérer les profils</string>
+    <string name="profile_menu_switch_failed">Jeton illisible : impossible d’activer ce profil.</string>
+
+    <!-- États génériques -->
+    <string name="state_error_title">Chargement impossible</string>
+    <string name="state_retry">Réessayer</string>
+
+    <!-- Statut serveur -->
+    <string name="status_kind_healthy">Actif</string>
+    <string name="status_kind_pending">En cours</string>
+    <string name="status_kind_error">Problème</string>
+    <string name="status_kind_unknown">Inconnu</string>
+    <string name="status_with_raw">%1$s (%2$s)</string>
+
+    <!-- Liste des serveurs -->
+    <string name="servers_search_label">Filtrer la page chargée</string>
+    <string name="servers_search_scope">Filtre local : seule la page affichée est parcourue, pas tout le compte. Serveurs chargés : %1$d</string>
+    <string name="servers_search_clear">Effacer le filtre</string>
+    <string name="servers_search_empty_title">Aucun serveur ne correspond sur cette page</string>
+    <string name="servers_search_empty_body">Le filtre ne parcourt que la page chargée. Effacez-le ou changez de page.</string>
+    <string name="servers_empty_title">Aucun serveur</string>
+    <string name="server_card_terminal">Terminal SSH vers %1$s</string>
+    <string name="server_card_no_ip">Adresse IP non renseignée</string>
+    <string name="servers_page_label">Page %1$s sur %2$s</string>
+
+    <!-- Détail serveur -->
+    <string name="server_category_overview">Vue d’ensemble</string>
+    <string name="server_category_overview_description">Monitoring, informations, journaux et insights</string>
+    <string name="server_category_apps">Sites et applications</string>
+    <string name="server_category_apps_description">Sites, load balancer et conteneurs Docker</string>
+    <string name="server_category_data">Données</string>
+    <string name="server_category_data_description">Bases de données et sauvegardes</string>
+    <string name="server_category_system">Système</string>
+    <string name="server_category_system_description">Services, daemons, crons, utilisateurs, pare-feu et script ponctuel</string>
+    <string name="server_category_access">Accès</string>
+    <string name="server_category_access_description">Clés SSH du serveur et terminal interactif</string>
+    <string name="server_all_categories">Toutes les catégories</string>
+    <string name="server_section_monitoring_description">Charge, mémoire et disque mesurés par Ploi</string>
+    <string name="server_section_infos_description">Détails, modification, redémarrage et suppression</string>
+    <string name="server_section_logs_description">Historique d’activité du serveur</string>
+    <string name="server_section_insights_description">Recommandations et points détectés par Ploi</string>
+    <string name="server_section_sites_description">Sites hébergés, déploiements et configuration</string>
+    <string name="server_section_load_balancer_description">Répartit les requêtes entre plusieurs serveurs</string>
+    <string name="server_section_containers_description">Conteneurs Docker du serveur</string>
+    <string name="server_section_databases_description">Bases, utilisateurs et accès</string>
+    <string name="server_section_backups_description">Sauvegardes de bases et de fichiers</string>
+    <string name="server_section_services_description">Démarrer ou redémarrer les services système</string>
+    <string name="server_section_daemons_description">Processus maintenus en arrière-plan</string>
+    <string name="server_section_crontabs_description">Tâches planifiées</string>
+    <string name="server_section_system_users_description">Comptes Unix du serveur</string>
+    <string name="server_section_network_rules_description">Règles de pare-feu entrantes</string>
+    <string name="server_section_one_off_script_description">Exécuter une commande unique, après confirmation</string>
+    <string name="server_section_ssh_keys_description">Clés publiques autorisées sur le serveur</string>
+    <string name="server_section_terminal_description">Session SSH interactive depuis cet appareil</string>
+
+    <!-- Verrouillage et PIN -->
+    <string name="lock_enter_pin">Saisissez votre code PIN pour continuer.</string>
+    <string name="pin_step_confirm">Confirmez votre code PIN</string>
+    <string name="pin_step_confirm_intro">Saisissez à nouveau le même code.</string>
+    <string name="pin_continue">Continuer</string>
+    <string name="pin_restart">Recommencer</string>
+    <string name="pin_backspace">Effacer le dernier chiffre</string>
+    <string name="pin_digits_entered">Chiffres saisis : %1$d</string>
+    <string name="pin_locked_title">Déverrouillage suspendu</string>
+
+    <!-- Accueil sans profil -->
+    <string name="welcome_title">Connectez votre compte Ploi</string>
+    <string name="welcome_new_profile">Nouveau profil</string>
+
+    <!-- Réglages -->
+    <string name="settings_profiles_description">Chaque profil garde son jeton chiffré sur cet appareil.</string>
+    <string name="settings_security_description">Code PIN, biométrie et verrouillage automatique</string>
+    <string name="settings_about_body">Vos jetons restent chiffrés sur cet appareil et les appels partent directement vers l’API Ploi.</string>
+    <string name="pin_length_counter">Longueur autorisée %2$d à %3$d, saisie : %1$d</string>
+    <string name="pin_problem_length">Le code doit compter de 4 à 12 chiffres.</string>
+    <string name="pin_problem_repeated">Code trop simple : un seul chiffre répété (ex. 111111).</string>
+    <string name="pin_problem_sequence">Code trop simple : suite continue (ex. 123456 ou 654321).</string>
+    <string name="recheck_title">Nouveau test de connexion</string>
+    <string name="recheck_running">Test en cours : statut Ploi et connexion depuis ce téléphone…</string>
+    <string name="recheck_ploi_status">Statut relu chez Ploi : %1$s</string>
+    <string name="recheck_ploi_failed">Relecture Ploi impossible : %1$s</string>
+    <string name="recheck_device_ok">Ce téléphone joint le port %1$d (%2$d ms)</string>
+    <string name="recheck_device_refused">Ce téléphone atteint le serveur, connexion refusée sur le port %1$d</string>
+    <string name="recheck_device_timeout">Ce téléphone ne joint pas le port %1$d (délai dépassé)</string>
+    <string name="recheck_device_failed">Ce téléphone ne joint pas le port %1$d (réseau ou adresse)</string>
+    <string name="recheck_device_no_ip">Test depuis le téléphone impossible : aucune adresse IP</string>
+    <string name="recheck_checked_at">Testé à %1$s</string>
+    <string name="recheck_retest">Retester</string>
+    <string name="servers_filter_all">Tous · %1$d</string>
+    <string name="servers_filter_healthy">Actifs · %1$d</string>
+    <string name="servers_filter_attention">À vérifier · %1$d</string>
+    <string name="status_unreachable">Injoignable</string>
+    <string name="status_installing">Installation</string>
+    <string name="recheck_compact_ok">Retesté %1$s · port joignable depuis ce téléphone</string>
+    <string name="recheck_compact_ko">Retesté %1$s · Ploi : %2$s · port injoignable depuis ce téléphone</string>
+    <string name="recheck_compact_running">Nouveau test en cours…</string>
+    <string name="show_more">Afficher tout</string>
+    <string name="show_less">Réduire</string>
+    <string name="items_count">Éléments : %1$d</string>
+    <!-- g1: firewall, crons, system users, SSH keys, insights, load balancer -->
+    <string name="g1_network_rule_port">Port</string>
+    <string name="g1_network_rule_action">Action</string>
+    <string name="g1_network_rule_from">Depuis</string>
+    <string name="g1_crontab_frequency">Fréquence</string>
+    <string name="g1_fact_user">Utilisateur</string>
+    <string name="g1_fact_created">Créé le</string>
+    <string name="g1_system_user_root">Racine</string>
+    <string name="g1_ssh_key_public">Clé publique</string>
+    <string name="g1_insight_priority">Priorité</string>
+    <string name="g1_lb_backends_title">Serveurs backends</string>
+    <string name="g1_lb_backends_description">Attacher ou détacher un serveur par son ID Ploi.</string>
+    <string name="g1_lb_certificates_title">Certificats</string>
+    <string name="g1_lb_certificates_description">Demander ou révoquer le certificat d’un domaine de ce load balancer.</string>
+    <!-- g2: databases, backups, services, containers -->
+    <string name="g2_linked_site_label">Site lié</string>
+    <string name="g2_created_label">Créé le</string>
+    <string name="g2_remote_ip_label">IP distante</string>
+    <string name="g2_interval_label">Fréquence</string>
+    <string name="g2_kept_label">Archives conservées</string>
+    <string name="g2_last_run_label">Dernière exécution</string>
+    <string name="g2_next_run_label">Prochaine exécution</string>
+    <string name="g2_site_label">Site</string>
+    <string name="g2_path_label">Chemin</string>
+    <string name="g2_ploi_status_label">Statut Ploi</string>
+    <string name="g2_php_cli_label">PHP CLI actuel</string>
+    <string name="g2_logs_empty">Aucune ligne de log renvoyée.</string>
+    <!-- g5: device-side screens (watchdog, SSH, transfer, alerts) -->
+    <string name="g5_local_checks_title">Supervision locale des sites</string>
+    <string name="g5_local_checks_fact_http">Code HTTP</string>
+    <string name="g5_local_checks_fact_latency">Latence</string>
+    <string name="g5_local_checks_fact_last">Dernier contrôle</string>
+    <string name="g5_ssh_term_destination">Destination</string>
+    <string name="g5_ssh_term_empty_title">Aucune destination enregistrée</string>
+    <string name="g5_ssh_term_font_smaller">Réduire la taille du texte</string>
+    <string name="g5_ssh_term_font_larger">Agrandir la taille du texte</string>
+    <string name="g5_ssh_fact_type">Type</string>
+    <string name="g5_ssh_fact_fingerprint">Empreinte SHA-256</string>
+    <!-- Account-level screens redesign (g4) -->
+    <string name="g4_account_plan_label">Abonnement</string>
+    <string name="g4_account_expiry_label">Expiration</string>
+    <string name="g4_created_label">Créé le</string>
+    <string name="g4_delay_label">Délai</string>
+    <string name="g4_seconds_value">%1$d s</string>
+    <string name="g4_execution_title">Exécution</string>
+    <string name="g4_exit_code_label">Code de sortie</string>
+    <string name="g4_started_label">Démarré</string>
+    <string name="g4_finished_label">Terminé</string>
+    <string name="g4_next_run_label">Prochaine exécution</string>
+    <string name="g4_last_run_label">Dernière exécution</string>
+    <string name="g4_last_triggered_label">Dernier déclenchement</string>
+    <string name="g4_repositories_show">Voir les dépôts</string>
+    <string name="g4_repositories_hide">Masquer les dépôts</string>
+    <string name="g4_run_as_label">Exécuté en tant que</string>
+    <string name="g4_server_error">Serveur %1$d : %2$s</string>
+    <string name="g4_server_number">Serveur %1$d</string>
+    <string name="g4_server_setup">Configuration du serveur</string>
+    <string name="g4_servers_label">Serveurs</string>
+    <string name="g4_sites_label">Sites</string>
+    <string name="g4_slug_label">Slug</string>
+    <string name="g4_state_label">État</string>
+    <string name="g4_type_label">Type</string>
+    <!-- Site area redesign (g3) -->
+    <string name="g3_site_average_uptime">Uptime moyen</string>
+    <string name="g3_site_certificate_active">Certificat actif</string>
+    <string name="g3_site_created_at">Créé le</string>
+    <string name="g3_site_disk_usage">Espace disque</string>
+    <string name="g3_site_enabled">Activé</string>
+    <string name="g3_site_expires">Expire le</string>
+    <string name="g3_site_health_url">URL de santé</string>
+    <string name="g3_site_installed">Installé</string>
+    <string name="g3_site_jobs">Jobs</string>
+    <string name="g3_site_last_deploy">Dernier déploiement</string>
+    <string name="g3_site_location">Localisation</string>
+    <string name="g3_site_main_domain">Domaine principal</string>
+    <string name="g3_site_path">Chemin</string>
+    <string name="g3_site_project_type">Type de projet</string>
+    <string name="g3_site_protected_path">Chemin protégé</string>
+    <string name="g3_site_queue">Queue</string>
+    <string name="g3_site_quick_deploy">Déploiement rapide</string>
+    <string name="g3_site_repository">Dépôt</string>
+    <string name="g3_site_robots_blocked">Robots bloqués</string>
+    <string name="g3_site_sections">Gérer le site</string>
+    <string name="g3_site_supervisors">Superviseurs</string>
+    <string name="g3_site_system_user">Utilisateur système</string>
+    <string name="g3_site_test_domain">Domaine de test</string>
+    <string name="g3_site_type">Type</string>
+    <string name="g3_site_wait">Attente</string>
+    <string name="g3_site_web_directory">Répertoire web</string>
+    <string name="status_open">À traiter</string>
+    <string name="status_resolved">Résolu</string>
+    <string name="status_ignored">Ignoré</string>
+    <string name="status_paused">En pause</string>
+    <string name="status_failed">Échec</string>
+    <string name="status_running">En cours d’exécution</string>
+    <string name="priority_low">Basse</string>
+    <string name="priority_medium">Moyenne</string>
+    <string name="priority_high">Haute</string>
+    <string name="priority_critical">Critique</string>
+    <string name="fact_ip">Adresse IP</string>
+    <string name="fact_ssh_port">Port SSH</string>
+    <string name="fact_type">Type</string>
+    <string name="fact_sites">Sites</string>
+    <string name="fact_monitoring">Monitoring Ploi</string>
+    <string name="fact_provider">Fournisseur</string>
+    <string name="fact_created">Créé le</string>
+    <string name="fact_yes">Installé</string>
+    <string name="fact_no">Non installé</string>
+    <plurals name="dashboard_servers">
+        <item quantity="one">%1$d serveur</item>
+        <item quantity="other">%1$d serveurs</item>
+    </plurals>
+    <string name="firewall_allow">Autoriser</string>
+    <string name="firewall_deny">Bloquer</string>
+</resources>

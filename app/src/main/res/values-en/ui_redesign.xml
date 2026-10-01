@@ -1,0 +1,236 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <!-- Primary navigation -->
+    <string name="nav_servers">Servers</string>
+    <string name="nav_terminal">Terminal</string>
+    <string name="nav_monitoring">Checks</string>
+    <string name="nav_deploy">Deploy</string>
+    <string name="nav_more">More</string>
+    <string name="nav_locked_during_batch">Navigation is locked while the deploy script is being applied.</string>
+
+    <!-- More hub -->
+    <string name="more_title">More tools</string>
+    <string name="more_providers_description">Cloud accounts linked to Ploi, plans and regions for new servers</string>
+    <string name="more_account_description">Ploi account details, notification channels and backups</string>
+    <string name="more_scripts_description">Script library and multi-server runs</string>
+    <string name="more_status_pages_description">Public status pages and their incidents</string>
+    <string name="more_templates_description">Web server configuration templates</string>
+    <string name="more_projects_description">Group sites and servers by project</string>
+    <string name="more_settings_description">Profiles, appearance, security, SSH, configuration backup</string>
+
+    <!-- Top bar and profile switcher -->
+    <string name="profile_menu_open">Active profile: %1$s. Switch profile</string>
+    <string name="profile_menu_manage">Manage profiles</string>
+    <string name="profile_menu_switch_failed">Unreadable token: this profile cannot be activated.</string>
+
+    <!-- Generic states -->
+    <string name="state_error_title">Couldn’t load</string>
+    <string name="state_retry">Retry</string>
+
+    <!-- Server status -->
+    <string name="status_kind_healthy">Active</string>
+    <string name="status_kind_pending">In progress</string>
+    <string name="status_kind_error">Problem</string>
+    <string name="status_kind_unknown">Unknown</string>
+    <string name="status_with_raw">%1$s (%2$s)</string>
+
+    <!-- Server list -->
+    <string name="servers_search_label">Filter the loaded page</string>
+    <string name="servers_search_scope">Local filter: only the page on screen is searched, not the whole account. Servers loaded: %1$d</string>
+    <string name="servers_search_clear">Clear filter</string>
+    <string name="servers_search_empty_title">No server matches on this page</string>
+    <string name="servers_search_empty_body">The filter only searches the loaded page. Clear it or change page.</string>
+    <string name="servers_empty_title">No servers</string>
+    <string name="server_card_terminal">SSH terminal to %1$s</string>
+    <string name="server_card_no_ip">No IP address</string>
+    <string name="servers_page_label">Page %1$s of %2$s</string>
+
+    <!-- Server detail -->
+    <string name="server_category_overview">Overview</string>
+    <string name="server_category_overview_description">Monitoring, details, logs and insights</string>
+    <string name="server_category_apps">Sites and apps</string>
+    <string name="server_category_apps_description">Sites, load balancer and Docker containers</string>
+    <string name="server_category_data">Data</string>
+    <string name="server_category_data_description">Databases and backups</string>
+    <string name="server_category_system">System</string>
+    <string name="server_category_system_description">Services, daemons, crons, users, firewall and one-off script</string>
+    <string name="server_category_access">Access</string>
+    <string name="server_category_access_description">Server SSH keys and interactive terminal</string>
+    <string name="server_all_categories">All categories</string>
+    <string name="server_section_monitoring_description">Load, memory and disk measured by Ploi</string>
+    <string name="server_section_infos_description">Details, edit, restart and delete</string>
+    <string name="server_section_logs_description">Server activity history</string>
+    <string name="server_section_insights_description">Recommendations and findings from Ploi</string>
+    <string name="server_section_sites_description">Hosted sites, deployments and configuration</string>
+    <string name="server_section_load_balancer_description">Traffic distribution to other servers</string>
+    <string name="server_section_containers_description">Docker containers on this server</string>
+    <string name="server_section_databases_description">Databases, users and access</string>
+    <string name="server_section_backups_description">Database and file backups</string>
+    <string name="server_section_services_description">Start or restart system services</string>
+    <string name="server_section_daemons_description">Background processes kept running</string>
+    <string name="server_section_crontabs_description">Scheduled tasks</string>
+    <string name="server_section_system_users_description">Unix accounts on the server</string>
+    <string name="server_section_network_rules_description">Inbound firewall rules</string>
+    <string name="server_section_one_off_script_description">Run a single command after confirmation</string>
+    <string name="server_section_ssh_keys_description">Public keys authorised on the server</string>
+    <string name="server_section_terminal_description">Interactive SSH session from this device</string>
+
+    <!-- Lock and PIN -->
+    <string name="lock_enter_pin">Enter your PIN to continue.</string>
+    <string name="pin_step_confirm">Confirm your PIN</string>
+    <string name="pin_step_confirm_intro">Enter the same code again.</string>
+    <string name="pin_continue">Continue</string>
+    <string name="pin_restart">Start over</string>
+    <string name="pin_backspace">Delete last digit</string>
+    <string name="pin_digits_entered">Digits entered: %1$d</string>
+    <string name="pin_locked_title">Unlock paused</string>
+
+    <!-- Welcome without profile -->
+    <string name="welcome_title">Connect your Ploi account</string>
+    <string name="welcome_new_profile">New profile</string>
+
+    <!-- Settings -->
+    <string name="settings_profiles_description">Each profile keeps its token encrypted on this device.</string>
+    <string name="settings_security_description">PIN, biometrics and auto-lock</string>
+    <string name="settings_about_body">Your tokens stay encrypted on this device and calls go straight to the Ploi API.</string>
+    <string name="pin_length_counter">Allowed length %2$d to %3$d, entered: %1$d</string>
+    <string name="pin_problem_length">The code must be 4 to 12 digits long.</string>
+    <string name="pin_problem_repeated">Too simple: one digit repeated (e.g. 111111).</string>
+    <string name="pin_problem_sequence">Too simple: a straight run (e.g. 123456 or 654321).</string>
+    <string name="recheck_title">Connection retest</string>
+    <string name="recheck_running">Testing: Ploi status and connection from this phone…</string>
+    <string name="recheck_ploi_status">Status re-read from Ploi: %1$s</string>
+    <string name="recheck_ploi_failed">Couldn’t re-read Ploi: %1$s</string>
+    <string name="recheck_device_ok">This phone reaches port %1$d (%2$d ms)</string>
+    <string name="recheck_device_refused">This phone reaches the server, connection refused on port %1$d</string>
+    <string name="recheck_device_timeout">This phone can’t reach port %1$d (timed out)</string>
+    <string name="recheck_device_failed">This phone can’t reach port %1$d (network or address)</string>
+    <string name="recheck_device_no_ip">Can’t test from the phone: no IP address</string>
+    <string name="recheck_checked_at">Tested at %1$s</string>
+    <string name="recheck_retest">Retest</string>
+    <string name="servers_filter_all">All · %1$d</string>
+    <string name="servers_filter_healthy">Active · %1$d</string>
+    <string name="servers_filter_attention">Needs attention · %1$d</string>
+    <string name="status_unreachable">Unreachable</string>
+    <string name="status_installing">Installing</string>
+    <string name="recheck_compact_ok">Retested %1$s · port reachable from this phone</string>
+    <string name="recheck_compact_ko">Retested %1$s · Ploi: %2$s · port unreachable from this phone</string>
+    <string name="recheck_compact_running">Retesting…</string>
+    <string name="show_more">Show all</string>
+    <string name="show_less">Show less</string>
+    <string name="items_count">Items: %1$d</string>
+    <!-- g1: firewall, crons, system users, SSH keys, insights, load balancer -->
+    <string name="g1_network_rule_port">Port</string>
+    <string name="g1_network_rule_action">Action</string>
+    <string name="g1_network_rule_from">From</string>
+    <string name="g1_crontab_frequency">Frequency</string>
+    <string name="g1_fact_user">User</string>
+    <string name="g1_fact_created">Created</string>
+    <string name="g1_system_user_root">Root</string>
+    <string name="g1_ssh_key_public">Public key</string>
+    <string name="g1_insight_priority">Priority</string>
+    <string name="g1_lb_backends_title">Backend servers</string>
+    <string name="g1_lb_backends_description">Attach or detach a server by its Ploi ID.</string>
+    <string name="g1_lb_certificates_title">Certificates</string>
+    <string name="g1_lb_certificates_description">Request or revoke the certificate of a domain on this load balancer.</string>
+    <!-- g2: databases, backups, services, containers -->
+    <string name="g2_linked_site_label">Linked site</string>
+    <string name="g2_created_label">Created</string>
+    <string name="g2_remote_ip_label">Remote IP</string>
+    <string name="g2_interval_label">Frequency</string>
+    <string name="g2_kept_label">Archives kept</string>
+    <string name="g2_last_run_label">Last run</string>
+    <string name="g2_next_run_label">Next run</string>
+    <string name="g2_site_label">Site</string>
+    <string name="g2_path_label">Path</string>
+    <string name="g2_ploi_status_label">Ploi status</string>
+    <string name="g2_php_cli_label">Current PHP CLI</string>
+    <string name="g2_logs_empty">No log lines returned.</string>
+    <!-- g5: device-side screens (watchdog, SSH, transfer, alerts) -->
+    <string name="g5_local_checks_title">Local site monitoring</string>
+    <string name="g5_local_checks_fact_http">HTTP status</string>
+    <string name="g5_local_checks_fact_latency">Latency</string>
+    <string name="g5_local_checks_fact_last">Last check</string>
+    <string name="g5_ssh_term_destination">Destination</string>
+    <string name="g5_ssh_term_empty_title">No saved destination</string>
+    <string name="g5_ssh_term_font_smaller">Decrease text size</string>
+    <string name="g5_ssh_term_font_larger">Increase text size</string>
+    <string name="g5_ssh_fact_type">Type</string>
+    <string name="g5_ssh_fact_fingerprint">SHA-256 fingerprint</string>
+    <!-- Account-level screens redesign (g4) -->
+    <string name="g4_account_plan_label">Plan</string>
+    <string name="g4_account_expiry_label">Expires</string>
+    <string name="g4_created_label">Created</string>
+    <string name="g4_delay_label">Delay</string>
+    <string name="g4_seconds_value">%1$d s</string>
+    <string name="g4_execution_title">Execution</string>
+    <string name="g4_exit_code_label">Exit code</string>
+    <string name="g4_started_label">Started</string>
+    <string name="g4_finished_label">Finished</string>
+    <string name="g4_next_run_label">Next run</string>
+    <string name="g4_last_run_label">Last run</string>
+    <string name="g4_last_triggered_label">Last triggered</string>
+    <string name="g4_repositories_show">Show repositories</string>
+    <string name="g4_repositories_hide">Hide repositories</string>
+    <string name="g4_run_as_label">Runs as</string>
+    <string name="g4_server_error">Server %1$d: %2$s</string>
+    <string name="g4_server_number">Server %1$d</string>
+    <string name="g4_server_setup">Server setup</string>
+    <string name="g4_servers_label">Servers</string>
+    <string name="g4_sites_label">Sites</string>
+    <string name="g4_slug_label">Slug</string>
+    <string name="g4_state_label">Status</string>
+    <string name="g4_type_label">Type</string>
+    <!-- Site area redesign (g3) -->
+    <string name="g3_site_average_uptime">Average uptime</string>
+    <string name="g3_site_certificate_active">Active certificate</string>
+    <string name="g3_site_created_at">Created</string>
+    <string name="g3_site_disk_usage">Disk usage</string>
+    <string name="g3_site_enabled">Enabled</string>
+    <string name="g3_site_expires">Expires</string>
+    <string name="g3_site_health_url">Health URL</string>
+    <string name="g3_site_installed">Installed</string>
+    <string name="g3_site_jobs">Jobs</string>
+    <string name="g3_site_last_deploy">Last deployment</string>
+    <string name="g3_site_location">Location</string>
+    <string name="g3_site_main_domain">Main domain</string>
+    <string name="g3_site_path">Path</string>
+    <string name="g3_site_project_type">Project type</string>
+    <string name="g3_site_protected_path">Protected path</string>
+    <string name="g3_site_queue">Queue</string>
+    <string name="g3_site_quick_deploy">Quick deploy</string>
+    <string name="g3_site_repository">Repository</string>
+    <string name="g3_site_robots_blocked">Robots blocked</string>
+    <string name="g3_site_sections">Manage the site</string>
+    <string name="g3_site_supervisors">Supervisors</string>
+    <string name="g3_site_system_user">System user</string>
+    <string name="g3_site_test_domain">Test domain</string>
+    <string name="g3_site_type">Type</string>
+    <string name="g3_site_wait">Wait</string>
+    <string name="g3_site_web_directory">Web directory</string>
+    <string name="status_open">Open</string>
+    <string name="status_resolved">Resolved</string>
+    <string name="status_ignored">Ignored</string>
+    <string name="status_paused">Paused</string>
+    <string name="status_failed">Failed</string>
+    <string name="status_running">Running</string>
+    <string name="priority_low">Low</string>
+    <string name="priority_medium">Medium</string>
+    <string name="priority_high">High</string>
+    <string name="priority_critical">Critical</string>
+    <string name="fact_ip">IP address</string>
+    <string name="fact_ssh_port">SSH port</string>
+    <string name="fact_type">Type</string>
+    <string name="fact_sites">Sites</string>
+    <string name="fact_monitoring">Ploi monitoring</string>
+    <string name="fact_provider">Provider</string>
+    <string name="fact_created">Created</string>
+    <string name="fact_yes">Installed</string>
+    <string name="fact_no">Not installed</string>
+    <plurals name="dashboard_servers">
+        <item quantity="one">%1$d server</item>
+        <item quantity="other">%1$d servers</item>
+    </plurals>
+    <string name="firewall_allow">Allow</string>
+    <string name="firewall_deny">Deny</string>
+</resources>

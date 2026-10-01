@@ -1,0 +1,42 @@
+<resources>
+    <string name="local_checks_tab">Watchdog</string>
+    <string name="local_checks_hint">HTTP(S) checks run by this phone, independent from the Ploi API. Background checks are best effort: no alert can fire while the device is offline, powered off or restricted. Minimum Android interval: 15 minutes, not guaranteed.</string>
+    <string name="local_checks_empty">No target configured. Add a URL to watch.</string>
+    <string name="local_checks_add">Add a target</string>
+    <string name="local_checks_edit">Edit target</string>
+    <string name="local_checks_check">Check</string>
+    <string name="local_checks_check_all">Check all</string>
+    <string name="local_checks_checking">Checking…</string>
+    <string name="local_checks_delete">Delete</string>
+    <string name="local_checks_delete_confirm">Delete target "%1$s" and its local history?</string>
+    <string name="local_checks_alerts">Outage / recovery alerts</string>
+    <string name="local_checks_alerts_denied">Notifications denied by the system: alerts stay off.</string>
+    <string name="local_checks_state_up">Up</string>
+    <string name="local_checks_state_down">Down</string>
+    <string name="local_checks_state_unknown">Unknown</string>
+    <string name="local_checks_never_checked">Never checked</string>
+    <string name="local_checks_last_checked">Checked %1$s</string>
+    <string name="local_checks_stale">Data may be stale</string>
+    <string name="local_checks_latency">%1$d ms</string>
+    <string name="local_checks_http_status">HTTP %1$d</string>
+    <plurals name="local_checks_failures">
+        <item quantity="one">1 consecutive failure</item>
+        <item quantity="other">%1$d consecutive failures</item>
+    </plurals>
+    <string name="local_checks_label_field">Label</string>
+    <string name="local_checks_url_field">URL (http or https)</string>
+    <string name="local_checks_method_field">Method</string>
+    <string name="local_checks_timeout_field">Timeout (ms, 1000–30000)</string>
+    <string name="local_checks_statuses_field">Accepted codes (e.g. 200, 204)</string>
+    <string name="local_checks_debounce_field">Failures before alert (1–10)</string>
+    <string name="local_checks_error_invalid">Invalid target definition.</string>
+    <string name="local_checks_error_duplicate">A target already uses this label.</string>
+    <string name="local_checks_error_limit">Maximum number of targets reached.</string>
+    <string name="local_checks_error_statuses">Invalid accepted HTTP codes.</string>
+    <string name="local_checks_channel">Local site watchdog</string>
+    <string name="local_checks_down_title">%1$s is down</string>
+    <string name="local_checks_down_http">Repeated failures; unexpected HTTP code: %1$d.</string>
+    <string name="local_checks_down_unreachable">Target unreachable after repeated failures.</string>
+    <string name="local_checks_up_title">%1$s recovered</string>
+    <string name="local_checks_up_text">Response accepted again (%1$d ms).</string>
+</resources>

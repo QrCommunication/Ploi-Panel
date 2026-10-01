@@ -1,0 +1,23 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="threshold_channel">Monitoring thresholds</string>
+    <string name="threshold_title">Threshold alerts</string>
+    <string name="threshold_hint">Notifies when CPU, RAM or disk (Ploi Monitoring) crosses the threshold, then when it is back below. Checked on a best-effort basis every 15 minutes at least, while the phone is online; Ploi samples may be delayed. Leave a field empty to ignore a metric.</string>
+    <string name="threshold_sustained">Consecutive readings above the threshold before alerting:</string>
+    <string name="threshold_save">Save thresholds</string>
+    <string name="threshold_remove">Remove alerts</string>
+    <string name="threshold_saved">Thresholds saved for this server.</string>
+    <string name="threshold_removed">Alerts removed for this server.</string>
+    <string name="threshold_invalid">Enter at least one threshold between 1 and 100%.</string>
+    <string name="threshold_limit">Maximum number of watched servers reached (50).</string>
+    <string name="threshold_permission_denied">Notifications denied: thresholds are saved but no alert will be shown.</string>
+    <string name="threshold_breached_title">%1$s: high %2$s</string>
+    <string name="threshold_breached_text">%1$s at %2$d%% (threshold %3$d%%).</string>
+    <string name="threshold_recovered_title">%1$s: %2$s recovered</string>
+    <string name="threshold_recovered_text">%1$s back to %2$d%%.</string>
+    <string name="autolock_title">Auto-lock after leaving the app</string>
+    <string name="autolock_immediate">Immediately</string>
+    <string name="autolock_seconds">%1$d s</string>
+    <string name="autolock_minutes">%1$d min</string>
+    <string name="autolock_hint">Grace delay before the PIN is asked again when you come back to the app. The “Lock” button stays immediate; restarting the app always locks.</string>
+</resources>

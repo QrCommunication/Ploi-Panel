@@ -1,0 +1,15 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="picker_retry">Retry this page</string>
+    <string name="backup_run_requested">Run request sent (backup completion not confirmed)</string>
+    <string name="project_pick_servers">Select servers (50 per page)</string>
+    <string name="project_no_servers">No servers available</string>
+    <string name="project_browse_server_sites">Sites on %1$s</string>
+    <string name="project_pick_sites">Select sites on this server (50 per page)</string>
+    <string name="project_no_sites">No sites available on this server</string>
+    <string name="picker_selected_configuration">Selected configuration: %1$s</string>
+    <plurals name="picker_selected_items">
+        <item quantity="one">%d item selected in total</item>
+        <item quantity="other">%d items selected in total</item>
+    </plurals>
+</resources>

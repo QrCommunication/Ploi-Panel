@@ -1,0 +1,7 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="widget_unknown_server">Server #%1$d</string>
+    <string name="widget_multi_count">Servers: %1$d/%2$d</string>
+    <string name="widget_updated_short">at %1$s</string>
+    <string name="widget_load_short">load %1$s</string>
+</resources>

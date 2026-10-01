@@ -1,0 +1,469 @@
+package com.qrcommunication.ploipanel
+
+import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.imePadding
+import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.FlowRow
+import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.text.KeyboardOptions
+import androidx.compose.foundation.verticalScroll
+import androidx.compose.material3.AlertDialog
+import androidx.compose.material3.Button
+import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.OutlinedButton
+import androidx.compose.material3.OutlinedTextField
+import androidx.compose.material3.Surface
+import androidx.compose.material3.Switch
+import androidx.compose.material3.Text
+import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableIntStateOf
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberCoroutineScope
+import androidx.compose.runtime.setValue
+import androidx.compose.ui.Alignment
+import androidx.compose.ui.Modifier
+import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.semantics.heading
+import androidx.compose.ui.semantics.semantics
+import androidx.compose.ui.text.input.KeyboardType
+import androidx.compose.ui.text.style.TextOverflow
+import androidx.compose.ui.unit.dp
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.outlined.Bolt
+import androidx.compose.material.icons.outlined.Code
+import androidx.compose.ui.window.Dialog
+import androidx.compose.ui.window.DialogProperties
+import androidx.fragment.app.FragmentActivity
+import kotlinx.coroutines.CancellationException
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.launch
+import kotlinx.coroutines.withContext
+
+/**
+ * Repository dialog (repositories domain): shows the installed repository, installs one
+ * when missing (404), toggles quick deploy, enables custom deployments and deletes the
+ * repository after PIN/biometric re-authentication.
+ */
+@Composable
+internal fun RepositoryDialog(
+    token: String, serverId: Long, siteId: Long, siteDomain: String,
+    lock: AppLock, activity: FragmentActivity,
+    onChanged: () -> Unit, onDismiss: () -> Unit
+) {
+    val scope = rememberCoroutineScope()
+    var refresh by remember { mutableIntStateOf(0) }
+    var repository by remember { mutableStateOf<SiteRepository?>(null) }
+    var missing by remember { mutableStateOf(false) }
+    var loading by remember { mutableStateOf(true) }
+    var error by remember { mutableStateOf<Throwable?>(null) }
+    var busy by remember { mutableStateOf(false) }
+    var feedback by remember { mutableStateOf("") }
+    var confirmDelete by remember { mutableStateOf(false) }
+    val deletedMessage = stringResource(R.string.repository_deleted)
+    val installedMessage = stringResource(R.string.repository_installed)
+    val customEnabledMessage = stringResource(R.string.custom_deployments_enabled)
+
+    LaunchedEffect(token, serverId, siteId, refresh) {
+        loading = true
+        error = null
+        feedback = ""
+        repository = null
+        try {
+            repository = withContext(Dispatchers.IO) { PloiApi.repository(token, serverId, siteId) }
+            missing = false
+        } catch (cancelled: CancellationException) {
+            throw cancelled
+        } catch (failure: Exception) {
+            repository = null
+            if (failure is PloiHttpException && failure.status == 404) {
+                missing = true
+            } else {
+                error = failure
+            }
+        } finally {
+            loading = false
+        }
+    }
+
+    fun runAction(message: String, block: suspend () -> Unit) {
+        busy = true
+        error = null
+        feedback = ""
+        scope.launch {
+            try {
+                withContext(Dispatchers.IO) { block() }
+                feedback = message
+                refresh++
+                onChanged()
+            } catch (cancelled: CancellationException) {
+                throw cancelled
+            } catch (failure: Exception) {
+                error = failure
+            } finally {
+                busy = false
+            }
+        }
+    }
+
+    AlertDialog(
+        onDismissRequest = onDismiss,
+        title = { Text(stringResource(R.string.repository_title)) },
+        text = {
+            Column(
+                Modifier.verticalScroll(rememberScrollState()),
+                verticalArrangement = Arrangement.spacedBy(PanelSpacing.md)
+            ) {
+                if (loading) BusyIndicator()
+                if (error != null) ErrorState(error!!, onRetry = { refresh++ }, retryEnabled = !loading && !busy)
+                if (feedback.isNotEmpty()) SuccessBanner(feedback)
+                repository?.let { repo ->
+                    val linked = repo.provider.isNotBlank() && repo.provider != "none"
+                    val yesNo = stringResource(if (repo.quickDeploy) R.string.flag_yes else R.string.flag_no)
+                    if (!linked) Text(stringResource(R.string.repository_custom), style = MaterialTheme.typography.bodyMedium,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant)
+                    SiteFacts(listOfNotNull(
+                        repo.provider.takeIf { linked }?.let { ResourceFact(stringResource(R.string.repository_provider_label), it) },
+                        repo.repositoryName.takeIf { linked && it.isNotBlank() }?.let { ResourceFact(stringResource(R.string.g3_site_repository), it, mono = true) },
+                        repo.branch.takeIf { linked && it.isNotBlank() }?.let { ResourceFact(stringResource(R.string.repository_branch_label), it, mono = true) },
+                        ResourceFact(stringResource(R.string.g3_site_quick_deploy), yesNo),
+                        repo.lastDeployAt.takeIf { it.isNotBlank() }?.let { ResourceFact(stringResource(R.string.g3_site_last_deploy), it) }
+                    ))
+                    FlowRow(horizontalArrangement = Arrangement.spacedBy(PanelSpacing.sm), verticalArrangement = Arrangement.spacedBy(PanelSpacing.xs)) {
+                        CardAction(stringResource(R.string.quick_deploy_toggle), icon = Icons.Outlined.Bolt, enabled = !busy, onClick = {
+                            runAction("") { PloiApi.toggleQuickDeploy(token, serverId, siteId) }
+                        })
+                        DangerAction(stringResource(R.string.repository_delete), onClick = { confirmDelete = true }, enabled = !busy)
+                    }
+                    CustomDeploymentForm(busy = busy, onEnable = { script ->
+                        runAction(customEnabledMessage) {
+                            PloiApi.enableCustomDeployments(token, serverId, siteId, script)
+                        }
+                    })
+                }
+                if (!loading && missing) {
+                    Text(stringResource(R.string.repository_none), style = MaterialTheme.typography.bodyMedium,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant)
+                    InstallRepositoryForm(busy = busy, onInstall = { request ->
+                        runAction(installedMessage) { PloiApi.installRepository(token, serverId, siteId, request) }
+                    })
+                }
+            }
+        },
+        confirmButton = { OutlinedButton(onClick = onDismiss, enabled = !busy) { Text(stringResource(R.string.close)) } }
+    )
+
+    if (confirmDelete) {
+        SensitiveConfirmDialog(lock = lock, activity = activity,
+            message = stringResource(R.string.confirm_delete_repository, siteDomain),
+            confirmLabel = R.string.repository_delete,
+            onConfirmed = {
+                confirmDelete = false
+                runAction(deletedMessage) { PloiApi.deleteRepository(token, serverId, siteId) }
+            },
+            onDismiss = { confirmDelete = false })
+    }
+}
+
+/** Install form for POST /sites/{site}/repository with documented validation. */
+@Composable
+private fun InstallRepositoryForm(busy: Boolean, onInstall: (InstallRepositoryRequest) -> Unit) {
+    var provider by remember { mutableStateOf("") }
+    var branch by remember { mutableStateOf("") }
+    var name by remember { mutableStateOf("") }
+    var sourceProviderId by remember { mutableStateOf("") }
+    var installComposer by remember { mutableStateOf(false) }
+    var invalid by remember { mutableStateOf(false) }
+
+    Column(verticalArrangement = Arrangement.spacedBy(PanelSpacing.md)) {
+        SectionHeader(stringResource(R.string.repository_install))
+        OutlinedTextField(value = provider, onValueChange = { provider = it },
+            label = { Text(stringResource(R.string.repository_provider_label)) },
+            supportingText = { Text(stringResource(R.string.repository_provider_hint)) },
+            singleLine = true, modifier = Modifier.fillMaxWidth())
+        OutlinedTextField(value = branch, onValueChange = { branch = it },
+            label = { Text(stringResource(R.string.repository_branch_label)) },
+            singleLine = true, modifier = Modifier.fillMaxWidth())
+        OutlinedTextField(value = name, onValueChange = { name = it },
+            label = { Text(stringResource(R.string.repository_name_label)) },
+            singleLine = true, modifier = Modifier.fillMaxWidth())
+        OutlinedTextField(value = sourceProviderId, onValueChange = { sourceProviderId = it.filter(Char::isDigit) },
+            label = { Text(stringResource(R.string.repository_source_provider_label)) },
+            singleLine = true, keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
+            modifier = Modifier.fillMaxWidth())
+        Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
+            Text(stringResource(R.string.repository_install_composer), Modifier.padding(top = 12.dp))
+            Switch(checked = installComposer, onCheckedChange = { installComposer = it })
+        }
+        if (invalid) Text(stringResource(R.string.invalid_form), color = MaterialTheme.colorScheme.error)
+        Button(onClick = {
+            val request = try {
+                InstallRepositoryRequest(
+                    provider = provider.trim(), branch = branch.trim(), name = name.trim(),
+                    sourceProviderId = sourceProviderId.toLongOrNull(), installComposer = installComposer
+                )
+            } catch (invalidInput: IllegalArgumentException) {
+                invalid = true
+                null
+            }
+            if (request != null) {
+                invalid = false
+                onInstall(request)
+            }
+        }, enabled = !busy && provider.isNotBlank() && branch.isNotBlank() && name.isNotBlank()) {
+            Text(stringResource(R.string.repository_install))
+        }
+    }
+}
+
+/** Optional initial-installation script for POST …/repository/custom-deployments. */
+@Composable
+private fun CustomDeploymentForm(busy: Boolean, onEnable: (String) -> Unit) {
+    var showForm by remember { mutableStateOf(false) }
+    var script by remember { mutableStateOf("") }
+    Column(verticalArrangement = Arrangement.spacedBy(PanelSpacing.sm)) {
+        CardAction(stringResource(R.string.custom_deployments_enable), icon = Icons.Outlined.Code,
+            enabled = !busy, onClick = { showForm = !showForm })
+        if (showForm) {
+            OutlinedTextField(value = script, onValueChange = { script = it },
+                label = { Text(stringResource(R.string.custom_deployments_script)) },
+                textStyle = panelMonoStyle,
+                modifier = Modifier.fillMaxWidth())
+            Button(onClick = {
+                showForm = false
+                onEnable(script.trim())
+            }, enabled = !busy) { Text(stringResource(R.string.custom_deployments_enable)) }
+        }
+    }
+}
+
+/** Deploy script viewer/editor; saving replaces the script after re-authentication. */
+@Composable
+internal fun DeployScriptDialog(
+    token: String, serverId: Long, siteId: Long, siteDomain: String,
+    lock: AppLock, activity: FragmentActivity, onDismiss: () -> Unit
+) {
+    val scope = rememberCoroutineScope()
+    var content by remember(token, serverId, siteId) { mutableStateOf<String?>(null) }
+    var draft by remember(token, serverId, siteId) { mutableStateOf("") }
+    var loading by remember(token, serverId, siteId) { mutableStateOf(true) }
+    var saving by remember { mutableStateOf(false) }
+    var error by remember { mutableStateOf<Throwable?>(null) }
+    var feedback by remember { mutableStateOf("") }
+    var pendingSave by remember { mutableStateOf<String?>(null) }
+    var confirmDiscard by remember { mutableStateOf(false) }
+    val savedMessage = stringResource(R.string.deploy_script_saved)
+
+    LaunchedEffect(token, serverId, siteId) {
+        loading = true
+        error = null
+        feedback = ""
+        content = null
+        try {
+            val fetched = withContext(Dispatchers.IO) { PloiApi.deployScript(token, serverId, siteId) }
+            content = fetched
+            draft = fetched
+        } catch (cancelled: CancellationException) {
+            throw cancelled
+        } catch (failure: Exception) {
+            error = failure
+        } finally {
+            loading = false
+        }
+    }
+
+    Dialog(
+        onDismissRequest = { if (!saving) { if (content != null && draft != content) confirmDiscard = true else onDismiss() } },
+        properties = DialogProperties(usePlatformDefaultWidth = false)
+    ) {
+        Surface(Modifier.fillMaxSize().imePadding().padding(PanelSpacing.md), shape = MaterialTheme.shapes.large) {
+            Column(Modifier.fillMaxSize().padding(PanelSpacing.lg), verticalArrangement = Arrangement.spacedBy(PanelSpacing.md)) {
+                Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(PanelSpacing.md)) {
+                    IconBadge(Icons.Outlined.Code, size = 36)
+                    Column(Modifier.weight(1f)) {
+                        Text(stringResource(R.string.deploy_script), style = MaterialTheme.typography.titleLarge,
+                            modifier = Modifier.semantics { heading() })
+                        Text(siteDomain, style = panelMonoStyle, color = MaterialTheme.colorScheme.onSurfaceVariant,
+                            maxLines = 1, overflow = TextOverflow.Ellipsis)
+                    }
+                }
+                Text(stringResource(R.string.deploy_site_editor_hint), style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant)
+                if (loading) BusyIndicator()
+                if (error != null) ErrorState(error!!)
+                if (feedback.isNotEmpty()) SuccessBanner(feedback)
+                if (content != null) {
+                    OutlinedTextField(
+                        value = draft, onValueChange = { draft = it; feedback = "" },
+                        label = { Text(stringResource(R.string.deploy_script_edit)) },
+                        textStyle = panelMonoStyle,
+                        enabled = !saving, modifier = Modifier.weight(1f).fillMaxWidth()
+                    )
+                    Text(stringResource(R.string.deploy_global_length, draft.length, DEPLOY_SCRIPT_MAX_LENGTH),
+                        style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                } else androidx.compose.foundation.layout.Spacer(Modifier.weight(1f))
+                FlowRow(horizontalArrangement = Arrangement.spacedBy(PanelSpacing.sm)) {
+                    OutlinedButton(onClick = {
+                        if (draft != content && content != null) confirmDiscard = true else onDismiss()
+                    }, enabled = !saving) { Text(stringResource(R.string.back)) }
+                    Button(onClick = { pendingSave = draft },
+                        enabled = !saving && content != null && draft != content &&
+                            draft.isNotBlank() && draft.length <= DEPLOY_SCRIPT_MAX_LENGTH) {
+                        Text(stringResource(R.string.save))
+                    }
+                }
+            }
+        }
+    }
+    if (confirmDiscard) AlertDialog(
+        onDismissRequest = { confirmDiscard = false },
+        title = { Text(stringResource(R.string.deploy_discard_title)) },
+        text = { Text(stringResource(R.string.deploy_discard_message)) },
+        confirmButton = { Button(onClick = { confirmDiscard = false; onDismiss() }) {
+            Text(stringResource(R.string.deploy_discard_action))
+        } },
+        dismissButton = { OutlinedButton(onClick = { confirmDiscard = false }) { Text(stringResource(R.string.cancel)) } }
+    )
+
+    val pending = pendingSave
+    if (pending != null) {
+        SensitiveConfirmDialog(lock = lock, activity = activity,
+            message = stringResource(R.string.confirm_deploy_script_save, siteDomain),
+            confirmLabel = R.string.save,
+            onConfirmed = {
+                pendingSave = null
+                saving = true
+                error = null
+                feedback = ""
+                scope.launch {
+                    try {
+                        val confirmed = withContext(Dispatchers.IO) {
+                            PloiApi.updateDeployScript(token, serverId, siteId, pending)
+                            PloiApi.deployScript(token, serverId, siteId)
+                        }
+                        check(confirmed == pending) { "Deployment script readback differs" }
+                        content = confirmed
+                        feedback = savedMessage
+                    } catch (cancelled: CancellationException) {
+                        throw cancelled
+                    } catch (failure: Exception) {
+                        error = failure
+                    } finally {
+                        saving = false
+                    }
+                }
+            },
+            onDismiss = { pendingSave = null })
+    }
+}
+
+/** .env viewer/editor; saving replaces the file after re-authentication. */
+@Composable
+internal fun EnvDialog(
+    token: String, serverId: Long, siteId: Long, siteDomain: String,
+    lock: AppLock, activity: FragmentActivity, onDismiss: () -> Unit
+) {
+    val scope = rememberCoroutineScope()
+    var content by remember { mutableStateOf<String?>(null) }
+    var draft by remember { mutableStateOf("") }
+    var editing by remember { mutableStateOf(false) }
+    var loading by remember { mutableStateOf(true) }
+    var saving by remember { mutableStateOf(false) }
+    var error by remember { mutableStateOf<Throwable?>(null) }
+    var pendingSave by remember { mutableStateOf<String?>(null) }
+    var feedback by remember { mutableStateOf("") }
+    val savedMessage = stringResource(R.string.env_saved)
+
+    LaunchedEffect(token, serverId, siteId) {
+        loading = true
+        error = null
+        feedback = ""
+        content = null
+        try {
+            val fetched = withContext(Dispatchers.IO) { PloiApi.environmentFile(token, serverId, siteId) }
+            content = fetched
+            draft = fetched
+        } catch (cancelled: CancellationException) {
+            throw cancelled
+        } catch (failure: Exception) {
+            error = failure
+        } finally {
+            loading = false
+        }
+    }
+
+    AlertDialog(
+        onDismissRequest = onDismiss,
+        title = { Text(stringResource(R.string.env_file)) },
+        text = {
+            Column(
+                Modifier.verticalScroll(rememberScrollState()),
+                verticalArrangement = Arrangement.spacedBy(PanelSpacing.sm)
+            ) {
+                if (loading) BusyIndicator()
+                if (error != null) ErrorState(error!!)
+                if (feedback.isNotEmpty()) SuccessBanner(feedback)
+                content?.let { current ->
+                    if (editing) {
+                        OutlinedTextField(
+                            value = draft, onValueChange = { draft = it },
+                            label = { Text(stringResource(R.string.env_edit)) },
+                            textStyle = panelMonoStyle,
+                            modifier = Modifier.fillMaxWidth()
+                        )
+                    } else {
+                        ExpandableMono(current, collapsedLines = 24)
+                    }
+                }
+            }
+        },
+        confirmButton = {
+            if (editing) {
+                Button(onClick = {
+                    if (draft.length >= ENV_CONTENT_MIN_LENGTH) pendingSave = draft
+                }, enabled = !saving && draft.length >= ENV_CONTENT_MIN_LENGTH) {
+                    Text(stringResource(R.string.save))
+                }
+            } else {
+                Button(onClick = { editing = true }, enabled = content != null && !saving) {
+                    Text(stringResource(R.string.edit_site))
+                }
+            }
+        },
+        dismissButton = { OutlinedButton(onClick = onDismiss) { Text(stringResource(R.string.cancel)) } }
+    )
+
+    val pending = pendingSave
+    if (pending != null) {
+        SensitiveConfirmDialog(lock = lock, activity = activity,
+            message = stringResource(R.string.confirm_env_save, siteDomain),
+            confirmLabel = R.string.save,
+            onConfirmed = {
+                pendingSave = null
+                saving = true
+                error = null
+                feedback = ""
+                scope.launch {
+                    try {
+                        withContext(Dispatchers.IO) { PloiApi.updateEnvironmentFile(token, serverId, siteId, pending) }
+                        content = pending
+                        editing = false
+                        feedback = savedMessage
+                    } catch (cancelled: CancellationException) {
+                        throw cancelled
+                    } catch (failure: Exception) {
+                        error = failure
+                    } finally {
+                        saving = false
+                    }
+                }
+            },
+            onDismiss = { pendingSave = null })
+    }
+}

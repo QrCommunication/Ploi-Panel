@@ -1,0 +1,4 @@
+<resources>
+    <string name="audit_confirm_wp_cli">Run this WP-CLI command on the site? It may change data.</string>
+    <string name="audit_confirm_wp_replace">Apply search and replace to the site? This is not a dry run.</string>
+</resources>
